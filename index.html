@@ -7,6 +7,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         :root {
@@ -412,6 +413,8 @@
                             <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--green);border-radius:50%;display:inline-block;"></span> Acima de 5</span>
                         </div>
                         <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-print" style="background-color: #10b981; color: white; margin: 0; padding: 0.3rem 0.8rem;" onclick="window.copyTableAsImage(event)">📸 Copiar como imagem</button>
+                            <button class="btn btn-print" style="background-color: #8b5cf6; color: white; margin: 0; padding: 0.3rem 0.8rem; display: none;" id="btn-toggle-ranking" onclick="window.toggleRankingView()">🏆 Exibir Ranking</button>
                             <button class="btn btn-print" style="background-color: #3b82f6; color: white; margin: 0; padding: 0.3rem 0.8rem;" id="btn-toggle-2026" onclick="window.toggleOnly2026()">📅 Considerar somente 2026</button>
                             <button class="btn btn-print" style="background-color: #facc15; color: #1f2937; margin: 0; padding: 0.3rem 0.8rem;" id="btn-toggle-metas" onclick="window.toggleMetas()">🎯 Exibir Metas</button>
                         </div>
@@ -455,6 +458,7 @@
         let sortDirection = 'desc'; 
         let isMetasVisible = false;
         let isOnly2026 = false;
+        let isRankingView = false;
 
         window.sarespAuditMap = {};
 
@@ -544,10 +548,8 @@
                     <p><strong>Desvio Padrão:</strong> ${auditData.contextStdDev.toFixed(2)}</p>
                     <p><strong>Z-Score calculado:</strong> ${auditData.zScore.toFixed(3)}</p>
                     <p style="margin-top: 0.5rem; font-size: 1.05rem;"><strong>TRI Estimado:</strong> <span style="color:var(--purple-tri); font-weight:bold;">${auditData.triEscola.toFixed(1)}</span></p>
-                </div>`;
+                </div>
 
-            if (auditData.classificacao) {
-                html += `
                 <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
                     <h4 style="margin-bottom: 0.5rem; color: var(--primary);">6. CÁLCULO DE IMPACTO</h4>
                     <p><strong>Peso do Componente (SARESP):</strong> ${auditData.pesoSaresp.toFixed(1)}</p>
@@ -585,9 +587,8 @@
                 <div style="background: #eff6ff; padding: 1rem; border-radius: 6px; border: 1px solid var(--secondary);">
                     <h4 style="margin-bottom: 0.5rem; color: var(--secondary);">10. INTERPRETAÇÃO PEDAGÓGICA</h4>
                     <p style="font-style: italic; color: #1e40af;">${msgInterpretacao}</p>
-                </div>`;
-            }
-            html += `</div>`;
+                </div>
+            </div>`;
 
             document.getElementById('saresp-audit-content').innerHTML = html;
             document.getElementById('saresp-audit-modal').style.display = 'flex';
@@ -608,6 +609,12 @@
         window.toggleMetas = function() {
             isMetasVisible = !isMetasVisible;
             document.getElementById('btn-toggle-metas').innerText = isMetasVisible ? '🎯 Ocultar Metas' : '🎯 Exibir Metas';
+            window.renderHeatmapTable();
+        };
+
+        window.toggleRankingView = function() {
+            isRankingView = !isRankingView;
+            document.getElementById('btn-toggle-ranking').innerText = isRankingView ? '🔢 Exibir Notas' : '🏆 Exibir Ranking';
             window.renderHeatmapTable();
         };
 
@@ -652,6 +659,62 @@
             ['escola', 'componente', 'tipo_classe', 'tipo_ensino', 'saresp_aval'].forEach(k => window.updateMultiSelectDisplay(k));
             window.resetRowSelection();
             window.applyFilters();
+        };
+
+        // --- CÓPIA DA TABELA COMO IMAGEM COM FILTROS INCLUSOS ---
+        window.copyTableAsImage = async function(event) {
+            const btn = event.target;
+            const originalBtnText = btn.innerText;
+            btn.innerText = "⏳ Copiando...";
+            
+            try {
+                const wrapper = document.createElement('div');
+                wrapper.style.background = 'white';
+                wrapper.style.padding = '20px';
+                wrapper.style.width = 'fit-content';
+                wrapper.style.color = '#1f2937';
+                wrapper.style.fontFamily = 'Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+                wrapper.style.position = 'absolute';
+                wrapper.style.left = '-9999px';
+                
+                const title = document.createElement('h2');
+                title.innerText = document.getElementById('table-title-context').innerText;
+                title.style.color = '#1e3a8a';
+                title.style.marginBottom = '10px';
+                
+                const filters = document.createElement('div');
+                filters.innerHTML = document.getElementById('print-filters-text').innerHTML;
+                filters.style.marginBottom = '20px';
+                filters.style.fontSize = '0.9rem';
+                filters.style.lineHeight = '1.5';
+                
+                const tableClone = document.getElementById('heatmap-container').cloneNode(true);
+                
+                wrapper.appendChild(title);
+                wrapper.appendChild(filters);
+                wrapper.appendChild(tableClone);
+                document.body.appendChild(wrapper);
+                
+                const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff' });
+                
+                canvas.toBlob(async (blob) => {
+                    try {
+                        const item = new ClipboardItem({ 'image/png': blob });
+                        await navigator.clipboard.write([item]);
+                        alert('Tabela e filtros copiados com sucesso para a área de transferência!');
+                    } catch (err) {
+                        console.error(err);
+                        alert('Erro ao copiar para a área de transferência. O seu navegador pode não suportar esta ação diretamente.');
+                    } finally {
+                        document.body.removeChild(wrapper);
+                        btn.innerText = originalBtnText;
+                    }
+                });
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao gerar a imagem.");
+                btn.innerText = originalBtnText;
+            }
         };
 
         function getSelectedCheckboxes(filterKey) {
@@ -732,6 +795,9 @@
             document.getElementById('sub-filter-aval').style.display = mode === 'single_eval' ? 'block' : 'none';
             document.getElementById('compare-filters').style.display = mode === 'compare' ? 'flex' : 'none';
             document.getElementById('saresp-aval-filter-container').style.display = mode === 'saresp' ? 'block' : 'none';
+            
+            const validRankingModes = ['eval', 'component', 'single_component', 'single_eval'];
+            document.getElementById('btn-toggle-ranking').style.display = validRankingModes.includes(mode) ? 'block' : 'none';
             
             sortColumn = 'media_geral'; sortDirection = 'desc';
             window.processViewAndRender();
@@ -1043,8 +1109,8 @@
             const rowKeyField = isUreView ? 'escola' : 'turma_nome';
 
             window.sarespAuditMap = {};
+            let isRankModeActive = isRankingView && ['eval', 'component', 'single_component', 'single_eval'].includes(currentViewMode);
 
-            // NOVO: MATRIZ SARESP TRI E PRIORIDADE (COM ORDENAÇÃO)
             if (currentViewMode === 'saresp') {
                 const selSarespAvals = getSelectedCheckboxes('saresp_aval');
                 let dataFiltered = activeData.filter(d => selSarespAvals.length === 0 || selSarespAvals.includes(d.aval_nome));
@@ -1071,12 +1137,11 @@
                 let contextStdDev = Math.sqrt(variance) || 1;
 
                 let colunasSaresp = Array.from(new Set(dataFiltered.map(d => d.componente))).sort();
-                let entityRows = Array.from(new Set(dataFiltered.map(d => d[rowKeyField])));
+                let entityRows = Array.from(new Set(dataFiltered.map(d => d[rowKeyField]))).sort();
 
                 let matrizSaresp = {};
                 let maxImpact = 0;
                 
-                // Primeiro pass para calcular TRI e armazenar impactos
                 entityRows.forEach(ent => {
                     if (!window.sarespAuditMap[ent]) window.sarespAuditMap[ent] = {};
                     matrizSaresp[ent] = { componentes: {}, notaGeralEstimada: null, sumTRIxPeso: 0, sumPeso: 0 };
@@ -1141,92 +1206,16 @@
                     }
                 });
 
+                entityRows.sort((a,b) => {
+                    let valA = matrizSaresp[a].notaGeralEstimada || -1;
+                    let valB = matrizSaresp[b].notaGeralEstimada || -1;
+                    return valB - valA;
+                });
+
                 let metrics = calculateSarespMetrics(activeData);
                 let triRedePorComp = {};
                 metrics.forEach(m => triRedePorComp[m.label] = m.tri);
 
-                // Criar impactoMatriz
-                let impactoMatriz = {};
-                entityRows.forEach(ent => {
-                    impactoMatriz[ent] = { componentes: {}, indiceGeral: 0, sumImpacto: 0 };
-                    colunasSaresp.forEach(c => {
-                        let triEscola = matrizSaresp[ent].componentes[c]; 
-                        if (triEscola !== null && triEscola !== undefined && triRedePorComp[c] !== undefined && window.sarespAuditMap[ent][c]) {
-                            let impacto = window.sarespAuditMap[ent][c].impactoBruto;
-                            let impactoNorm = maxImpact > 0 ? impacto / maxImpact : 0;
-                            let desvioInverso = triRedePorComp[c] - triEscola; // Positivo = Escola pior que a rede
-                            let indice = impactoNorm * desvioInverso;
-                            
-                            impactoMatriz[ent].componentes[c] = { tri: triEscola, indice: indice, impacto: impacto };
-                            impactoMatriz[ent].indiceGeral += (indice * impacto);
-                            impactoMatriz[ent].sumImpacto += impacto;
-
-                            window.sarespAuditMap[ent][c].impactoNorm = impactoNorm;
-                            window.sarespAuditMap[ent][c].desempenhoInverso = desvioInverso;
-                            window.sarespAuditMap[ent][c].indice = indice;
-                            window.sarespAuditMap[ent][c].triRede = triRedePorComp[c];
-                        } else {
-                            impactoMatriz[ent].componentes[c] = null;
-                        }
-                    });
-                    
-                    if (impactoMatriz[ent].sumImpacto > 0) {
-                        impactoMatriz[ent].indiceGeral = impactoMatriz[ent].indiceGeral / impactoMatriz[ent].sumImpacto;
-                    } else {
-                        impactoMatriz[ent].indiceGeral = null;
-                    }
-                });
-
-                const prioridadeMap = { 'CRÍTICA': 5, 'MUITO ALTA': 4, 'ALTA': 3, 'MODERADA': 2, 'BAIXA': 1 };
-                function getImpactPriority(indice) {
-                    if (indice === null || indice === undefined) return { class: 'bg-empty', label: 'Sem Dados', val: 0 };
-                    if (indice >= 15) return { class: 'bg-dark-red', label: 'Crítica', val: 5 };
-                    if (indice >= 10) return { class: 'bg-red', label: 'Muito Alta', val: 4 };
-                    if (indice >= 5) return { class: 'bg-orange', label: 'Alta', val: 3 };
-                    if (indice > 0) return { class: 'bg-yellow', label: 'Moderada', val: 2 };
-                    return { class: 'bg-green', label: 'Baixa', val: 1 };
-                }
-
-                // --- ORDENAÇÃO DINÂMICA SARESP ---
-                entityRows.sort((a,b) => {
-                    let valA, valB;
-                    if (sortColumn === 'row_header') { valA = a; valB = b; }
-                    else if (sortColumn === 'nota_geral' || sortColumn === 'media_geral') {
-                        valA = matrizSaresp[a].notaGeralEstimada !== null ? matrizSaresp[a].notaGeralEstimada : -999;
-                        valB = matrizSaresp[b].notaGeralEstimada !== null ? matrizSaresp[b].notaGeralEstimada : -999;
-                    } 
-                    else if (sortColumn === 'indice_geral') {
-                        valA = impactoMatriz[a].indiceGeral !== null ? impactoMatriz[a].indiceGeral : -999;
-                        valB = impactoMatriz[b].indiceGeral !== null ? impactoMatriz[b].indiceGeral : -999;
-                    } 
-                    else {
-                        valA = matrizSaresp[a].componentes[sortColumn] !== null && matrizSaresp[a].componentes[sortColumn] !== undefined ? matrizSaresp[a].componentes[sortColumn] : -999;
-                        valB = matrizSaresp[b].componentes[sortColumn] !== null && matrizSaresp[b].componentes[sortColumn] !== undefined ? matrizSaresp[b].componentes[sortColumn] : -999;
-                    }
-                    if (sortColumn === 'row_header') return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                    return sortDirection === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
-                });
-
-                let impactoEntityRows = [...entityRows].sort((a,b) => {
-                    let valA, valB;
-                    if (sortColumn === 'row_header') { valA = a; valB = b; }
-                    else if (sortColumn === 'indice_geral' || sortColumn === 'media_geral') {
-                        valA = impactoMatriz[a].indiceGeral !== null ? impactoMatriz[a].indiceGeral : -999;
-                        valB = impactoMatriz[b].indiceGeral !== null ? impactoMatriz[b].indiceGeral : -999;
-                    } 
-                    else if (sortColumn === 'nota_geral') {
-                        valA = matrizSaresp[a].notaGeralEstimada !== null ? matrizSaresp[a].notaGeralEstimada : -999;
-                        valB = matrizSaresp[b].notaGeralEstimada !== null ? matrizSaresp[b].notaGeralEstimada : -999;
-                    } 
-                    else {
-                        valA = impactoMatriz[a].componentes[sortColumn] !== null ? impactoMatriz[a].componentes[sortColumn].indice : -999;
-                        valB = impactoMatriz[b].componentes[sortColumn] !== null ? impactoMatriz[b].componentes[sortColumn].indice : -999;
-                    }
-                    if (sortColumn === 'row_header') return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                    return sortDirection === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
-                });
-
-                // HTML Resumo Global
                 let htmlSaresp = `<h3 style="margin-bottom: 1rem; color: var(--primary);">Resumo Global (Visão SARESP)</h3>`;
                 htmlSaresp += `<table class="heatmap" style="margin-bottom: 2rem;"><thead><tr>
                     <th>Componente Curricular</th>
@@ -1249,7 +1238,6 @@
                 });
                 htmlSaresp += `</tbody></table>`;
 
-                // HTML Matriz TRI
                 let htmlMatrix = `<h3 style="margin-bottom: 1rem; color: var(--primary);">Matriz de Proficiência (TRI) por Entidade</h3>`;
                 htmlMatrix += `
                 <div style="font-size: 0.85rem; display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; background: #f9fafb; padding: 0.6rem; border-radius: 4px; border: 1px solid var(--border);">
@@ -1285,6 +1273,10 @@
                         let val = rowData.componentes[c];
                         if (val !== null && val !== undefined) {
                             let colorClass = val < 220 ? 'bg-red' : (val < 260 ? 'bg-yellow' : (val <= 300 ? 'bg-green' : 'bg-blue-tri'));
+                            if (window.sarespAuditMap[ent] && window.sarespAuditMap[ent][c]) {
+                                window.sarespAuditMap[ent][c].triRede = triRedePorComp[c];
+                                window.sarespAuditMap[ent][c].desvio = val - triRedePorComp[c];
+                            }
                             htmlMatrix += `<td class="${colorClass}" onclick="window.openSarespAudit('${ent.replace(/'/g, "\\'")}', '${c.replace(/'/g, "\\'")}')" style="cursor: pointer;">${val.toFixed(1).replace('.', ',')}</td>`;
                         } else {
                             htmlMatrix += `<td class="bg-empty">-</td>`;
@@ -1294,7 +1286,100 @@
                 });
                 htmlMatrix += `</tbody></table>`;
                 
-                // HTML Matriz Prioridade (Impacto Real)
+                let prioridadeMatriz = {};
+                entityRows.forEach(ent => {
+                    let rowData = matrizSaresp[ent];
+                    let desvios = [];
+                    prioridadeMatriz[ent] = { componentes: {}, desvioGeral: null };
+                    colunasSaresp.forEach(c => {
+                        let triEscola = rowData.componentes[c];
+                        if (triEscola !== null && triEscola !== undefined && triRedePorComp[c] !== undefined) {
+                            let desvio = triEscola - triRedePorComp[c];
+                            prioridadeMatriz[ent].componentes[c] = { tri: triEscola, rede: triRedePorComp[c], desvio: desvio };
+                            desvios.push(desvio);
+                        } else {
+                            prioridadeMatriz[ent].componentes[c] = null;
+                        }
+                    });
+                    if (desvios.length > 0) {
+                        prioridadeMatriz[ent].desvioGeral = desvios.reduce((a,b)=>a+b,0) / desvios.length;
+                    }
+                });
+
+                let prioridadeEntityRows = [...entityRows].sort((a,b) => {
+                    let valA = prioridadeMatriz[a].desvioGeral !== null ? prioridadeMatriz[a].desvioGeral : 999;
+                    let valB = prioridadeMatriz[b].desvioGeral !== null ? prioridadeMatriz[b].desvioGeral : 999;
+                    return valA - valB;
+                });
+
+                function getPriorityDetails(desvio) {
+                    if (desvio === null) return { class: 'bg-empty', icon: '-', label: 'Sem Dados' };
+                    if (desvio < -30) return { class: 'bg-dark-red', icon: '🔴', label: 'Crítica' };
+                    if (desvio < -20) return { class: 'bg-red', icon: '🟥', label: 'Muito Alta' };
+                    if (desvio < -10) return { class: 'bg-orange', icon: '🟠', label: 'Alta' };
+                    if (desvio < -5) return { class: 'bg-yellow', icon: '🟡', label: 'Moderada' };
+                    return { class: 'bg-green', icon: '🟢', label: 'Baixa' };
+                }
+
+                let impactoMatriz = {};
+                entityRows.forEach(ent => {
+                    impactoMatriz[ent] = { componentes: {}, indiceGeral: 0, sumImpacto: 0 };
+                    colunasSaresp.forEach(c => {
+                        let triEscola = matrizSaresp[ent].componentes[c]; 
+                        if (triEscola !== null && triEscola !== undefined && triRedePorComp[c] !== undefined && window.sarespAuditMap[ent][c]) {
+                            let impacto = window.sarespAuditMap[ent][c].impactoBruto;
+                            let impactoNorm = maxImpact > 0 ? impacto / maxImpact : 0;
+                            let desvioInverso = triRedePorComp[c] - triEscola; 
+                            let indice = impactoNorm * desvioInverso;
+                            
+                            impactoMatriz[ent].componentes[c] = { tri: triEscola, indice: indice, impacto: impacto };
+                            impactoMatriz[ent].indiceGeral += (indice * impacto);
+                            impactoMatriz[ent].sumImpacto += impacto;
+
+                            window.sarespAuditMap[ent][c].impactoNorm = impactoNorm;
+                            window.sarespAuditMap[ent][c].desempenhoInverso = desvioInverso;
+                            window.sarespAuditMap[ent][c].indice = indice;
+                            window.sarespAuditMap[ent][c].triRede = triRedePorComp[c];
+                        } else {
+                            impactoMatriz[ent].componentes[c] = null;
+                        }
+                    });
+                    
+                    if (impactoMatriz[ent].sumImpacto > 0) {
+                        impactoMatriz[ent].indiceGeral = impactoMatriz[ent].indiceGeral / impactoMatriz[ent].sumImpacto;
+                    } else {
+                        impactoMatriz[ent].indiceGeral = null;
+                    }
+                });
+
+                let impactoEntityRows = [...entityRows].sort((a,b) => {
+                    let valA, valB;
+                    if (sortColumn === 'row_header') { valA = a; valB = b; }
+                    else if (sortColumn === 'indice_geral' || sortColumn === 'media_geral') {
+                        valA = impactoMatriz[a].indiceGeral !== null ? impactoMatriz[a].indiceGeral : -999;
+                        valB = impactoMatriz[b].indiceGeral !== null ? impactoMatriz[b].indiceGeral : -999;
+                    } 
+                    else if (sortColumn === 'nota_geral') {
+                        valA = matrizSaresp[a].notaGeralEstimada !== null ? matrizSaresp[a].notaGeralEstimada : -999;
+                        valB = matrizSaresp[b].notaGeralEstimada !== null ? matrizSaresp[b].notaGeralEstimada : -999;
+                    } 
+                    else {
+                        valA = impactoMatriz[a].componentes[sortColumn] !== null && impactoMatriz[a].componentes[sortColumn] !== undefined ? impactoMatriz[a].componentes[sortColumn].indice : -999;
+                        valB = impactoMatriz[b].componentes[sortColumn] !== null && impactoMatriz[b].componentes[sortColumn] !== undefined ? impactoMatriz[b].componentes[sortColumn].indice : -999;
+                    }
+                    if (sortColumn === 'row_header') return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    return sortDirection === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+                });
+
+                function getImpactPriority(indice) {
+                    if (indice === null || indice === undefined) return { class: 'bg-empty', label: 'Sem Dados', val: 0 };
+                    if (indice >= 15) return { class: 'bg-dark-red', label: 'Crítica', val: 5 };
+                    if (indice >= 10) return { class: 'bg-red', label: 'Muito Alta', val: 4 };
+                    if (indice >= 5) return { class: 'bg-orange', label: 'Alta', val: 3 };
+                    if (indice > 0) return { class: 'bg-yellow', label: 'Moderada', val: 2 };
+                    return { class: 'bg-green', label: 'Baixa', val: 1 };
+                }
+
                 let htmlImpact = `<h3 style="margin-top: 1rem; margin-bottom: 1rem; color: var(--primary);">Matriz de Prioridade Pedagógica (Impacto Real)</h3>`;
                 htmlImpact += `
                 <div style="font-size: 0.85rem; display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; background: #f9fafb; padding: 0.6rem; border-radius: 4px; border: 1px solid var(--border);">
@@ -1346,8 +1431,6 @@
                 container.innerHTML = htmlSaresp + htmlMatrix + htmlImpact;
                 return;
             }
-
-            // --- FIM DA LÓGICA EXCLUSIVA SARESP ---
 
             let colunasSet = new Set();
             if (currentViewMode === 'eval' || currentViewMode === 'single_component' || currentViewMode === 'compare' || currentViewMode === 'general_compare') { activeData.forEach(d => colunasSet.add(`${d.aval_bimestre}|||${d.aval_nome}`)); } 
@@ -1401,6 +1484,22 @@
                 }
                 participacaoPorLinha[r] = { avaliados: hC, matriculados: mat, participacao: mat > 0 ? (hC / mat) * 100 : 0 };
             });
+
+            let rankingsPorColuna = {};
+            if (isRankModeActive) {
+                colunas.forEach(c => {
+                    let colValues = [];
+                    rows.forEach(r => { let cell = matriz[r][c]; if (cell && cell.totalWeight > 0) { colValues.push({ r: r, val: cell.sumProduct / cell.totalWeight }); } });
+                    colValues.sort((a, b) => b.val - a.val);
+                    let rankMap = {}; colValues.forEach((item, index) => { rankMap[item.r] = { pos: index + 1, total: colValues.length }; });
+                    rankingsPorColuna[c] = rankMap;
+                });
+                let colValuesGeral = [];
+                rows.forEach(r => { let rTotal = rowTotalizador[r]; if (rTotal && rTotal.totalWeight > 0) { colValuesGeral.push({ r: r, val: rTotal.sumProduct / rTotal.totalWeight }); } });
+                colValuesGeral.sort((a, b) => b.val - a.val);
+                let rankMapGeral = {}; colValuesGeral.forEach((item, index) => { rankMapGeral[item.r] = { pos: index + 1, total: colValuesGeral.length }; });
+                rankingsPorColuna['media_geral'] = rankMapGeral;
+            }
 
             rows.sort((a, b) => {
                 let valA, valB;
@@ -1549,14 +1648,26 @@
                         if (cell && cell.totalWeight > 0) {
                             const m = (cell.sumProduct / cell.totalWeight).toFixed(2); const num = parseFloat(m);
                             const safeR = r.replace(/'/g, "\\'"); const idEscola = cell.idEscolaContext;
-                            html += `<td class="${num < 3 ? 'bg-red' : (num > 5 ? 'bg-green' : 'bg-yellow')}" onclick="window.calculateRanking('${m}', '${safeR}', '${idEscola}', '${c.replace(/'/g, "\\'")}', ${isUreView})">${m.replace('.', ',')}</td>`;
+                            
+                            let displayValue = m.replace('.', ',');
+                            if (isRankModeActive && rankingsPorColuna[c] && rankingsPorColuna[c][r]) {
+                                displayValue = `${rankingsPorColuna[c][r].pos}/${rankingsPorColuna[c][r].total}`;
+                            }
+
+                            html += `<td class="${num < 3 ? 'bg-red' : (num > 5 ? 'bg-green' : 'bg-yellow')}" onclick="window.calculateRanking('${m}', '${safeR}', '${idEscola}', '${c.replace(/'/g, "\\'")}', ${isUreView})">${displayValue}</td>`;
                         } else html += `<td class="bg-empty">-</td>`;
                     }
                 });
 
                 if (currentViewMode !== 'compare') {
                     const rTotal = rowTotalizador[r]; let mVal = rTotal && rTotal.totalWeight > 0 ? (rTotal.sumProduct / rTotal.totalWeight).toFixed(2) : '-';
-                    html += `<td class="${mVal !== '-' ? (parseFloat(mVal) < 3 ? 'bg-red' : (parseFloat(mVal) > 5 ? 'bg-green' : 'bg-yellow')) : 'bg-empty'}" style="border-left: 3px solid #1f2937;">${mVal.replace('.', ',')}</td>`;
+                    
+                    let displayValue = mVal !== '-' ? mVal.replace('.', ',') : '-';
+                    if (isRankModeActive && mVal !== '-' && rankingsPorColuna['media_geral'] && rankingsPorColuna['media_geral'][r]) {
+                        displayValue = `${rankingsPorColuna['media_geral'][r].pos}/${rankingsPorColuna['media_geral'][r].total}`;
+                    }
+
+                    html += `<td class="${mVal !== '-' ? (parseFloat(mVal) < 3 ? 'bg-red' : (parseFloat(mVal) > 5 ? 'bg-green' : 'bg-yellow')) : 'bg-empty'}" style="border-left: 3px solid #1f2937;">${displayValue}</td>`;
                 }
 
                 if (isUreView && isMetasVisible) {

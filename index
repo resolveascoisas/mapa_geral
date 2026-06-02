@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Educacional Avançado</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary: #1e3a8a; 
+            --secondary: #3b82f6;
+            --background: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --red: #ef4444;     
+            --yellow: #facc15;  
+            --green: #10b981;   
+            --blue-info: #0ea5e9; 
+            --purple-tri: #8b5cf6;
+            --dark-red: #7f1d1d;
+            --orange: #ea580c;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--background); color: var(--text-main); min-height: 100vh; }
+
+        /* --- LOADING OVERLAY --- */
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9); display: none; justify-content: center; 
+            align-items: center; flex-direction: column; z-index: 9999;
+        }
+        .spinner {
+            border: 4px solid var(--border); border-top: 4px solid var(--primary);
+            border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- UI COMPONENTS --- */
+        .btn {
+            background-color: var(--primary); color: white; border: none;
+            padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 1rem;
+            font-weight: 600; cursor: pointer; transition: background 0.3s;
+        }
+        .btn:hover { background-color: var(--secondary); }
+        .btn-print { background-color: #4b5563; padding: 0.5rem 1rem; font-size: 0.9rem; margin-right: 0.5rem;}
+        .btn-print:hover { background-color: #374151; }
+
+        /* --- TABS DE ALTERNÂNCIA DE VISÃO --- */
+        .view-toggles { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: stretch; width: 100%; justify-content: space-between; }
+        .btn-toggle { background-color: #e5e7eb; color: var(--text-main); padding: 0.7rem 0.5rem; font-size: 0.95rem; flex: 1 1 0%; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; transition: 0.2s;}
+        .btn-toggle:hover { background-color: #d1d5db; }
+        .btn-toggle.active { background-color: var(--secondary); color: white; }
+        .sub-filter { padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border); font-weight: 600; color: var(--primary); display: none; width: 100%; margin-top: 0.5rem; }
+
+        #compare-filters {
+            display: none; background: #e5e7eb; padding: 0.75rem 1.5rem; border-radius: 6px; 
+            margin-bottom: 1.5rem; align-items: center; gap: 1rem; flex-wrap: wrap; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #compare-filters select { padding: 0.4rem; border-radius: 4px; border: 1px solid var(--border); font-weight: 500; }
+
+        /* --- LOGIN SECTION --- */
+        #login-section { display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+        .login-box { background: var(--card-bg); padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; }
+        .login-box img { max-width: 150px; margin-bottom: 1.5rem; }
+        .input-group { margin-bottom: 1rem; text-align: left; }
+        .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-muted); font-size: 0.9rem; }
+        .input-group input { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; }
+        #login-error { color: var(--red); margin-top: 1rem; font-size: 0.9rem; display: none; font-weight: 500; }
+
+        /* --- DASHBOARD SECTION & HEADER --- */
+        #dashboard-section { display: none; }
+        header { background-color: var(--card-bg); padding: 1.2rem 2.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border);}
+        .header-left { display: flex; align-items: center; gap: 1.25rem; }
+        .header-left img { max-height: 55px; }
+        .header-center { display: flex; gap: 0.75rem; flex-grow: 1; justify-content: center; }
+        .header-right { display: flex; align-items: center; gap: 1.5rem; border-left: 2px solid var(--border); padding-left: 1.5rem; }
+        .user-info { text-align: right; }
+        .user-info strong { color: var(--text-main); display: block; font-size: 0.95rem; }
+        #user-role-label { font-size: 0.8rem; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;}
+        .btn-logout { background-color: #fef2f2; color: var(--red); border: 1px solid var(--red); padding: 0.5rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-logout:hover { background-color: var(--red); color: white; }
+        
+        .container { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+
+        /* HEADER DE IMPRESSÃO */
+        #print-header { display: none; background: #f9fafb; padding: 1rem; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1.5rem; }
+        #print-header h3 { margin-bottom: 0.5rem; font-size: 1.1rem; color: var(--primary); }
+        #print-filters-text { font-size: 0.9rem; line-height: 1.5; color: #374151; }
+
+        /* --- FILTROS COM CHECKBOX --- */
+        .filters-wrapper { background: var(--card-bg); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+        
+        .filter-item label { display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 600; color: var(--text-main); }
+        .multi-select { position: relative; user-select: none; width: 100%; }
+        .select-display { padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: var(--text-main); min-height: 38px; }
+        .select-display span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .select-display:after { content: '▼'; font-size: 0.7rem; color: var(--text-muted); margin-left: 0.5rem; }
+        .select-options { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-radius: 4px; max-height: 250px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 4px; }
+        .select-options.show { display: block; }
+        .select-options label { display: flex; align-items: center; padding: 0.6rem; cursor: pointer; transition: background 0.2s; font-size: 0.85rem; font-weight: normal; margin: 0; border-bottom: 1px solid #f3f4f6; color: var(--text-main); }
+        .select-options label:hover { background: #f9fafb; color: var(--primary); }
+        .select-options input[type="checkbox"] { margin-right: 0.6rem; cursor: pointer; width: 14px; height: 14px; }
+
+        .btn-clear { background: transparent; border: 1px solid var(--red); color: var(--red); border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; height: 38px; width: 100%; display: flex; align-items: center; justify-content: center; }
+        .btn-clear:hover { background: var(--red); color: white; }
+
+        /* CARDS */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .card { background: var(--card-bg); padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid var(--primary); display: flex; flex-direction: column;}
+        .card h3 { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .card .value { font-size: 2rem; font-weight: bold; margin-top: auto; color: var(--primary); }
+        
+        .podium-list { list-style: none; margin-top: 0.5rem; font-size: 0.95rem; width: 100%; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        .podium-list li { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; border-bottom: 1px dashed var(--border); padding-bottom: 0.3rem; }
+        .podium-list li:last-child { border-bottom: none; margin-bottom: 0;}
+        .podium-list span { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
+        .podium-list strong { font-size: 1.05rem; }
+
+        /* CHARTS & HEATMAP TABLE */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; transition: all 0.3s ease; }
+        .chart-container { background: var(--card-bg); padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: 350px; position: relative; transition: height 0.3s ease;}
+        .table-container { background: var(--card-bg); padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; overflow-x: auto; }
+        
+        table.heatmap { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem; }
+        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: 0.5rem; text-align: center; vertical-align: middle; }
+        table.heatmap th { background-color: #111827; color: white; font-weight: 600; cursor: pointer; user-select: none; }
+        table.heatmap th:hover { background-color: #1f2937; }
+        
+        table.heatmap .row-header { text-align: left; background-color: #f9fafb; color: var(--text-main); font-weight: 600; min-width: 200px; cursor: pointer; transition: background 0.2s; }
+        table.heatmap .row-header:hover { background-color: #e5e7eb; color: var(--primary); }
+        table.heatmap tr.selected-row .row-header { background-color: #dbeafe !important; color: var(--primary) !important; border-left: 5px solid var(--secondary); }
+        table.heatmap tr.selected-row td { filter: brightness(1.05); box-shadow: inset 0 0 4px rgba(0,0,0,0.15); }
+
+        .bg-dark-red { background-color: var(--dark-red) !important; color: white !important; font-weight: bold; }
+        .bg-red { background-color: var(--red) !important; color: white !important; font-weight: bold; }
+        .bg-orange { background-color: var(--orange) !important; color: white !important; font-weight: bold; }
+        .bg-yellow { background-color: var(--yellow) !important; color: #1f2937 !important; font-weight: bold; }
+        .bg-green { background-color: var(--green) !important; color: white !important; font-weight: bold; }
+        .bg-blue-tri { background-color: var(--blue-info) !important; color: white !important; font-weight: bold; }
+        .bg-empty { background-color: #f3f4f6 !important; color: var(--text-muted); }
+        table.heatmap td.bg-dark-red:hover, table.heatmap td.bg-red:hover, table.heatmap td.bg-orange:hover, table.heatmap td.bg-yellow:hover, table.heatmap td.bg-green:hover, table.heatmap td.bg-blue-tri:hover { opacity: 0.85; transform: scale(1.05); cursor: pointer; }
+
+        /* MODAIS DE INFORMAÇÃO */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 2rem; border-radius: 8px; width: 95%; max-width: 750px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+        .modal-close { position: absolute; top: 1rem; right: 1rem; cursor: pointer; font-size: 1.5rem; font-weight: bold; color: var(--text-muted); }
+        .modal-content h2 { margin-bottom: 0.5rem; color: var(--primary); font-size: 1.35rem; }
+        .rank-box { background: #f9fafb; border: 1px solid var(--border); padding: 12px; border-radius: 6px; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.3rem;}
+        .rank-box p { margin: 0; font-size: 1rem; }
+        .rank-box strong { color: var(--primary); }
+        .modal-table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 0.85rem; }
+        .modal-table th, .modal-table td { border: 1px solid var(--border); padding: 0.5rem; text-align: center; }
+        .modal-table th { background-color: #374151; color: white; }
+
+        #selected-row-indicator { display: none; background: #dbeafe; color: var(--primary); padding: 0.5rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600; justify-content: space-between; align-items: center; }
+        #modal-filter-info { font-size: 0.85rem; background: #f3f4f6; padding: 0.6rem; border-radius: 4px; margin-bottom: 1rem; color: #374151; border: 1px solid var(--border); }
+
+        /* DISCLAIMER E AUDITORIA MODALS */
+        #disclaimer-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 10001; justify-content: center; align-items: center; }
+        #disclaimer-modal .modal-content { max-width: 550px; border-top: 5px solid var(--yellow); text-align: center; padding: 2.5rem; }
+        #disclaimer-modal h2 { margin-bottom: 1rem; color: var(--text-main); font-size: 1.4rem; justify-content: center; display: flex;}
+        #disclaimer-modal p { font-size: 0.95rem; color: #4b5563; line-height: 1.6; margin-bottom: 1rem; text-align: justify; }
+
+        #saresp-audit-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10002; justify-content: center; align-items: center; }
+        #saresp-audit-modal .modal-content { max-width: 800px; border-top: 5px solid var(--purple-tri); padding: 2rem;}
+
+        /* --- MODO IMPRESSÃO OTIMIZADO --- */
+        @media print {
+            @page { size: landscape; margin: 10mm; } 
+            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #login-section, header, .filters-wrapper, .btn-print, .view-toggles, #compare-filters, #selected-row-indicator, .modal-overlay, #disclaimer-modal, #saresp-audit-modal, #chart-controls { display: none !important; }
+            #dashboard-section { display: block !important; }
+            .container { padding: 0 !important; max-width: 100% !important; margin: 0 !important; width: 100% !important; }
+            
+            #print-header { display: block !important; margin-bottom: 1rem; }
+            .cards-grid { gap: 0.5rem; margin-bottom: 1rem; align-items: stretch;}
+            .card { padding: 0.5rem 1rem; box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+            .card .value { font-size: 1.5rem; }
+            .charts-grid { display: flex; flex-direction: row; gap: 0.5rem; margin-bottom: 1rem; }
+            .chart-container { flex: 1; height: 220px !important; padding: 0.5rem; box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+            
+            .table-container { padding: 0; box-shadow: none; border: none; margin-bottom: 0; }
+            table.heatmap { margin-top: 0.5rem; font-size: 10px !important; }
+            table.heatmap th, table.heatmap td { padding: 0.2rem 0.3rem !important; border: 1px solid #9ca3af !important; }
+            table.heatmap th { background-color: #d1d5db !important; color: black !important; }
+            table.heatmap .row-header { min-width: 150px; }
+            
+            .bg-dark-red { background-color: #7f1d1d !important; color: white !important; }
+            .bg-orange { background-color: #ea580c !important; color: white !important; }
+            .bg-red { background-color: #ef4444 !important; color: white !important; }
+            .bg-yellow { background-color: #facc15 !important; color: black !important; }
+            .bg-green { background-color: #10b981 !important; color: white !important; }
+            .bg-blue-tri { background-color: #0ea5e9 !important; color: white !important; }
+        }
+
+        @media (max-width: 900px) { 
+            header { flex-direction: column; align-items: flex-start; }
+            .header-center { justify-content: flex-start; width: 100%; margin-top: 1rem;}
+            .header-right { border-left: none; padding-left: 0; width: 100%; justify-content: space-between; margin-top: 1rem; }
+            .charts-grid { grid-template-columns: 1fr; } 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay"><div class="spinner"></div><h3 style="margin-top: 1rem; color: var(--text-main);" id="loading-text">Carregando...</h3></div>
+
+    <div id="metodologia-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 650px;">
+            <span class="modal-close" onclick="window.closeMetodologia()">&times;</span>
+            <h2 style="color: var(--primary); margin-bottom: 1rem;">🧠 Entenda o Cálculo do Painel</h2>
+            <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 0.5rem;">Média Ponderada Real Bidimensional</h3>
+            <p style="font-size: 0.95rem; color: var(--text-muted); text-align: justify; margin-bottom: 1rem; line-height: 1.5;">
+                Para garantir que o desempenho reflita a realidade com precisão estatística, este sistema <strong>não</strong> utiliza médias aritméticas simples. O impacto de cada nota no resultado global é calculado levando em consideração dois fatores simultâneos:
+            </p>
+            <ul style="font-size: 0.95rem; color: var(--text-muted); margin-left: 1.5rem; margin-bottom: 1rem; line-height: 1.5;">
+                <li><strong>O Tamanho da Turma (Avaliados):</strong> Turmas com mais alunos têm maior impacto no resultado da escola/rede.</li>
+                <li><strong>A Relevância da Prova (Peso):</strong> Disciplinas com mais questões (ou maior peso definido pela matriz curricular) impactam mais o resultado final.</li>
+            </ul>
+            <div style="background: var(--background); padding: 1rem; border-radius: 6px; text-align: center; margin-bottom: 1.5rem; font-family: monospace; font-size: 1rem; color: var(--primary); border: 1px solid var(--border);">
+                Média = &Sigma; (Nota × Avaliados × Peso) / &Sigma; (Avaliados × Peso)
+            </div>
+            <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 0.5rem;">Cálculo de Participação (%)</h3>
+            <p style="font-size: 0.95rem; color: var(--text-muted); text-align: justify; margin-bottom: 0.5rem; line-height: 1.5;">
+                O painel de participação elimina a duplicidade. Se um mesmo aluno realizou as provas de Português, Matemática e Física, o sistema identifica a sua participação de forma <strong>única</strong> dentro da turma, evitando inflacionar artificialmente as taxas de engajamento da escola.
+            </p>
+        </div>
+    </div>
+
+    <div id="disclaimer-modal">
+        <div class="modal-content">
+            <h2>⚠️ Versão Beta</h2>
+            <p>Este painel encontra-se em fase de <strong>testes e homologação (Versão Beta)</strong> e o seu caráter é estritamente analítico.</p>
+            <p>As notas apresentadas podem diferir dos painéis disponibilizados no BI do <strong>Escola Total</strong> e nas tabelas oficiais publicadas pela URE. Isso ocorre porque o método de cálculo aplicado aqui difere intencionalmente para padronizar e aprofundar as análises.</p>
+            <p>Portanto, considere este ambiente <strong>apenas como uma ferramenta de visualização para apoio pedagógico</strong>.</p>
+            <button class="btn" style="width: 100%; margin-top: 1rem;" onclick="window.closeDisclaimer()">Ciente, acessar painel</button>
+        </div>
+    </div>
+
+    <div id="ranking-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="window.closeModal()">&times;</span>
+            <h2 id="modal-title">Mini Relatório de Desempenho</h2>
+            <p id="modal-desc" style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 500;"></p>
+            <div id="modal-filter-info"></div>
+            <div class="rank-box">
+                <p>Nota Ponderada Real: <strong id="modal-nota" style="font-size: 1.2rem;"></strong></p>
+                <p>Metas Pactuadas: <strong id="modal-metas" style="color: var(--text-main);">...</strong></p>
+                <p>Classificação (No Contexto Atual): <strong id="modal-rank-context">Calculando...</strong></p>
+            </div>
+            <h3 style="font-size: 1.05rem; color: var(--primary); margin-top: 1.5rem; margin-bottom: 0.5rem;">📊 Comparativo Histórico Transversal</h3>
+            <div id="modal-comparativo-container"></div>
+        </div>
+    </div>
+
+    <div id="saresp-audit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="window.closeSarespAuditModal()">&times;</span>
+            <h2 style="color: var(--primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">🔎 Detalhamento do Cálculo SARESP</h2>
+            <div id="saresp-audit-content"></div>
+        </div>
+    </div>
+
+    <div id="login-section">
+        <div class="login-box">
+            <img src="./imagens/logo.png" alt="Logo" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iNTAiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlNWU3ZWIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2YjcyODAiIGR5PSIuM2VtIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5MT0dPPC90ZXh0Pjwvc3ZnPg=='">
+            <div class="input-group">
+                <label>E-mail Institucional</label>
+                <input type="email" id="email" placeholder="exemplo@ure.avare" onkeypress="if(event.key === 'Enter') window.handleLogin();">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key === 'Enter') window.handleLogin();">
+            </div>
+            <button class="btn" onclick="window.handleLogin()">Entrar</button>
+            <div id="login-error">Credenciais inválidas. Tente novamente.</div>
+        </div>
+    </div>
+
+    <div id="dashboard-section">
+        <header>
+            <div class="header-left">
+                <img src="./imagens/logo.png" alt="Logo" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iNTAiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlNWU3ZWIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2YjcyODAiIGR5PSIuM2VtIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5MT0dPPC90ZXh0Pjwvc3ZnPg=='">
+                <div>
+                    <h1 id="dash-title" style="font-size: 1.35rem; color: var(--primary); margin: 0;">Painel de Desempenho</h1>
+                    <span id="user-role-label">Carregando perfil...</span>
+                </div>
+            </div>
+            <div class="header-center">
+                <button class="btn btn-print" style="background-color: var(--secondary); color: white; border:none;" onclick="window.openMetodologia()"><span style="margin-right:5px;">❓</span> Entenda o Painel</button>
+                <button class="btn btn-print" onclick="window.print()"><span style="margin-right:5px;">🖨️</span> Imprimir Relatório</button>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <strong id="user-email">admin@ure.avare</strong>
+                </div>
+                <button class="btn-logout" onclick="window.handleLogout()">Sair</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <div id="print-header">
+                <h3>Parâmetros do Relatório Gerado</h3>
+                <p id="print-filters-text"></p>
+            </div>
+
+            <div class="filters-wrapper">
+                <div class="filters-grid">
+                    <div class="filter-item" id="filter-escola-container">
+                        <label>Escola</label>
+                        <div class="multi-select" data-filter="escola">
+                            <div class="select-display" onclick="window.toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Componente Curricular</label>
+                        <div class="multi-select" data-filter="componente">
+                            <div class="select-display" onclick="window.toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Tipo Classe</label>
+                        <div class="multi-select" data-filter="tipo_classe">
+                            <div class="select-display" onclick="window.toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Tipo Ensino</label>
+                        <div class="multi-select" data-filter="tipo_ensino">
+                            <div class="select-display" onclick="window.toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item" style="display: flex; align-items: flex-end;">
+                        <button class="btn-clear" onclick="window.clearFilters()">Limpar Filtros ✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-toggles">
+                <button class="btn btn-toggle active" id="btn-view-eval" onclick="window.setViewMode('eval')">📋 Histórico (Geral)</button>
+                <button class="btn btn-toggle" id="btn-view-comp" onclick="window.setViewMode('component')">📊 Por Componentes</button>
+                <button class="btn btn-toggle" id="btn-view-single" onclick="window.setViewMode('single_component')">🎯 Único Componente</button>
+                <button class="btn btn-toggle" id="btn-view-single-aval" onclick="window.setViewMode('single_eval')">🎯 Única Avaliação</button>
+                <button class="btn btn-toggle" id="btn-view-compare" onclick="window.setViewMode('compare')">⚖️ Comparar Desempenhos</button>
+                <button class="btn btn-toggle" id="btn-view-general-compare" onclick="window.setViewMode('general_compare')">📈 Comparativo Geral</button>
+                <button class="btn btn-toggle" id="btn-view-saresp" onclick="window.setViewMode('saresp')">🎯 Painel SARESP (TRI)</button>
+                
+                <select id="sub-filter-comp" class="sub-filter" onchange="window.processViewAndRender()"></select>
+                <select id="sub-filter-aval" class="sub-filter" onchange="window.processViewAndRender()"></select>
+                
+                <div id="saresp-aval-filter-container" class="multi-select" data-filter="saresp_aval" style="display: none; margin-top: 0.5rem; width: 100%;">
+                    <div class="select-display" onclick="window.toggleDropdown(this)"><span>Filtrar Avaliações SARESP</span></div>
+                    <div class="select-options"></div>
+                </div>
+            </div>
+
+            <div id="compare-filters">
+                <label style="font-weight: 600; color: var(--primary);">Analisar Evolução:</label>
+                <select id="comp-aval-1" onchange="window.processViewAndRender()"></select>
+                <span style="font-weight: 600;">frente a</span>
+                <select id="comp-aval-2" onchange="window.processViewAndRender()"></select>
+                <label style="font-weight: 600; color: var(--primary); margin-left: 1rem;">Filtrar Componente:</label>
+                <select id="compare-filter-componente" onchange="window.processViewAndRender()"></select>
+            </div>
+
+            <div id="selected-row-indicator">
+                <span id="selected-row-text">Filtrando gráficos para a sala...</span>
+                <button class="btn" style="padding:0.25rem 0.5rem; font-size:0.8rem; background:#ef4444;" onclick="window.resetRowSelection()">Remover Filtro ✕</button>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h3>Média Ponderada Real</h3>
+                    <div class="value" id="card-media-geral">-</div>
+                </div>
+                <div class="card">
+                    <h3>Destaques (Componentes)</h3>
+                    <div id="card-melhor-disc">-</div>
+                </div>
+                <div class="card">
+                    <h3>Oportunidades de Melhoria</h3>
+                    <div id="card-pior-disc">-</div>
+                </div>
+                <div class="card">
+                    <h3>Destaques (<span id="label-destaque-ent">Entidades</span>)</h3>
+                    <div id="card-melhor-entidade">-</div>
+                </div>
+                <div class="card">
+                    <h3>Oportunidades (<span id="label-pior-ent">Entidades</span>)</h3>
+                    <div id="card-pior-entidade">-</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <h3 id="table-title-context">Mapa Dinâmico de Notas</h3>
+                    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+                        <div style="font-size: 0.85rem; display: flex; gap: 1rem;">
+                            <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--red);border-radius:50%;display:inline-block;"></span> Abaixo de 3</span>
+                            <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--yellow);border-radius:50%;display:inline-block;"></span> 3 a 5</span>
+                            <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--green);border-radius:50%;display:inline-block;"></span> Acima de 5</span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-print" style="background-color: #3b82f6; color: white; margin: 0; padding: 0.3rem 0.8rem;" id="btn-toggle-2026" onclick="window.toggleOnly2026()">📅 Considerar somente 2026</button>
+                            <button class="btn btn-print" style="background-color: #facc15; color: #1f2937; margin: 0; padding: 0.3rem 0.8rem;" id="btn-toggle-metas" onclick="window.toggleMetas()">🎯 Exibir Metas</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="heatmap-container"></div>
+            </div>
+
+            <div id="chart-controls" style="display: none; justify-content: flex-end; gap: 0.5rem; margin-bottom: 1rem; width: 100%;">
+                <button class="btn btn-print" style="margin:0; background:var(--primary); color:white; border:none;" onclick="window.toggleChartDatasets(true)">☑️ Marcar Todas</button>
+                <button class="btn btn-print" style="margin:0; background:var(--text-muted); color:white; border:none;" onclick="window.toggleChartDatasets(false)">☐ Desmarcar Todas</button>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-container"><canvas id="chartComponentes"></canvas></div>
+                <div class="chart-container"><canvas id="chartEvolucao"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kmplasayzhtjoelxnvif.supabase.co';
+        const supabaseKey = 'sb_publishable_24GErsvesucjCS2GKZkBUQ_8xMMXuoh';
+        
+        let supabaseClient = null;
+        if (window.supabase) {
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            window.supabaseClient = supabaseClient;
+        }
+
+        let currentUser = null;
+        let userProfile = null;
+        let globalData = []; 
+        let filteredData = []; 
+        let activeData = [];   
+        let escolasMap = new Map(); 
+        let chartsInstance = {}; 
+        
+        let currentViewMode = 'eval'; 
+        let selectedRowEntity = null; 
+        let sortColumn = 'media_geral'; 
+        let sortDirection = 'desc'; 
+        let isMetasVisible = false;
+        let isOnly2026 = false;
+
+        window.sarespAuditMap = {};
+
+        const baseMetas = [
+            { key: "ZUMBI DOS PALMARES", o: 3.4, d: 3.6 }, { key: "AVELINO APARECIDO", o: 3.4, d: 3.6 },
+            { key: "BENE ANDRADE", o: 4.4, d: 4.8 }, { key: "EE JOAO CRUZ", o: 4.6, d: 4.9 },
+            { key: "CEL JTO A EE JOAO CRUZ", o: 4.6, d: 4.9 }, { key: "SANDRA APARECIDA DE ARAUJO", o: 4.7, d: 4.9 },
+            { key: "SANDRA APARECIDA DE ARAÚJO", o: 4.7, d: 4.9 }, { key: "CELSO FERREIRA", o: 5.4, d: 5.8 },
+            { key: "CERQUEIRA CESAR II", o: 4.9, d: 5.2 }, { key: "CERQUEIRA CESAR III", o: 4.9, d: 5.2 },
+            { key: "JOAO PAULO II", o: 4.9, d: 5.2 }, { key: "TRES RIOS", o: 3.4, d: 3.6 },
+            { key: "ANITA GARIBALDI", o: 4.9, d: 5.2 }, { key: "PROVISORIA DE CERQUEIRA CESAR", o: 5.1, d: 5.4 },
+            { key: "MAURO DE MACEDO", o: 4.6, d: 4.9 }, { key: "COTA LEONEL", o: 5.0, d: 5.3 },
+            { key: "DIMAS MOZART", o: 5.0, d: 5.2 }, { key: "EMILIO IMMOOS", o: 5.3, d: 5.6 },
+            { key: "MARIANA APARECIDA TODESCATO", o: 5.1, d: 5.4 }, { key: "ERUCE PAULUCCI", o: 4.6, d: 4.9 },
+            { key: "GUIDO DIAS", o: 4.2, d: 4.5 }, { key: "JOAO CRUZ CORONEL", o: 4.6, d: 4.9 },
+            { key: "JOAO MICHELIN", o: 5.1, d: 5.4 }, { key: "JOAO TEIXEIRA", o: 4.5, d: 4.9 },
+            { key: "JOSE APARECIDO CASTELUCCI", o: 5.4, d: 5.7 }, { key: "JOSE LEITE PINHEIRO", o: 4.9, d: 5.2 },
+            { key: "JOSE PENNA", o: 5.1, d: 5.4 }, { key: "JOSE PIRES", o: 6.5, d: 6.8 },
+            { key: "MARIA IZABEL", o: 4.4, d: 4.7 }, { key: "MATILDE VIEIRA", o: 4.7, d: 5.0 },
+            { key: "PAULO ARAUJO NOVAES", o: 4.9, d: 5.2 }, { key: "PAULO DELICIO", o: 4.9, d: 5.2 },
+            { key: "PEDRO BENTO ALVES", o: 4.5, d: 4.9 }, { key: "MARCELO PIRES DA SILVA", o: 4.7, d: 4.9 },
+            { key: "TAQUARITUBA", o: 4.2, d: 4.5 }, { key: "MASCULINA DE CERQUEIRA CESAR", o: 5.1, d: 5.4 },
+            { key: "NELSON MARCONDES", o: 5.4, d: 5.8 }, { key: "ORLANDO BRANDO", o: 3.4, d: 3.6 },
+            { key: "ABILIO RAPOSO", o: 4.3, d: 4.5 }
+        ];
+
+        const getMetasEscola = (escolaNome) => {
+            if(!escolaNome) return { o: '-', d: '-' };
+            const upper = escolaNome.toUpperCase();
+            for(let m of baseMetas) { if(upper.includes(m.key)) return { o: m.o, d: m.d }; }
+            return { o: '-', d: '-' };
+        };
+
+        window.closeSarespAuditModal = function() { document.getElementById('saresp-audit-modal').style.display = 'none'; };
+        
+        window.openSarespAudit = function(ent, comp) {
+            const auditData = window.sarespAuditMap[ent] ? window.sarespAuditMap[ent][comp] : null;
+            if (!auditData) return;
+            
+            const selSarespAvals = getSelectedCheckboxes('saresp_aval');
+            const avalsStr = selSarespAvals.length === 0 ? 'Todas do Filtro Principal' : selSarespAvals.join(', ');
+
+            let msgInterpretacao = "";
+            let classL = auditData.classificacao ? auditData.classificacao.toLowerCase() : "";
+            
+            if (classL === 'crítica') msgInterpretacao = "A disciplina apresenta desempenho extremamente baixo e afeta diretamente um grande número de alunos, exigindo intervenção pedagógica urgente e focada.";
+            else if (classL === 'muito alta') msgInterpretacao = "O desempenho está aquém do esperado num componente de forte impacto na matriz do SARESP. Ações de recuperação devem ser priorizadas.";
+            else if (classL === 'alta') msgInterpretacao = "Há uma defasagem considerável em relação à rede. Recomenda-se acompanhamento focado nas habilidades em defasagem.";
+            else if (classL === 'moderada') msgInterpretacao = "O impacto é moderado. O desempenho apresenta ligeira defasagem, mas o cenário geral encontra-se dentro do previsto.";
+            else msgInterpretacao = "A escola apresenta proficiência adequada ou superior à média da rede neste componente, sem necessidade de intervenções críticas no momento.";
+
+            let html = `
+            <div style="display:grid; gap: 1rem; text-align: left; font-size: 0.95rem;">
+                <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--primary);">1. IDENTIFICAÇÃO</h4>
+                    <p><strong>Entidade:</strong> ${auditData.entidade}</p>
+                    <p><strong>Componente Curricular:</strong> ${auditData.componente}</p>
+                    <p><strong>Avaliações Consideradas:</strong> ${avalsStr}</p>
+                </div>
+                
+                <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--primary);">2. BASE DE DADOS UTILIZADA</h4>
+                    <p><strong>Alunos considerados:</strong> ${auditData.alunosConsiderados}</p>
+                    <p><strong>Avaliações totais analisadas:</strong> ${auditData.totalRowsOriginal}</p>
+                    <p><strong>Valores removidos (outliers):</strong> ${auditData.valoresRemovidos} (Aparo de Top/Bottom 10%)</p>
+                </div>
+
+                <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--primary);">3. CÁLCULO DA MÉDIA PONDERADA</h4>
+                    <p style="font-family: monospace; background: #e5e7eb; padding: 0.5rem; border-radius: 4px; font-weight: bold; text-align:center;">media = &Sigma;(nota × peso × alunos) ÷ &Sigma;(peso × alunos)</p>
+                    <p><strong>&Sigma;(nota × peso × alunos) =</strong> ${auditData.sumProductOriginal.toFixed(2)}</p>
+                    <p><strong>&Sigma;(peso × alunos) =</strong> ${auditData.sumWeightOriginal.toFixed(2)}</p>
+                    <p style="margin-top: 0.5rem; font-size: 1.05rem;"><strong>Média Ponderada Base:</strong> ${auditData.mediaOriginal.toFixed(2)}</p>
+                </div>
+
+                <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--primary);">4. APLICAÇÃO DA MÉDIA APARADA</h4>
+                    <p><strong>Média Original (com outliers):</strong> ${auditData.mediaOriginal.toFixed(2)}</p>
+                    <p><strong>Média Aparada (sem outliers):</strong> <span style="color:var(--primary); font-weight:bold;">${auditData.mediaAparada.toFixed(2)}</span></p>
+                </div>
+
+                <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--primary);">5. CONVERSÃO PARA TRI</h4>
+                    <p style="font-family: monospace; background: #e5e7eb; padding: 0.5rem; border-radius: 4px; font-weight: bold; text-align:center;">z = (media - média_rede) / desvio_padrão<br>TRI = 200 + (z × 50)</p>
+                    <p><strong>Média da Escola (Aparada):</strong> ${auditData.mediaAparada.toFixed(2)}</p>
+                    <p><strong>Média da Rede (Contexto):</strong> ${auditData.contextMean.toFixed(2)}</p>
+                    <p><strong>Desvio Padrão:</strong> ${auditData.contextStdDev.toFixed(2)}</p>
+                    <p><strong>Z-Score calculado:</strong> ${auditData.zScore.toFixed(3)}</p>
+                    <p style="margin-top: 0.5rem; font-size: 1.05rem;"><strong>TRI Estimado:</strong> <span style="color:var(--purple-tri); font-weight:bold;">${auditData.triEscola.toFixed(1)}</span></p>
+                </div>`;
+
+            if (auditData.classificacao) {
+                html += `
+                <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--primary);">6. CÁLCULO DE IMPACTO</h4>
+                    <p><strong>Peso do Componente (SARESP):</strong> ${auditData.pesoSaresp.toFixed(1)}</p>
+                    <p><strong>Total de Alunos:</strong> ${auditData.totalAlunosImpacto}</p>
+                    <p style="margin-top: 0.5rem;"><strong>Impacto Bruto (peso × alunos):</strong> ${auditData.impactoBruto.toFixed(1)}</p>
+                </div>
+
+                <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--primary);">7. CÁLCULO DO DESVIO</h4>
+                    <p style="font-family: monospace; background: #e5e7eb; padding: 0.5rem; border-radius: 4px; font-weight: bold; text-align:center;">desvio = TRI_escola - TRI_médio_rede</p>
+                    <p><strong>TRI Escola:</strong> ${auditData.triEscola.toFixed(1)}</p>
+                    <p><strong>TRI Médio da Rede:</strong> ${auditData.triRede.toFixed(1)}</p>
+                    <p style="margin-top: 0.5rem;"><strong>Desvio Calculado:</strong> ${(auditData.triEscola - auditData.triRede).toFixed(2)}</p>
+                </div>
+
+                <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; border: 1px solid var(--border);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--primary);">8. ÍNDICE DE PRIORIDADE</h4>
+                    <p style="font-family: monospace; background: #e5e7eb; padding: 0.5rem; border-radius: 4px; font-weight: bold; text-align:center;">indice = impacto_normalizado × desempenho_inverso</p>
+                    <p><strong>Impacto Normalizado:</strong> ${auditData.impactoNorm.toFixed(3)}</p>
+                    <p><strong>Desempenho Inverso (Rede - Escola):</strong> ${auditData.desempenhoInverso.toFixed(2)}</p>
+                    <p style="margin-top: 0.5rem; font-size: 1.05rem;"><strong>Índice de Prioridade Final:</strong> ${auditData.indice.toFixed(3)}</p>
+                </div>
+
+                <div style="background: #fef2f2; padding: 1rem; border-radius: 6px; border: 1px solid var(--red);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--red);">9. CLASSIFICAÇÃO FINAL</h4>
+                    <p style="font-size: 1.1rem; margin-bottom: 0.5rem;"><strong>Classificação:</strong> PRIORIDADE ${auditData.classificacao.toUpperCase()}</p>
+                    <p><strong>Motivos principais da categorização:</strong></p>
+                    <ul style="margin-left: 1.5rem; margin-bottom: 0.5rem;">
+                        <li>Desempenho ${auditData.desempenhoInverso > 0 ? 'abaixo' : 'acima'} da média da rede (${auditData.desempenhoInverso > 0 ? '-' : '+'}${Math.abs(auditData.desempenhoInverso).toFixed(1)} pontos TRI)</li>
+                        <li>${auditData.totalAlunosImpacto} alunos diretamente avaliados no componente</li>
+                        <li>Componente de ${auditData.pesoSaresp >= 20 ? 'alto' : (auditData.pesoSaresp >= 10 ? 'médio' : 'baixo')} peso no SARESP (Peso ${auditData.pesoSaresp.toFixed(1)})</li>
+                    </ul>
+                </div>
+                
+                <div style="background: #eff6ff; padding: 1rem; border-radius: 6px; border: 1px solid var(--secondary);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--secondary);">10. INTERPRETAÇÃO PEDAGÓGICA</h4>
+                    <p style="font-style: italic; color: #1e40af;">${msgInterpretacao}</p>
+                </div>`;
+            }
+            html += `</div>`;
+
+            document.getElementById('saresp-audit-content').innerHTML = html;
+            document.getElementById('saresp-audit-modal').style.display = 'flex';
+        };
+
+        window.closeDisclaimer = function() { document.getElementById('disclaimer-modal').style.display = 'none'; };
+        window.showDisclaimer = function() {
+            if (!sessionStorage.getItem('disclaimerAccepted')) {
+                document.getElementById('disclaimer-modal').style.display = 'flex';
+                sessionStorage.setItem('disclaimerAccepted', 'true');
+            }
+        };
+        window.openMetodologia = function() { document.getElementById('metodologia-modal').style.display = 'flex'; };
+        window.closeMetodologia = function() { document.getElementById('metodologia-modal').style.display = 'none'; };
+        window.openModal = function() { document.getElementById('ranking-modal').style.display = 'flex'; };
+        window.closeModal = function() { document.getElementById('ranking-modal').style.display = 'none'; };
+
+        window.toggleMetas = function() {
+            isMetasVisible = !isMetasVisible;
+            document.getElementById('btn-toggle-metas').innerText = isMetasVisible ? '🎯 Ocultar Metas' : '🎯 Exibir Metas';
+            window.renderHeatmapTable();
+        };
+
+        window.toggleOnly2026 = function() {
+            isOnly2026 = !isOnly2026;
+            const btn = document.getElementById('btn-toggle-2026');
+            if (isOnly2026) {
+                btn.innerText = '📅 Incluir Anos Anteriores';
+                btn.style.backgroundColor = '#10b981'; 
+            } else {
+                btn.innerText = '📅 Considerar somente 2026';
+                btn.style.backgroundColor = '#3b82f6';
+            }
+            window.applyFilters();
+        };
+
+        window.toggleDropdown = function(element) {
+            const options = element.nextElementSibling;
+            const isShowing = options.classList.contains('show');
+            document.querySelectorAll('.select-options.show').forEach(opt => opt.classList.remove('show'));
+            if (!isShowing) options.classList.add('show');
+        };
+
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.multi-select')) {
+                document.querySelectorAll('.select-options.show').forEach(opt => opt.classList.remove('show'));
+            }
+        });
+
+        window.updateMultiSelectDisplay = function(filterKey) {
+            const container = document.querySelector(`.multi-select[data-filter="${filterKey}"]`);
+            if(!container) return;
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+            const displaySpan = container.querySelector('.select-display span');
+            if (checkboxes.length === 0) { displaySpan.innerText = filterKey === 'saresp_aval' ? "Filtrar Avaliações SARESP" : "Todos"; } 
+            else if (checkboxes.length === 1) { displaySpan.innerText = checkboxes[0].value; } 
+            else { displaySpan.innerText = `${checkboxes.length} selecionados`; }
+        };
+
+        window.clearFilters = function() {
+            document.querySelectorAll('.multi-select input[type="checkbox"]').forEach(cb => cb.checked = false);
+            ['escola', 'componente', 'tipo_classe', 'tipo_ensino', 'saresp_aval'].forEach(k => window.updateMultiSelectDisplay(k));
+            window.resetRowSelection();
+            window.applyFilters();
+        };
+
+        function getSelectedCheckboxes(filterKey) {
+            const checkboxes = document.querySelectorAll(`.multi-select[data-filter="${filterKey}"] input[type="checkbox"]:checked`);
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        window.toggleChartDatasets = function(visible) {
+            if (chartsInstance.comp) { chartsInstance.comp.data.datasets.forEach((ds, i) => { chartsInstance.comp.setDatasetVisibility(i, visible); }); chartsInstance.comp.update(); }
+            if (chartsInstance.evol) { chartsInstance.evol.data.datasets.forEach((ds, i) => { chartsInstance.evol.setDatasetVisibility(i, visible); }); chartsInstance.evol.update(); }
+        };
+
+        function getSarespWeight(comp, turmaNome, tipoEnsino) {
+            const t = String(turmaNome).toUpperCase();
+            const e = String(tipoEnsino).toUpperCase();
+            const c = String(comp).toUpperCase();
+            let segment = '678';
+            if (e.includes('MEDIO') || t.includes('EM') || t.includes('MEDIO') || /^[123].*(EM|SÉRIE|SERIE)/.test(t)) { segment = 'EM'; } 
+            else if (t.includes('9') || t.includes('9º') || t.includes('9O')) { segment = '9'; }
+            if (segment === '678') {
+                if (c.includes('PORT') || c === 'LPT' || c === 'LP') return 20;
+                if (c.includes('MAT')) return 20;
+                if (c.includes('CIE')) return 16;
+                if (c.includes('GEO')) return 16;
+                if (c.includes('HIS')) return 16;
+                if (c.includes('ING')) return 8;
+                return 10;
+            } else if (segment === '9') {
+                if (c.includes('PORT') || c === 'LPT' || c === 'LP') return 22;
+                if (c.includes('MAT')) return 22;
+                if (c.includes('CIE')) return 16;
+                if (c.includes('HIS')) return 16;
+                if (c.includes('GEO')) return 16;
+                if (c.includes('ING')) return 8;
+                return 10;
+            } else if (segment === 'EM') {
+                if (c.includes('PORT') || c === 'LPT' || c === 'LP') return 20;
+                if (c.includes('ING')) return 4;
+                if (c.includes('BIO')) return 8;
+                if (c.includes('FIS')) return 8;
+                if (c.includes('QUI')) return 8;
+                if (c.includes('MAT')) return 24;
+                if (c.includes('HIS')) return 6;
+                if (c.includes('GEO')) return 6;
+                if (c.includes('FIL')) return 3;
+                if (c.includes('SOC')) return 3;
+                return 8;
+            }
+            return 10;
+        }
+
+        window.highlightSelectedRow = function() {
+            const rows = document.querySelectorAll('table.heatmap tbody tr');
+            rows.forEach(tr => {
+                const headerEl = tr.querySelector('.row-header');
+                if (headerEl && selectedRowEntity && headerEl.innerText === selectedRowEntity) tr.classList.add('selected-row');
+                else tr.classList.remove('selected-row');
+            });
+        };
+
+        window.toggleSort = function(colKey) {
+            if (sortColumn === colKey) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            else { sortColumn = colKey; sortDirection = 'desc'; }
+            window.renderHeatmapTable();
+        };
+
+        window.setViewMode = function(mode) {
+            currentViewMode = mode;
+            document.getElementById('btn-view-eval').classList.toggle('active', mode === 'eval');
+            document.getElementById('btn-view-comp').classList.toggle('active', mode === 'component');
+            document.getElementById('btn-view-single').classList.toggle('active', mode === 'single_component');
+            document.getElementById('btn-view-single-aval').classList.toggle('active', mode === 'single_eval');
+            document.getElementById('btn-view-compare').classList.toggle('active', mode === 'compare');
+            document.getElementById('btn-view-general-compare').classList.toggle('active', mode === 'general_compare');
+            document.getElementById('btn-view-saresp').classList.toggle('active', mode === 'saresp');
+            
+            document.getElementById('sub-filter-comp').style.display = mode === 'single_component' ? 'block' : 'none';
+            document.getElementById('sub-filter-aval').style.display = mode === 'single_eval' ? 'block' : 'none';
+            document.getElementById('compare-filters').style.display = mode === 'compare' ? 'flex' : 'none';
+            document.getElementById('saresp-aval-filter-container').style.display = mode === 'saresp' ? 'block' : 'none';
+            
+            sortColumn = 'media_geral'; sortDirection = 'desc';
+            window.processViewAndRender();
+        };
+
+        function showLoading(text = 'Carregando...') {
+            document.getElementById('loading-text').innerText = text;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+        window.handleLogin = async function() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('login-error');
+            errorDiv.style.display = 'none';
+            if (!window.supabaseClient) { errorDiv.style.display = 'block'; errorDiv.innerText = 'Erro crítico: Biblioteca de banco de dados não carregou.'; return; }
+            if (!email || !password) { errorDiv.style.display = 'block'; errorDiv.innerText = 'Preencha todos os campos.'; return; }
+            try {
+                showLoading('Autenticando...');
+                const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) { hideLoading(); errorDiv.style.display = 'block'; errorDiv.innerText = 'Credenciais inválidas: ' + error.message; } 
+                else { currentUser = data.user; initDashboard(); }
+            } catch (err) { console.error(err); hideLoading(); errorDiv.style.display = 'block'; errorDiv.innerText = 'Falha de conexão: ' + err.message; }
+        };
+
+        window.handleLogout = async function() {
+            showLoading('Saindo...'); await window.supabaseClient.auth.signOut();
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'flex'; hideLoading();
+        };
+
+        async function fetchAllData(table) {
+            let allData = []; let limit = 1000; let start = 0; let hasMore = true;
+            while (hasMore) {
+                const { data, error } = await window.supabaseClient.from(table).select('*').range(start, start + limit - 1);
+                if (error) return { error };
+                allData.push(...data);
+                if (data.length < limit) hasMore = false; else start += limit;
+            }
+            return { data: allData };
+        }
+        
+        async function loadAndJoinData() {
+            showLoading('Sincronizando dados tridimensionais...');
+            try {
+                let resDesempenho, resTurmas, resAvaliacoes, resEscolas;
+                const rAva = await fetchAllData('avaliacoes');
+                if (rAva.error) throw new Error("Tabela 'avaliacoes' com erro: " + rAva.error.message);
+                resAvaliacoes = rAva;
+
+                const rEsc = await fetchAllData('escolas');
+                if (rEsc.error) { resEscolas = { data: [] }; } else { resEscolas = rEsc; }
+                escolasMap.clear(); resEscolas.data.forEach(e => { if (e.id_escola) escolasMap.set(e.id_escola, e); });
+
+                if (userProfile.tipo_usuario === 'ESCOLA') {
+                    document.getElementById('btn-toggle-metas').style.display = 'none'; 
+                    let allTurmas = []; let start = 0; let limit = 1000; let hasMore = true;
+                    while(hasMore) {
+                        const { data, error } = await window.supabaseClient.from('turmas').select('*').eq('escola', userProfile.nome_escola).range(start, start + limit - 1);
+                        if(error) throw error; allTurmas.push(...data);
+                        if(data.length < limit) hasMore = false; else start += limit;
+                    }
+                    resTurmas = { data: allTurmas };
+                    if (allTurmas.length === 0) { globalData = []; populateFilters(); window.applyFilters(); hideLoading(); return; }
+                    const turmaIds = allTurmas.map(t => t.id);
+                    let allDesempenho = []; start = 0; hasMore = true;
+                    while(hasMore) {
+                        const { data, error } = await window.supabaseClient.from('desempenho').select('*').in('id', turmaIds).range(start, start + limit - 1);
+                        if(error) throw error; allDesempenho.push(...data);
+                        if(data.length < limit) hasMore = false; else start += limit;
+                    }
+                    resDesempenho = { data: allDesempenho };
+                } else {
+                    const [rDes, rTur] = await Promise.all([ fetchAllData('desempenho'), fetchAllData('turmas') ]);
+                    if (rDes.error || rTur.error) throw new Error("Erro ao baixar bases.");
+                    resDesempenho = rDes; resTurmas = rTur;
+                }
+
+                const turmasMap = new Map(); resTurmas.data.forEach(t => { if(t.id) turmasMap.set(t.id, t); });
+                const avaliacoesMap = new Map(); resAvaliacoes.data.forEach(a => { if(a.id) avaliacoesMap.set(a.id, a); });
+
+                globalData = resDesempenho.data.map(d => {
+                    const turma = turmasMap.get(d.id) || {};
+                    const aval = avaliacoesMap.get(d.id_avaliacao) || {};
+                    const escGeo = escolasMap.get(turma.id_escola) || {};
+                    return {
+                        id_turma: d.id, nota: parseFloat(d.nota) || 0, avaliados: parseInt(d.avaliados) || 0, peso: parseFloat(d.peso) || 1, matriculas: parseInt(turma.matriculas) || 0, 
+                        componente: d.componente || 'N/A', turma_nome: d.nome_limpo || turma.nome_limpo || 'N/A', escola: turma.escola || escGeo.nome_escola || 'Desconhecida', 
+                        id_escola: turma.id_escola || escGeo.id_escola || null, tipo_classe: turma.tipo_classe || 'N/A', tipo_ensino: turma.tipo_ensino || 'N/A', 
+                        aval_nome: aval.nome || 'N/A', aval_tipo: aval.tipo || 'N/A', aval_bimestre: aval.bimestre || 'N/A'
+                    };
+                }).filter(d => d.escola !== 'Desconhecida' && d.turma_nome !== 'Desconhecida');
+
+                populateFilters(); populateSarespFilter(); window.applyFilters(); hideLoading(); window.showDisclaimer();
+            } catch(e) { console.error(e); alert("Erro ao Consolidar Base: \n" + e.message); hideLoading(); }
+        }
+
+        function populateFilters() {
+            const buildCheckboxes = (filterKey, values) => {
+                const container = document.querySelector(`.multi-select[data-filter="${filterKey}"] .select-options`);
+                if(!container) return; container.innerHTML = '';
+                values.forEach(v => {
+                    const safeV = v.replace(/"/g, '&quot;'); const label = document.createElement('label');
+                    label.innerHTML = `<input type="checkbox" value="${safeV}" onchange="window.updateMultiSelectDisplay('${filterKey}'); window.applyFilters();"> ${v}`;
+                    container.appendChild(label);
+                });
+                window.updateMultiSelectDisplay(filterKey);
+            };
+
+            buildCheckboxes('escola', getUniqueValues(globalData, 'escola'));
+            buildCheckboxes('componente', getUniqueValues(globalData, 'componente'));
+            buildCheckboxes('tipo_classe', getUniqueValues(globalData, 'tipo_classe'));
+            buildCheckboxes('tipo_ensino', getUniqueValues(globalData, 'tipo_ensino'));
+
+            const addOptions = (selectId, values) => {
+                const select = document.getElementById(selectId);
+                if(selectId === 'compare-filter-componente') select.innerHTML = '<option value="GERAL">Geral</option>'; else select.innerHTML = '';
+                values.forEach(v => { select.innerHTML += `<option value="${v}">${v}</option>`; });
+            };
+            
+            addOptions('sub-filter-comp', getUniqueValues(globalData, 'componente')); 
+            addOptions('compare-filter-componente', getUniqueValues(globalData, 'componente'));
+
+            let avalSet = new Set(); globalData.forEach(d => avalSet.add(`${d.aval_bimestre}|||${d.aval_nome}`));
+            let avalList = Array.from(avalSet).sort();
+            
+            const selAval = document.getElementById('sub-filter-aval'); selAval.innerHTML = '';
+            avalList.forEach(v => { selAval.innerHTML += `<option value="${v}">${v.replace('|||', ' - ')}</option>`; });
+
+            const sel1 = document.getElementById('comp-aval-1'); const sel2 = document.getElementById('comp-aval-2');
+            sel1.innerHTML = ''; sel2.innerHTML = '';
+            avalList.forEach((v, i) => {
+                let label = v.replace('|||', ' - ');
+                sel1.innerHTML += `<option value="${v}">${label}</option>`;
+                sel2.innerHTML += `<option value="${v}" ${i===1?'selected':''}>${label}</option>`;
+            });
+        }
+
+        function populateSarespFilter() {
+            const container = document.querySelector(`.multi-select[data-filter="saresp_aval"] .select-options`);
+            if(!container) return; container.innerHTML = '';
+            let uniqueAvals = [...new Set(globalData.map(d => d.aval_nome))].sort();
+            uniqueAvals.forEach(v => {
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${v.replace(/"/g, '&quot;')}" onchange="window.updateMultiSelectDisplay('saresp_aval'); window.processViewAndRender();"> ${v}`;
+                container.appendChild(label);
+            });
+            window.updateMultiSelectDisplay('saresp_aval');
+        }
+
+        function getUniqueValues(data, key) { return [...new Set(data.map(item => item[key]))].filter(Boolean).sort(); }
+
+        window.applyFilters = function() {
+            const selEscolas = getSelectedCheckboxes('escola'); const selComponentes = getSelectedCheckboxes('componente');
+            const selTipoClasse = getSelectedCheckboxes('tipo_classe'); const selTipoEnsino = getSelectedCheckboxes('tipo_ensino');
+
+            filteredData = globalData.filter(d => {
+                const passEscola = selEscolas.length === 0 || selEscolas.includes(d.escola);
+                const passComponente = selComponentes.length === 0 || selComponentes.includes(d.componente);
+                const passTipoClasse = selTipoClasse.length === 0 || selTipoClasse.includes(d.tipo_classe);
+                const passTipoEnsino = selTipoEnsino.length === 0 || selTipoEnsino.includes(d.tipo_ensino);
+                let pass2026 = true;
+                if (isOnly2026) { const b = String(d.aval_bimestre).trim(); pass2026 = ['1', '2', '3', '4'].includes(b); }
+                return passEscola && passComponente && passTipoClasse && passTipoEnsino && pass2026;
+            });
+            window.processViewAndRender();
+        };
+
+        function updatePrintHeader() {
+            const getCheckVals = key => { const vals = getSelectedCheckboxes(key); return vals.length === 0 ? 'Todos' : vals.join(', '); };
+            const getSelectVal = id => { const el = document.getElementById(id); return el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : ''; };
+            let text = `<strong>Escola(s):</strong> ${getCheckVals('escola')} &nbsp;|&nbsp; <strong>Componente(s):</strong> ${getCheckVals('componente')} <br> <strong>Classe(s):</strong> ${getCheckVals('tipo_classe')} &nbsp;|&nbsp; <strong>Ensino:</strong> ${getCheckVals('tipo_ensino')}`;
+            if(currentViewMode === 'single_component') text += `<br><strong>Visão:</strong> Foco no Componente (${getSelectVal('sub-filter-comp')})`;
+            if(currentViewMode === 'single_eval') text += `<br><strong>Visão:</strong> Foco na Avaliação (${getSelectVal('sub-filter-aval').replace('|||', ' - ')})`;
+            if(currentViewMode === 'compare') text += `<br><strong>Visão:</strong> Comparativo (${getSelectVal('comp-aval-1').replace('|||', ' - ')} vs ${getSelectVal('comp-aval-2').replace('|||', ' - ')} - Filtro: ${getSelectVal('compare-filter-componente')})`;
+            if(currentViewMode === 'general_compare') text += `<br><strong>Visão:</strong> Comparativo Geral (Gráficos Multi-Entidade)`;
+            document.getElementById('print-filters-text').innerHTML = text;
+        }
+
+        window.processViewAndRender = function() {
+            activeData = [...filteredData];
+            if (currentViewMode === 'single_component') {
+                const comp = document.getElementById('sub-filter-comp').value; if(comp) activeData = activeData.filter(d => d.componente === comp);
+            } else if (currentViewMode === 'single_eval') {
+                const aval = document.getElementById('sub-filter-aval').value; if(aval) activeData = activeData.filter(d => (`${d.aval_bimestre}|||${d.aval_nome}`) === aval);
+            } else if (currentViewMode === 'compare') {
+                const a1 = document.getElementById('comp-aval-1').value; const a2 = document.getElementById('comp-aval-2').value; const compSel = document.getElementById('compare-filter-componente').value;
+                activeData = activeData.filter(d => { const id = `${d.aval_bimestre}|||${d.aval_nome}`; return id === a1 || id === a2; });
+                if (compSel !== 'GERAL') activeData = activeData.filter(d => d.componente === compSel);
+            }
+            updatePrintHeader(); window.renderHeatmapTable(); window.updateChartsAndCards();
+        };
+
+        window.handleRowClick = function(entityName) {
+            if (selectedRowEntity === entityName) window.resetRowSelection();
+            else { selectedRowEntity = entityName; document.getElementById('selected-row-indicator').style.display = 'flex'; document.getElementById('selected-row-text').innerText = `Filtro ativo focado em: ${entityName}`; window.updateChartsAndCards(); window.highlightSelectedRow(); }
+        };
+
+        window.resetRowSelection = function() { 
+            selectedRowEntity = null; document.getElementById('selected-row-indicator').style.display = 'none'; window.updateChartsAndCards(); window.highlightSelectedRow(); 
+        };
+
+        function calculateSarespMetrics(dataInput) {
+            const selSarespAvals = getSelectedCheckboxes('saresp_aval');
+            let dataFiltered = dataInput.filter(d => selSarespAvals.length === 0 || selSarespAvals.includes(d.aval_nome));
+
+            let compsGroup = {};
+            dataFiltered.forEach(d => { if(!compsGroup[d.componente]) compsGroup[d.componente] = []; compsGroup[d.componente].push(d); });
+
+            let componentsMetrics = []; let allSubAverages = [];
+            Object.keys(compsGroup).forEach(cName => {
+                let rows = compsGroup[cName].sort((a,b) => a.nota - b.nota);
+                let N = rows.length; let trimmedRows = rows;
+                if(N >= 5) { let trimCount = Math.floor(N * 0.10); trimmedRows = rows.slice(trimCount, N - trimCount); }
+                let sumProduct = 0, totalWeight = 0;
+                trimmedRows.forEach(d => { let pSaresp = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino); sumProduct += (d.nota * pSaresp * d.avaliados); totalWeight += (pSaresp * d.avaliados); });
+                let mediaPonderadaSaresp = totalWeight > 0 ? (sumProduct / totalWeight) : 0;
+                componentsMetrics.push({ label: cName, media: mediaPonderadaSaresp, totalWeight }); allSubAverages.push(mediaPonderadaSaresp);
+            });
+
+            let contextMean = allSubAverages.length > 0 ? allSubAverages.reduce((a,b)=>a+b,0)/allSubAverages.length : 0;
+            let variance = allSubAverages.length > 0 ? allSubAverages.reduce((a,b)=>a+Math.pow(b-contextMean,2),0)/allSubAverages.length : 0;
+            let contextStdDev = Math.sqrt(variance) || 1;
+
+            componentsMetrics.forEach(m => {
+                let z = (m.media - contextMean) / contextStdDev;
+                let triValue = 200 + (z * 50); m.tri = Math.max(0, Math.min(500, triValue));
+                if(m.tri < 200) m.proficiencia = 'Muito Baixo'; else if(m.tri <= 250) m.proficiencia = 'Básico'; else if(m.tri <= 300) m.proficiencia = 'Adequado'; else m.proficiencia = 'Avançado';
+            });
+            return componentsMetrics;
+        }
+
+        window.updateChartsAndCards = function() {
+            let subsetData = [...activeData];
+            const isUreView = (userProfile.tipo_usuario !== 'ESCOLA' && getSelectedCheckboxes('escola').length === 0);
+            
+            if (selectedRowEntity) {
+                if (isUreView) subsetData = subsetData.filter(d => d.escola === selectedRowEntity);
+                else subsetData = subsetData.filter(d => d.turma_nome === selectedRowEntity);
+            }
+
+            if (subsetData.length === 0) {
+                document.getElementById('card-media-geral').innerText = '-'; 
+                document.getElementById('card-melhor-disc').innerHTML = '-'; document.getElementById('card-pior-disc').innerHTML = '-';
+                document.getElementById('card-melhor-entidade').innerHTML = '-'; document.getElementById('card-pior-entidade').innerHTML = '-';
+                renderCharts(subsetData); return;
+            }
+
+            let totalNotasPonderadas = 0; let totalPesosAvaliados = 0; 
+            subsetData.forEach(d => { totalNotasPonderadas += (d.nota * d.avaliados * d.peso); totalPesosAvaliados += (d.avaliados * d.peso); });
+            document.getElementById('card-media-geral').innerText = totalPesosAvaliados ? (totalNotasPonderadas / totalPesosAvaliados).toFixed(2).replace('.', ',') : '-';
+
+            const compData = calculateAverages(subsetData, 'componente', false).filter(d => d.label !== 'Desconhecida' && d.label !== 'N/A');
+            if(compData.length > 0) {
+                let htmlMelhores = '<ul class="podium-list">';
+                compData.slice(0, 3).forEach((d, i) => { let cor = i === 0 ? 'var(--green)' : 'var(--text-main)'; htmlMelhores += `<li style="color:${cor};"><span>${i+1}º ${d.label}</span> <strong>${d.media.replace('.', ',')}</strong></li>`; });
+                document.getElementById('card-melhor-disc').innerHTML = htmlMelhores + '</ul>';
+
+                let htmlPiores = '<ul class="podium-list">'; const pioresData = [...compData].reverse().slice(0, 3);
+                pioresData.forEach((d, i) => { let cor = i === 0 ? 'var(--red)' : 'var(--text-main)'; htmlPiores += `<li style="color:${cor};"><span>${i+1}º ${d.label}</span> <strong>${d.media.replace('.', ',')}</strong></li>`; });
+                document.getElementById('card-pior-disc').innerHTML = htmlPiores + '</ul>';
+            } else { document.getElementById('card-melhor-disc').innerHTML = '-'; document.getElementById('card-pior-disc').innerHTML = '-'; }
+
+            const entityField = isUreView ? 'escola' : 'turma_nome';
+            document.getElementById('label-destaque-ent').innerText = isUreView ? 'Escolas' : 'Turmas'; document.getElementById('label-pior-ent').innerText = isUreView ? 'Escolas' : 'Turmas';
+            
+            const entData = calculateAverages(subsetData, entityField, false).filter(d => d.label !== 'Desconhecida' && d.label !== 'N/A');
+            if(entData.length > 0) {
+                let htmlMelhoresEnt = '<ul class="podium-list">';
+                entData.slice(0, 3).forEach((d, i) => { let cor = i === 0 ? 'var(--green)' : 'var(--text-main)'; htmlMelhoresEnt += `<li style="color:${cor};"><span title="${d.label}">${i+1}º ${d.label}</span> <strong>${d.media.replace('.', ',')}</strong></li>`; });
+                document.getElementById('card-melhor-entidade').innerHTML = htmlMelhoresEnt + '</ul>';
+
+                let htmlPioresEnt = '<ul class="podium-list">'; const pioresEntData = [...entData].reverse().slice(0, 3);
+                pioresEntData.forEach((d, i) => { let cor = i === 0 ? 'var(--red)' : 'var(--text-main)'; htmlPioresEnt += `<li style="color:${cor};"><span title="${d.label}">${i+1}º ${d.label}</span> <strong>${d.media.replace('.', ',')}</strong></li>`; });
+                document.getElementById('card-pior-entidade').innerHTML = htmlPioresEnt + '</ul>';
+            } else { document.getElementById('card-melhor-entidade').innerHTML = '-'; document.getElementById('card-pior-entidade').innerHTML = '-'; }
+
+            renderCharts(subsetData);
+        };
+
+        function calculateAverages(data, groupByField, isChronological = false) {
+            const groups = {};
+            data.forEach(item => {
+                let key = item[groupByField]; if (groupByField === 'aval_nome') key = `${item.aval_bimestre}|||${item.aval_nome}`;
+                if(!groups[key]) groups[key] = { sumProduct: 0, totalWeight: 0, totalAlunos: 0 };
+                groups[key].sumProduct += item.nota * item.avaliados * item.peso; groups[key].totalWeight += item.avaliados * item.peso; groups[key].totalAlunos += item.avaliados;
+            });
+            let result = Object.keys(groups).map(k => ({ label: k, media: groups[k].totalWeight ? (groups[k].sumProduct / groups[k].totalWeight).toFixed(2) : 0, avaliados: groups[k].totalAlunos }));
+            if (isChronological) {
+                result.sort((a, b) => { const getOrder = (val) => { const bim = val.split('|||')[0].toLowerCase(); if (bim.includes('2025')) return 0; let num = parseInt(bim.replace(/\D/g, '')); return isNaN(num) ? 99 : num; }; return getOrder(a.label) - getOrder(b.label) || a.label.localeCompare(b.label); });
+                result.forEach(r => r.label = r.label.split('|||')[1]);
+            } else { result.sort((a,b) => b.media - a.media); }
+            return result;
+        }
+
+        const calcPart = (mapAval, isUreView) => {
+            let hC = 0, mat = 0; const uniqueEscolas = new Set();
+            mapAval.forEach(v => { hC += v.aval; if(isUreView) { if (v.idEsc && escolasMap.has(v.idEsc)) uniqueEscolas.add(v.idEsc); else mat += v.mat; } else mat += v.mat; });
+            if(isUreView) uniqueEscolas.forEach(id => { mat += parseInt(escolasMap.get(id).total_alunos) || 0; }); return mat > 0 ? (hC / mat) * 100 : 0;
+        };
+
+        // --- MATRIZ RICA E SARESP ---
+        window.renderHeatmapTable = function() {
+            const container = document.getElementById('heatmap-container');
+            if (activeData.length === 0) { container.innerHTML = '<p style="padding:1rem;">Sem dados vinculados ao filtro selecionado.</p>'; return; }
+
+            const isUreView = (userProfile.tipo_usuario !== 'ESCOLA' && getSelectedCheckboxes('escola').length === 0);
+            const rowKeyField = isUreView ? 'escola' : 'turma_nome';
+
+            window.sarespAuditMap = {};
+
+            // NOVO: MATRIZ SARESP TRI E PRIORIDADE (COM ORDENAÇÃO)
+            if (currentViewMode === 'saresp') {
+                const selSarespAvals = getSelectedCheckboxes('saresp_aval');
+                let dataFiltered = activeData.filter(d => selSarespAvals.length === 0 || selSarespAvals.includes(d.aval_nome));
+
+                let globalCompsGroup = {};
+                dataFiltered.forEach(d => {
+                    if(!globalCompsGroup[d.componente]) globalCompsGroup[d.componente] = [];
+                    globalCompsGroup[d.componente].push(d);
+                });
+                let allSubAverages = [];
+                Object.keys(globalCompsGroup).forEach(cName => {
+                    let rows = globalCompsGroup[cName].sort((a,b) => a.nota - b.nota);
+                    let N = rows.length; let trimmedRows = rows;
+                    if(N >= 5) { let trimCount = Math.floor(N * 0.10); trimmedRows = rows.slice(trimCount, N - trimCount); }
+                    let sumP = 0, totW = 0;
+                    trimmedRows.forEach(d => {
+                        let pS = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino);
+                        sumP += (d.nota * pS * d.avaliados); totW += (pS * d.avaliados);
+                    });
+                    if(totW > 0) allSubAverages.push(sumP/totW);
+                });
+                let contextMean = allSubAverages.length > 0 ? allSubAverages.reduce((a,b)=>a+b,0)/allSubAverages.length : 0;
+                let variance = allSubAverages.length > 0 ? allSubAverages.reduce((a,b)=>a+Math.pow(b-contextMean,2),0)/allSubAverages.length : 0;
+                let contextStdDev = Math.sqrt(variance) || 1;
+
+                let colunasSaresp = Array.from(new Set(dataFiltered.map(d => d.componente))).sort();
+                let entityRows = Array.from(new Set(dataFiltered.map(d => d[rowKeyField])));
+
+                let matrizSaresp = {};
+                let maxImpact = 0;
+                
+                // Primeiro pass para calcular TRI e armazenar impactos
+                entityRows.forEach(ent => {
+                    if (!window.sarespAuditMap[ent]) window.sarespAuditMap[ent] = {};
+                    matrizSaresp[ent] = { componentes: {}, notaGeralEstimada: null, sumTRIxPeso: 0, sumPeso: 0 };
+                    let entData = dataFiltered.filter(d => d[rowKeyField] === ent);
+                    
+                    colunasSaresp.forEach(comp => {
+                        let cData = entData.filter(d => d.componente === comp).sort((a,b) => a.nota - b.nota);
+                        if(cData.length === 0) {
+                            matrizSaresp[ent].componentes[comp] = null; return;
+                        }
+                        
+                        let N = cData.length; let trimmedRows = cData;
+                        let trimCount = 0;
+                        if(N >= 5) { trimCount = Math.floor(N * 0.10); trimmedRows = cData.slice(trimCount, N - trimCount); }
+                        
+                        let originalSumP = 0, originalTotW = 0, originalAlunos = 0;
+                        cData.forEach(d => {
+                            let pS = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino);
+                            originalSumP += (d.nota * pS * d.avaliados);
+                            originalTotW += (pS * d.avaliados);
+                            originalAlunos += d.avaliados;
+                        });
+                        let mediaOriginal = originalTotW > 0 ? originalSumP / originalTotW : 0;
+
+                        let sumP = 0, totW = 0, alunos = 0;
+                        let pesoSarespComponente = 10; 
+                        trimmedRows.forEach((d, idx) => {
+                            let pS = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino);
+                            if(idx===0) pesoSarespComponente = pS; 
+                            sumP += (d.nota * pS * d.avaliados);
+                            totW += (pS * d.avaliados);
+                            alunos += d.avaliados;
+                        });
+                        
+                        if(totW > 0) {
+                            let mediaAparada = sumP / totW;
+                            let z = (mediaAparada - contextMean) / contextStdDev;
+                            let tri = Math.max(0, Math.min(500, 200 + (z * 50)));
+                            matrizSaresp[ent].componentes[comp] = tri;
+                            matrizSaresp[ent].sumTRIxPeso += (tri * pesoSarespComponente);
+                            matrizSaresp[ent].sumPeso += pesoSarespComponente;
+
+                            let impacto = (pesoSarespComponente) * originalAlunos; // peso_componente * total_alunos
+                            if(impacto > maxImpact) maxImpact = impacto;
+
+                            window.sarespAuditMap[ent][comp] = {
+                                entidade: ent, componente: comp,
+                                totalRowsOriginal: N, totalRowsTrimmed: trimmedRows.length,
+                                valoresRemovidos: trimCount * 2, alunosConsiderados: originalAlunos,
+                                sumProductOriginal: originalSumP, sumWeightOriginal: originalTotW,
+                                mediaOriginal: mediaOriginal, sumProductAparada: sumP, sumWeightAparada: totW,
+                                mediaAparada: mediaAparada, contextMean: contextMean, contextStdDev: contextStdDev,
+                                zScore: z, triEscola: tri, pesoSaresp: pesoSarespComponente, impactoBruto: impacto
+                            };
+                        } else {
+                            matrizSaresp[ent].componentes[comp] = null;
+                        }
+                    });
+                    
+                    if(matrizSaresp[ent].sumPeso > 0) {
+                        matrizSaresp[ent].notaGeralEstimada = matrizSaresp[ent].sumTRIxPeso / matrizSaresp[ent].sumPeso;
+                    }
+                });
+
+                let metrics = calculateSarespMetrics(activeData);
+                let triRedePorComp = {};
+                metrics.forEach(m => triRedePorComp[m.label] = m.tri);
+
+                // Criar impactoMatriz
+                let impactoMatriz = {};
+                entityRows.forEach(ent => {
+                    impactoMatriz[ent] = { componentes: {}, indiceGeral: 0, sumImpacto: 0 };
+                    colunasSaresp.forEach(c => {
+                        let triEscola = matrizSaresp[ent].componentes[c]; 
+                        if (triEscola !== null && triEscola !== undefined && triRedePorComp[c] !== undefined && window.sarespAuditMap[ent][c]) {
+                            let impacto = window.sarespAuditMap[ent][c].impactoBruto;
+                            let impactoNorm = maxImpact > 0 ? impacto / maxImpact : 0;
+                            let desvioInverso = triRedePorComp[c] - triEscola; // Positivo = Escola pior que a rede
+                            let indice = impactoNorm * desvioInverso;
+                            
+                            impactoMatriz[ent].componentes[c] = { tri: triEscola, indice: indice, impacto: impacto };
+                            impactoMatriz[ent].indiceGeral += (indice * impacto);
+                            impactoMatriz[ent].sumImpacto += impacto;
+
+                            window.sarespAuditMap[ent][c].impactoNorm = impactoNorm;
+                            window.sarespAuditMap[ent][c].desempenhoInverso = desvioInverso;
+                            window.sarespAuditMap[ent][c].indice = indice;
+                            window.sarespAuditMap[ent][c].triRede = triRedePorComp[c];
+                        } else {
+                            impactoMatriz[ent].componentes[c] = null;
+                        }
+                    });
+                    
+                    if (impactoMatriz[ent].sumImpacto > 0) {
+                        impactoMatriz[ent].indiceGeral = impactoMatriz[ent].indiceGeral / impactoMatriz[ent].sumImpacto;
+                    } else {
+                        impactoMatriz[ent].indiceGeral = null;
+                    }
+                });
+
+                const prioridadeMap = { 'CRÍTICA': 5, 'MUITO ALTA': 4, 'ALTA': 3, 'MODERADA': 2, 'BAIXA': 1 };
+                function getImpactPriority(indice) {
+                    if (indice === null || indice === undefined) return { class: 'bg-empty', label: 'Sem Dados', val: 0 };
+                    if (indice >= 15) return { class: 'bg-dark-red', label: 'Crítica', val: 5 };
+                    if (indice >= 10) return { class: 'bg-red', label: 'Muito Alta', val: 4 };
+                    if (indice >= 5) return { class: 'bg-orange', label: 'Alta', val: 3 };
+                    if (indice > 0) return { class: 'bg-yellow', label: 'Moderada', val: 2 };
+                    return { class: 'bg-green', label: 'Baixa', val: 1 };
+                }
+
+                // --- ORDENAÇÃO DINÂMICA SARESP ---
+                entityRows.sort((a,b) => {
+                    let valA, valB;
+                    if (sortColumn === 'row_header') { valA = a; valB = b; }
+                    else if (sortColumn === 'nota_geral' || sortColumn === 'media_geral') {
+                        valA = matrizSaresp[a].notaGeralEstimada !== null ? matrizSaresp[a].notaGeralEstimada : -999;
+                        valB = matrizSaresp[b].notaGeralEstimada !== null ? matrizSaresp[b].notaGeralEstimada : -999;
+                    } 
+                    else if (sortColumn === 'indice_geral') {
+                        valA = impactoMatriz[a].indiceGeral !== null ? impactoMatriz[a].indiceGeral : -999;
+                        valB = impactoMatriz[b].indiceGeral !== null ? impactoMatriz[b].indiceGeral : -999;
+                    } 
+                    else {
+                        valA = matrizSaresp[a].componentes[sortColumn] !== null && matrizSaresp[a].componentes[sortColumn] !== undefined ? matrizSaresp[a].componentes[sortColumn] : -999;
+                        valB = matrizSaresp[b].componentes[sortColumn] !== null && matrizSaresp[b].componentes[sortColumn] !== undefined ? matrizSaresp[b].componentes[sortColumn] : -999;
+                    }
+                    if (sortColumn === 'row_header') return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    return sortDirection === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+                });
+
+                let impactoEntityRows = [...entityRows].sort((a,b) => {
+                    let valA, valB;
+                    if (sortColumn === 'row_header') { valA = a; valB = b; }
+                    else if (sortColumn === 'indice_geral' || sortColumn === 'media_geral') {
+                        valA = impactoMatriz[a].indiceGeral !== null ? impactoMatriz[a].indiceGeral : -999;
+                        valB = impactoMatriz[b].indiceGeral !== null ? impactoMatriz[b].indiceGeral : -999;
+                    } 
+                    else if (sortColumn === 'nota_geral') {
+                        valA = matrizSaresp[a].notaGeralEstimada !== null ? matrizSaresp[a].notaGeralEstimada : -999;
+                        valB = matrizSaresp[b].notaGeralEstimada !== null ? matrizSaresp[b].notaGeralEstimada : -999;
+                    } 
+                    else {
+                        valA = impactoMatriz[a].componentes[sortColumn] !== null ? impactoMatriz[a].componentes[sortColumn].indice : -999;
+                        valB = impactoMatriz[b].componentes[sortColumn] !== null ? impactoMatriz[b].componentes[sortColumn].indice : -999;
+                    }
+                    if (sortColumn === 'row_header') return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    return sortDirection === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+                });
+
+                // HTML Resumo Global
+                let htmlSaresp = `<h3 style="margin-bottom: 1rem; color: var(--primary);">Resumo Global (Visão SARESP)</h3>`;
+                htmlSaresp += `<table class="heatmap" style="margin-bottom: 2rem;"><thead><tr>
+                    <th>Componente Curricular</th>
+                    <th>Registros Ponderados</th>
+                    <th>Média Aparada SARESP</th>
+                    <th style="color:var(--purple-tri);">Proficiência TRI Estimada</th>
+                    <th>Nível de Classificação</th>
+                </tr></thead><tbody>`;
+
+                metrics.forEach(m => {
+                    let farolClass = m.media < 3 ? 'bg-red' : (m.media > 5 ? 'bg-green' : 'bg-yellow');
+                    let triFarol = m.tri < 200 ? 'bg-red' : (m.tri > 250 ? 'bg-green' : 'bg-yellow');
+                    htmlSaresp += `<tr>
+                        <td class="row-header" style="text-align:center; font-weight:bold; color:var(--primary);">${m.label}</td>
+                        <td>${m.totalWeight.toLocaleString()}</td>
+                        <td class="${farolClass}">${m.media.toFixed(2).replace('.', ',')}</td>
+                        <td style="font-weight:bold; color:var(--primary); font-size:1.05rem;">${m.tri.toFixed(1).replace('.', ',')}</td>
+                        <td class="${triFarol}">${m.proficiencia}</td>
+                    </tr>`;
+                });
+                htmlSaresp += `</tbody></table>`;
+
+                // HTML Matriz TRI
+                let htmlMatrix = `<h3 style="margin-bottom: 1rem; color: var(--primary);">Matriz de Proficiência (TRI) por Entidade</h3>`;
+                htmlMatrix += `
+                <div style="font-size: 0.85rem; display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; background: #f9fafb; padding: 0.6rem; border-radius: 4px; border: 1px solid var(--border);">
+                    <strong style="color:var(--text-main);">Escala TRI Estimada:</strong>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--red);border-radius:50%;display:inline-block;"></span> < 220</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--yellow);border-radius:50%;display:inline-block;"></span> 220 a 259</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--green);border-radius:50%;display:inline-block;"></span> 260 a 300</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--blue-info);border-radius:50%;display:inline-block;"></span> > 300</span>
+                </div>`;
+
+                htmlMatrix += `<table class="heatmap" style="margin-bottom: 2rem;"><thead><tr>
+                    <th>Clas.</th>
+                    <th onclick="window.toggleSort('row_header')" class="row-header">Unidade / Sala ${sortColumn === 'row_header' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>
+                    <th onclick="window.toggleSort('nota_geral')" style="color:var(--purple-tri); border-right: 2px solid var(--border); cursor:pointer;">Nota Geral Estimada<br><span style="font-size:0.75rem; font-weight:normal;">(SARESP)</span> ${sortColumn === 'nota_geral' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+                
+                colunasSaresp.forEach(c => { htmlMatrix += `<th onclick="window.toggleSort('${c.replace(/'/g, "\\'")}')" style="cursor:pointer;">${c} ${sortColumn === c ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`; });
+                htmlMatrix += `</tr></thead><tbody>`;
+
+                entityRows.forEach((ent, idx) => {
+                    let rowData = matrizSaresp[ent];
+                    htmlMatrix += `<tr><td style="font-weight:bold; color:var(--text-muted);">${idx + 1}º</td>`;
+                    htmlMatrix += `<td class="row-header">${ent}</td>`;
+                    
+                    let valGeral = rowData.notaGeralEstimada;
+                    if (valGeral !== null) {
+                        let colorClass = valGeral < 220 ? 'bg-red' : (valGeral < 260 ? 'bg-yellow' : (valGeral <= 300 ? 'bg-green' : 'bg-blue-tri'));
+                        htmlMatrix += `<td class="${colorClass}" style="border-right: 2px solid var(--border); font-size:1.05rem;">${valGeral.toFixed(1).replace('.', ',')}</td>`;
+                    } else {
+                        htmlMatrix += `<td class="bg-empty" style="border-right: 2px solid var(--border);">-</td>`;
+                    }
+                    
+                    colunasSaresp.forEach(c => {
+                        let val = rowData.componentes[c];
+                        if (val !== null && val !== undefined) {
+                            let colorClass = val < 220 ? 'bg-red' : (val < 260 ? 'bg-yellow' : (val <= 300 ? 'bg-green' : 'bg-blue-tri'));
+                            htmlMatrix += `<td class="${colorClass}" onclick="window.openSarespAudit('${ent.replace(/'/g, "\\'")}', '${c.replace(/'/g, "\\'")}')" style="cursor: pointer;">${val.toFixed(1).replace('.', ',')}</td>`;
+                        } else {
+                            htmlMatrix += `<td class="bg-empty">-</td>`;
+                        }
+                    });
+                    htmlMatrix += `</tr>`;
+                });
+                htmlMatrix += `</tbody></table>`;
+                
+                // HTML Matriz Prioridade (Impacto Real)
+                let htmlImpact = `<h3 style="margin-top: 1rem; margin-bottom: 1rem; color: var(--primary);">Matriz de Prioridade Pedagógica (Impacto Real)</h3>`;
+                htmlImpact += `
+                <div style="font-size: 0.85rem; display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; background: #f9fafb; padding: 0.6rem; border-radius: 4px; border: 1px solid var(--border);">
+                    <strong style="color:var(--text-main);">Prioridade Real (Defasagem + Peso + Alunos):</strong>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--dark-red);border-radius:50%;display:inline-block;"></span> Crítica</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--red);border-radius:50%;display:inline-block;"></span> Muito Alta</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--orange);border-radius:50%;display:inline-block;"></span> Alta</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--yellow);border-radius:50%;display:inline-block;"></span> Moderada</span>
+                    <span style="display:flex; align-items:center; gap:0.3rem;"><span style="width:12px;height:12px;background:var(--green);border-radius:50%;display:inline-block;"></span> Baixa</span>
+                </div>`;
+
+                htmlImpact += `<table class="heatmap"><thead><tr>
+                    <th>Ord.</th>
+                    <th onclick="window.toggleSort('row_header')" class="row-header">Unidade / Sala ${sortColumn === 'row_header' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>
+                    <th onclick="window.toggleSort('indice_geral')" style="border-right: 2px solid var(--border); cursor:pointer;">Prioridade Geral<br><span style="font-size:0.75rem; font-weight:normal;">(Índice Consolidado)</span> ${sortColumn === 'indice_geral' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+                
+                colunasSaresp.forEach(c => { htmlImpact += `<th onclick="window.toggleSort('${c.replace(/'/g, "\\'")}')" style="cursor:pointer;">${c} ${sortColumn === c ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`; });
+                htmlImpact += `</tr></thead><tbody>`;
+
+                impactoEntityRows.forEach((ent, idx) => {
+                    let rowData = impactoMatriz[ent];
+                    let pGeral = getImpactPriority(rowData.indiceGeral);
+                    
+                    htmlImpact += `<tr>
+                        <td style="font-weight:bold; color:var(--text-muted);">${idx + 1}º</td>
+                        <td class="row-header">${ent}</td>
+                        <td class="${pGeral.class}" style="border-right: 2px solid var(--border);" title="Índice Geral: ${rowData.indiceGeral !== null ? rowData.indiceGeral.toFixed(2) : '-'}">
+                            ${pGeral.label}
+                        </td>`;
+                    
+                    colunasSaresp.forEach(c => {
+                        let compData = rowData.componentes[c];
+                        if (compData) {
+                            let p = getImpactPriority(compData.indice);
+                            if (window.sarespAuditMap[ent] && window.sarespAuditMap[ent][c]) {
+                                window.sarespAuditMap[ent][c].classificacao = p.label;
+                            }
+                            htmlImpact += `<td class="${p.class}" onclick="window.openSarespAudit('${ent.replace(/'/g, "\\'")}', '${c.replace(/'/g, "\\'")}')" style="cursor: pointer;" title="Índice Impacto: ${compData.indice.toFixed(2)} | TRI Rede: ${triRedePorComp[c].toFixed(1)}">
+                                ${compData.tri.toFixed(0)} | ${p.label}
+                            </td>`;
+                        } else {
+                            htmlImpact += `<td class="bg-empty">-</td>`;
+                        }
+                    });
+                    htmlImpact += `</tr>`;
+                });
+                htmlImpact += `</tbody></table>`;
+                
+                container.innerHTML = htmlSaresp + htmlMatrix + htmlImpact;
+                return;
+            }
+
+            // --- FIM DA LÓGICA EXCLUSIVA SARESP ---
+
+            let colunasSet = new Set();
+            if (currentViewMode === 'eval' || currentViewMode === 'single_component' || currentViewMode === 'compare' || currentViewMode === 'general_compare') { activeData.forEach(d => colunasSet.add(`${d.aval_bimestre}|||${d.aval_nome}`)); } 
+            else activeData.forEach(d => colunasSet.add(d.componente));
+            let colunas = Array.from(colunasSet);
+
+            if (currentViewMode === 'eval' || currentViewMode === 'single_component' || currentViewMode === 'compare' || currentViewMode === 'general_compare') {
+                colunas.sort((a, b) => { const getOrder = (val) => { const bim = val.split('|||')[0].toLowerCase(); if (bim.includes('2025')) return 0; let num = parseInt(bim.replace(/\D/g, '')); return isNaN(num) ? 99 : num; }; return getOrder(a) - getOrder(b) || a.localeCompare(b); });
+            } else colunas.sort();
+
+            if (currentViewMode === 'compare') {
+                const a1 = document.getElementById('comp-aval-1').value; const a2 = document.getElementById('comp-aval-2').value;
+                colunas = []; if (a1) colunas.push(a1); if (a2 && a2 !== a1) colunas.push(a2); 
+                if (colunas.length === 2) { colunas.push('VARIACAO'); colunas.push('VARIACAO_PART'); }
+            }
+
+            let titulo = isUreView ? "Acompanhamento Aglutinado por Escolas" : "Acompanhamento por Turmas";
+            if(currentViewMode === 'single_component') titulo += ` (${document.getElementById('sub-filter-comp').value})`;
+            else if(currentViewMode === 'single_eval') titulo += ` (${document.getElementById('sub-filter-aval').value.replace('|||', ' - ')})`;
+            else if(currentViewMode === 'compare') { const compSel = document.getElementById('compare-filter-componente').value; titulo = `Comparativo de Evolução — ${compSel === 'GERAL' ? 'Todos os Componentes' : compSel}`; }
+            else if(currentViewMode === 'general_compare') titulo = `Comparativo Geral - ${isUreView ? 'Escolas' : 'Turmas'}`;
+            document.getElementById('table-title-context').innerText = titulo;
+
+            const matriz = {}; const rowTotalizador = {}; const participacaoPorLinha = {};
+            
+            activeData.forEach(d => {
+                const r = d[rowKeyField]; const c = (currentViewMode === 'eval' || currentViewMode === 'single_component' || currentViewMode === 'compare' || currentViewMode === 'general_compare') ? `${d.aval_bimestre}|||${d.aval_nome}` : d.componente;
+                if (!matriz[r]) matriz[r] = {}; if (!matriz[r][c]) matriz[r][c] = { sumProduct: 0, totalWeight: 0, idEscolaContext: d.id_escola, mapAval: new Map() };
+                matriz[r][c].sumProduct += (d.nota * d.avaliados * d.peso); matriz[r][c].totalWeight += (d.avaliados * d.peso);
+                if(d.id_turma) matriz[r][c].mapAval.set(d.id_turma, { aval: d.avaliados, mat: d.matriculas, idEsc: d.id_escola });
+
+                if (!rowTotalizador[r]) rowTotalizador[r] = { sumProduct: 0, totalWeight: 0 };
+                rowTotalizador[r].sumProduct += (d.nota * d.avaliados * d.peso); rowTotalizador[r].totalWeight += (d.avaliados * d.peso);
+            });
+
+            let rows = Object.keys(matriz);
+
+            rows.forEach(r => {
+                const subsetLinha = activeData.filter(d => d[rowKeyField] === r);
+                const mapAval = new Map(); subsetLinha.forEach(d => { if(d.id_turma) mapAval.set(d.id_turma, d.avaliados); });
+                let hC = 0; mapAval.forEach(v => hC += v);
+                
+                let mat = 0;
+                if (isUreView) {
+                    const uniqueSchoolIds = [...new Set(subsetLinha.map(d => d.id_escola))].filter(Boolean);
+                    if(uniqueSchoolIds.length > 0 && escolasMap.size > 0) {
+                        uniqueSchoolIds.forEach(id => { mat += parseInt(escolasMap.get(id)?.total_alunos) || 0; });
+                    } else { const mapMat = new Map(); subsetLinha.forEach(d => { if(d.id_turma) mapMat.set(d.id_turma, d.matriculas); }); mapMat.forEach(v => mat += v); }
+                } else {
+                    const mapMat = new Map(); subsetLinha.forEach(d => { if(d.id_turma) mapMat.set(d.id_turma, d.matriculas); }); mapMat.forEach(v => mat += v);
+                }
+                participacaoPorLinha[r] = { avaliados: hC, matriculados: mat, participacao: mat > 0 ? (hC / mat) * 100 : 0 };
+            });
+
+            rows.sort((a, b) => {
+                let valA, valB;
+                if (sortColumn === 'row_header') { valA = a; valB = b; } 
+                else if (sortColumn === 'meta_ouro') { valA = getMetasEscola(a).o === '-' ? 0 : getMetasEscola(a).o; valB = getMetasEscola(b).o === '-' ? 0 : getMetasEscola(b).o; }
+                else if (sortColumn === 'meta_diamante') { valA = getMetasEscola(a).d === '-' ? 0 : getMetasEscola(a).d; valB = getMetasEscola(b).d === '-' ? 0 : getMetasEscola(b).d; }
+                else if (sortColumn === 'avaliados') { valA = participacaoPorLinha[a].avaliados; valB = participacaoPorLinha[b].avaliados; }
+                else if (sortColumn === 'matriculados') { valA = participacaoPorLinha[a].matriculados; valB = participacaoPorLinha[b].matriculados; }
+                else if (sortColumn === 'participacao') { valA = participacaoPorLinha[a].participacao; valB = participacaoPorLinha[b].participacao; }
+                else if (sortColumn === 'media_geral') { valA = rowTotalizador[a]?.totalWeight ? (rowTotalizador[a].sumProduct / rowTotalizador[a].totalWeight) : 0; valB = rowTotalizador[b]?.totalWeight ? (rowTotalizador[b].sumProduct / rowTotalizador[b].totalWeight) : 0; } 
+                else if (sortColumn === 'VARIACAO') {
+                    const a1 = colunas[0]; const a2 = colunas[1];
+                    let n1A = (matriz[a] && matriz[a][a1] && matriz[a][a1].totalWeight > 0) ? matriz[a][a1].sumProduct / matriz[a][a1].totalWeight : null;
+                    let n2A = (matriz[a] && matriz[a][a2] && matriz[a][a2].totalWeight > 0) ? matriz[a][a2].sumProduct / matriz[a][a2].totalWeight : null;
+                    let n1B = (matriz[b] && matriz[b][a1] && matriz[b][a1].totalWeight > 0) ? matriz[b][a1].sumProduct / matriz[b][a1].totalWeight : null;
+                    let n2B = (matriz[b] && matriz[b][a2] && matriz[b][a2].totalWeight > 0) ? matriz[b][a2].sumProduct / matriz[b][a2].totalWeight : null;
+                    valA = (n1A !== null && n2A !== null) ? (n2A - n1A) : -999; valB = (n1B !== null && n2B !== null) ? (n2B - n1B) : -999;
+                } else if (sortColumn === 'VARIACAO_PART') {
+                    const a1 = colunas[0]; const a2 = colunas[1];
+                    let p1A = (matriz[a] && matriz[a][a1]) ? calcPart(matriz[a][a1].mapAval, isUreView) : null;
+                    let p2A = (matriz[a] && matriz[a][a2]) ? calcPart(matriz[a][a2].mapAval, isUreView) : null;
+                    let p1B = (matriz[b] && matriz[b][a1]) ? calcPart(matriz[b][a1].mapAval, isUreView) : null;
+                    let p2B = (matriz[b] && matriz[b][a2]) ? calcPart(matriz[b][a2].mapAval, isUreView) : null;
+                    valA = (p1A !== null && p2A !== null && p1A > 0 && p2A > 0) ? (p2A - p1A) : -999;
+                    valB = (p1B !== null && p2B !== null && p1B > 0 && p2B > 0) ? (p2B - p1B) : -999;
+                } else {
+                    valA = (matriz[a] && matriz[a][sortColumn] && matriz[a][sortColumn].totalWeight > 0) ? (matriz[a][sortColumn].sumProduct / matriz[a][sortColumn].totalWeight) : -1;
+                    valB = (matriz[b] && matriz[b][sortColumn] && matriz[b][sortColumn].totalWeight > 0) ? (matriz[b][sortColumn].sumProduct / matriz[b][sortColumn].totalWeight) : -1;
+                }
+                return sortDirection === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+            });
+
+            let html = `<table class="heatmap"><thead><tr>`;
+            html += `<th>Clas.<br><span style="font-size:0.75rem;">/${rows.length}</span></th>`;
+            html += `<th class="row-header" onclick="window.toggleSort('row_header')">Unidade / Sala ${sortColumn === 'row_header' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+            
+            html += `<th onclick="window.toggleSort('avaliados')">Alunos<br><span style="font-size:0.75rem;">(Pres.)</span> ${sortColumn === 'avaliados' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+            html += `<th onclick="window.toggleSort('matriculados')">Total<br><span style="font-size:0.75rem;">Matric.</span> ${sortColumn === 'matriculados' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+            html += `<th onclick="window.toggleSort('participacao')">Part.<br><span style="font-size:0.75rem;">(%)</span> ${sortColumn === 'participacao' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+
+            colunas.forEach(c => {
+                let displayLabel = c;
+                if (c === 'VARIACAO') displayLabel = `Evolução<br><span style="font-size:0.75rem; font-weight:normal;">(Nota)</span>`;
+                else if (c === 'VARIACAO_PART') displayLabel = `Evolução<br><span style="font-size:0.75rem; font-weight:normal;">(Particip.)</span>`;
+                else if (c.includes('|||')) displayLabel = `${c.split('|||')[0]}<br><span style="font-size:0.75rem; font-weight:normal;">${c.split('|||')[1]}</span>`;
+                html += `<th onclick="window.toggleSort('${c}')">${displayLabel} ${sortColumn === c ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+            });
+            
+            if (currentViewMode !== 'compare') html += `<th onclick="window.toggleSort('media_geral')" style="border-left: 3px solid #1f2937;">Média Geral ${sortColumn === 'media_geral' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+            
+            if (isUreView && isMetasVisible) {
+                html += `<th onclick="window.toggleSort('meta_ouro')" style="color:var(--yellow);">Meta<br><span style="font-size:0.75rem;">Ouro</span> ${sortColumn === 'meta_ouro' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+                html += `<th onclick="window.toggleSort('meta_diamante')" style="color:var(--blue-info);">Meta<br><span style="font-size:0.75rem;">Diamante</span> ${sortColumn === 'meta_diamante' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`;
+            }
+            html += `</tr></thead><tbody>`;
+
+            if (isUreView) {
+                let globalAval = 0, globalMat = 0;
+                rows.forEach(r => { globalAval += participacaoPorLinha[r].avaliados; globalMat += participacaoPorLinha[r].matriculados; });
+                let globalPart = globalMat > 0 ? (globalAval / globalMat) * 100 : 0;
+
+                let globalColTotals = {};
+                colunas.forEach(c => { 
+                    globalColTotals[c] = { sumProduct: 0, totalWeight: 0, mapAval: new Map() }; 
+                    rows.forEach(r => { 
+                        if (matriz[r] && matriz[r][c] && matriz[r][c].totalWeight > 0) { 
+                            globalColTotals[c].sumProduct += matriz[r][c].sumProduct; 
+                            globalColTotals[c].totalWeight += matriz[r][c].totalWeight; 
+                            matriz[r][c].mapAval.forEach((v, k) => globalColTotals[c].mapAval.set(k, v));
+                        } 
+                    }); 
+                });
+
+                html += `<tr style="background-color: #f3f4f6; font-weight: bold; border-bottom: 2px solid #111827;">`;
+                html += `<td colspan="2" class="row-header" style="background-color: #e5e7eb; color: #1e3a8a;">MÉDIA GLOBAL DOS FILTROS ATUAIS</td>`;
+                html += `<td style="color:#1f2937;">${globalAval}</td><td style="color:#1f2937;">${globalMat}</td><td style="color:var(--blue-info);">${globalPart.toFixed(1).replace('.',',')}%</td>`;
+
+                colunas.forEach(c => {
+                    if (c === 'VARIACAO') {
+                        const a1 = colunas[0]; const a2 = colunas[1]; let n1 = globalColTotals[a1] && globalColTotals[a1].totalWeight > 0 ? globalColTotals[a1].sumProduct / globalColTotals[a1].totalWeight : null; let n2 = globalColTotals[a2] && globalColTotals[a2].totalWeight > 0 ? globalColTotals[a2].sumProduct / globalColTotals[a2].totalWeight : null;
+                        if (n1 !== null && n2 !== null) { 
+                            let diff = n2 - n1; 
+                            let sinal = diff > 0 ? '▲ ' : (diff < 0 ? '▼ ' : '');
+                            let form = Math.abs(diff).toFixed(2).replace('.', ',');
+                            html += `<td style="color:${diff > 0.1 ? 'var(--green)' : (diff < -0.1 ? 'var(--red)' : 'var(--yellow)')}; font-weight:bold;">${sinal}${form}</td>`; 
+                        } else html += `<td class="bg-empty">-</td>`;
+                    } else if (c === 'VARIACAO_PART') {
+                        const a1 = colunas[0]; const a2 = colunas[1]; let p1 = globalColTotals[a1] ? calcPart(globalColTotals[a1].mapAval, isUreView) : null; let p2 = globalColTotals[a2] ? calcPart(globalColTotals[a2].mapAval, isUreView) : null;
+                        if (p1 !== null && p2 !== null && p1 > 0 && p2 > 0) { 
+                            let diff = p2 - p1; 
+                            let sinal = diff > 0 ? '▲ ' : (diff < 0 ? '▼ ' : '');
+                            let form = Math.abs(diff).toFixed(1).replace('.', ',');
+                            html += `<td style="color:${diff > 0.5 ? 'var(--green)' : (diff < -0.5 ? 'var(--red)' : 'var(--yellow)')}; font-weight:bold;">${sinal}${form}%</td>`; 
+                        } else html += `<td class="bg-empty">-</td>`;
+                    } else {
+                        const cell = globalColTotals[c];
+                        if (cell && cell.totalWeight > 0) { const m = (cell.sumProduct / cell.totalWeight).toFixed(2); const num = parseFloat(m); html += `<td class="${num < 3 ? 'bg-red' : (num > 5 ? 'bg-green' : 'bg-yellow')}">${m.replace('.', ',')}</td>`; } else html += `<td class="bg-empty">-</td>`;
+                    }
+                });
+
+                if (currentViewMode !== 'compare') {
+                    let gSumProduct = 0; let gTotalWeight = 0; rows.forEach(r => { if (rowTotalizador[r]) { gSumProduct += rowTotalizador[r].sumProduct; gTotalWeight += rowTotalizador[r].totalWeight; } });
+                    let gMedia = gTotalWeight > 0 ? (gSumProduct / gTotalWeight).toFixed(2) : '-';
+                    html += `<td class="${gMedia !== '-' ? (parseFloat(gMedia) < 3 ? 'bg-red' : (parseFloat(gMedia) > 5 ? 'bg-green' : 'bg-yellow')) : 'bg-empty'}" style="font-weight: bold; border-left: 3px solid #1f2937;">${gMedia.replace('.', ',')}</td>`;
+                }
+
+                if (isMetasVisible) {
+                    html += `<td style="color:var(--yellow); font-weight:bold;">4,8</td><td style="color:var(--blue-info); font-weight:bold;">5,1</td>`;
+                }
+                
+                html += `</tr>`;
+            }
+
+            rows.forEach((r, idx) => {
+                const rank = idx + 1; const pData = participacaoPorLinha[r];
+                const mEsc = getMetasEscola(r);
+
+                html += `<tr><td style="font-weight:bold; color:var(--text-muted);">${rank}º</td>`;
+                html += `<td class="row-header" onclick="window.handleRowClick('${r.replace(/'/g, "\\'")}')">${r}</td>`;
+                
+                html += `<td>${pData.avaliados}</td><td>${pData.matriculados}</td><td style="color:var(--blue-info); font-weight:bold;">${pData.participacao.toFixed(1).replace('.',',')}%</td>`;
+                
+                colunas.forEach(c => {
+                    if (c === 'VARIACAO') {
+                        const a1 = colunas[0]; const a2 = colunas[1];
+                        let n1 = (matriz[r] && matriz[r][a1] && matriz[r][a1].totalWeight > 0) ? matriz[r][a1].sumProduct / matriz[r][a1].totalWeight : null;
+                        let n2 = (matriz[r] && matriz[r][a2] && matriz[r][a2].totalWeight > 0) ? matriz[r][a2].sumProduct / matriz[r][a2].totalWeight : null;
+                        if (n1 !== null && n2 !== null) { 
+                            let diff = n2 - n1; 
+                            let sinal = diff > 0 ? '▲ ' : (diff < 0 ? '▼ ' : '');
+                            let form = Math.abs(diff).toFixed(2).replace('.', ',');
+                            html += `<td style="color:${diff > 0.1 ? 'var(--green)' : (diff < -0.1 ? 'var(--red)' : 'var(--yellow)')}; font-weight:bold;">${sinal}${form}</td>`; 
+                        } else html += `<td class="bg-empty">-</td>`;
+                    } else if (c === 'VARIACAO_PART') {
+                        const a1 = colunas[0]; const a2 = colunas[1];
+                        let p1 = (matriz[r] && matriz[r][a1]) ? calcPart(matriz[r][a1].mapAval, isUreView) : null;
+                        let p2 = (matriz[r] && matriz[r][a2]) ? calcPart(matriz[r][a2].mapAval, isUreView) : null;
+                        if (p1 !== null && p2 !== null && p1 > 0 && p2 > 0) { 
+                            let diff = p2 - p1; 
+                            let sinal = diff > 0 ? '▲ ' : (diff < 0 ? '▼ ' : '');
+                            let form = Math.abs(diff).toFixed(1).replace('.', ',');
+                            html += `<td style="color:${diff > 0.5 ? 'var(--green)' : (diff < -0.5 ? 'var(--red)' : 'var(--yellow)')}; font-weight:bold;">${sinal}${form}%</td>`; 
+                        } else html += `<td class="bg-empty">-</td>`;
+                    } else {
+                        const cell = matriz[r][c];
+                        if (cell && cell.totalWeight > 0) {
+                            const m = (cell.sumProduct / cell.totalWeight).toFixed(2); const num = parseFloat(m);
+                            const safeR = r.replace(/'/g, "\\'"); const idEscola = cell.idEscolaContext;
+                            html += `<td class="${num < 3 ? 'bg-red' : (num > 5 ? 'bg-green' : 'bg-yellow')}" onclick="window.calculateRanking('${m}', '${safeR}', '${idEscola}', '${c.replace(/'/g, "\\'")}', ${isUreView})">${m.replace('.', ',')}</td>`;
+                        } else html += `<td class="bg-empty">-</td>`;
+                    }
+                });
+
+                if (currentViewMode !== 'compare') {
+                    const rTotal = rowTotalizador[r]; let mVal = rTotal && rTotal.totalWeight > 0 ? (rTotal.sumProduct / rTotal.totalWeight).toFixed(2) : '-';
+                    html += `<td class="${mVal !== '-' ? (parseFloat(mVal) < 3 ? 'bg-red' : (parseFloat(mVal) > 5 ? 'bg-green' : 'bg-yellow')) : 'bg-empty'}" style="border-left: 3px solid #1f2937;">${mVal.replace('.', ',')}</td>`;
+                }
+
+                if (isUreView && isMetasVisible) {
+                    html += `<td style="color:var(--yellow); font-weight:600;">${mEsc.o !== '-' ? mEsc.o.toFixed(1).replace('.',',') : '-'}</td>`;
+                    html += `<td style="color:var(--blue-info); font-weight:600;">${mEsc.d !== '-' ? mEsc.d.toFixed(1).replace('.',',') : '-'}</td>`;
+                }
+
+                html += `</tr>`;
+            });
+            container.innerHTML = html + `</tbody></table>`; window.highlightSelectedRow();
+        };
+
+        function renderCharts(subsetData) {
+            Object.keys(chartsInstance).forEach(k => { if(chartsInstance[k]) chartsInstance[k].destroy(); });
+            const chartsGrid = document.querySelector('.charts-grid');
+            const chartControls = document.getElementById('chart-controls');
+
+            if (currentViewMode === 'general_compare') {
+                chartControls.style.display = 'flex'; chartsGrid.style.gridTemplateColumns = '1fr';
+                document.querySelectorAll('.chart-container').forEach(el => { el.style.height = '600px'; el.style.minHeight = '600px'; });
+                
+                const isUreView = (userProfile.tipo_usuario !== 'ESCOLA' && getSelectedCheckboxes('escola').length === 0);
+                const entityField = isUreView ? 'escola' : 'turma_nome';
+                const entities = [...new Set(subsetData.map(d => d[entityField]))].filter(Boolean).sort();
+                
+                const compData = calculateAverages(subsetData, 'componente', false);
+                const components = compData.map(d => d.label).filter(l => l !== 'Desconhecida' && l !== 'N/A');
+                
+                const barDatasets = entities.map((ent, i) => {
+                    const entData = subsetData.filter(d => d[entityField] === ent);
+                    const dataPoints = components.map(comp => {
+                        const cData = entData.filter(d => d.componente === comp); let sumP = 0, weight = 0;
+                        cData.forEach(d => { sumP += d.nota * d.avaliados * d.peso; weight += d.avaliados * d.peso; }); return weight > 0 ? (sumP / weight).toFixed(2) : null;
+                    });
+                    const hue = (i * 137.5) % 360; return { label: ent, data: dataPoints, backgroundColor: `hsla(${hue}, 70%, 50%, 0.7)`, borderColor: `hsla(${hue}, 70%, 50%, 1)`, borderWidth: 1 };
+                });
+                const ctxComp = document.getElementById('chartComponentes').getContext('2d');
+                chartsInstance.comp = new Chart(ctxComp, { type: 'bar', data: { labels: components, datasets: barDatasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Comparativo de Componentes por Entidade' } } } });
+                
+                const evalsMap = new Map(); subsetData.forEach(d => evalsMap.set(`${d.aval_bimestre}|||${d.aval_nome}`, d.aval_nome));
+                const sortedEvalsKeys = Array.from(evalsMap.keys()).sort((a, b) => { const getOrder = (val) => { const bim = val.split('|||')[0].toLowerCase(); if (bim.includes('2025')) return 0; let num = parseInt(bim.replace(/\D/g, '')); return isNaN(num) ? 99 : num; }; return getOrder(a) - getOrder(b) || a.localeCompare(b); });
+                
+                const lineDatasets = entities.map((ent, i) => {
+                    const entData = subsetData.filter(d => d[entityField] === ent);
+                    const dataPoints = sortedEvalsKeys.map(evKey => {
+                        const evData = entData.filter(d => `${d.aval_bimestre}|||${d.aval_nome}` === evKey); let sumP = 0, weight = 0;
+                        evData.forEach(d => { sumP += d.nota * d.avaliados * d.peso; weight += d.avaliados * d.peso; }); return weight > 0 ? (sumP / weight).toFixed(2) : null;
+                    });
+                    const hue = (i * 137.5) % 360; return { label: ent, data: dataPoints, borderColor: `hsla(${hue}, 70%, 50%, 1)`, backgroundColor: `hsla(${hue}, 70%, 50%, 0.1)`, borderWidth: 2, fill: false, tension: 0.1, spanGaps: true };
+                });
+                const ctxEvolucao = document.getElementById('chartEvolucao').getContext('2d');
+                chartsInstance.evol = new Chart(ctxEvolucao, { type: 'line', data: { labels: sortedEvalsKeys.map(k => k.split('|||')[1]), datasets: lineDatasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Evolução Histórica por Entidade' } } } });
+            } else {
+                chartControls.style.display = 'none'; chartsGrid.style.gridTemplateColumns = '';
+                document.querySelectorAll('.chart-container').forEach(el => { el.style.height = '350px'; el.style.minHeight = '350px'; });
+
+                const compData = calculateAverages(subsetData, 'componente', false);
+                const barColors = compData.map(d => { const num = parseFloat(d.media); return num < 3 ? '#ef4444' : (num > 5 ? '#10b981' : '#facc15'); });
+                const ctxComp = document.getElementById('chartComponentes').getContext('2d');
+                chartsInstance.comp = new Chart(ctxComp, { type: 'bar', data: { labels: compData.map(d => d.label), datasets: [{ label: 'Média por Componente', data: compData.map(d => d.media), backgroundColor: barColors }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+                
+                const evolucaoData = calculateAverages(subsetData, 'aval_nome', true); 
+                const ctxEvolucao = document.getElementById('chartEvolucao').getContext('2d');
+                chartsInstance.evol = new Chart(ctxEvolucao, { type: 'line', data: { labels: evolucaoData.map(d => d.label), datasets: [{ label: 'Desempenho Histórico Cronológico', data: evolucaoData.map(d => d.media), borderColor: '#10b981', fill: true, backgroundColor: 'rgba(16, 185, 129, 0.08)' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+            }
+        }
+
+        async function initDashboard() {
+            showLoading('Buscando perfil...'); document.getElementById('login-section').style.display = 'none'; document.getElementById('dashboard-section').style.display = 'block';
+            const { data: profile, error } = await window.supabaseClient.from('usuarios_escolas').select('*').eq('email', currentUser.email).single();
+            if (error || !profile) { alert("Perfil não identificado."); window.handleLogout(); return; }
+            userProfile = profile; document.getElementById('user-email').innerText = profile.email;
+            if (profile.tipo_usuario === 'URE' || profile.tipo_usuario === 'URE_AVARE') { document.getElementById('dash-title').innerText = profile.tipo_usuario === 'URE_AVARE' ? "Diretoria de Ensino de Avaré" : "Painel Geral URE"; document.getElementById('user-role-label').innerText = "Gestor Regional"; } 
+            else { document.getElementById('dash-title').innerText = profile.nome_escola; document.getElementById('user-role-label').innerText = "Gestão Escolar"; document.getElementById('filter-escola-container').style.display = 'none'; }
+            await loadAndJoinData();
+        }
+
+        window.onload = async () => { 
+            try { 
+                if(!window.supabaseClient) return;
+                const { data: { session } } = await window.supabaseClient.auth.getSession(); 
+                if (session) { currentUser = session.user; initDashboard(); } 
+            } catch (e) { console.error("Auto login error", e) } 
+        };
+    </script>
+</body>
+</html>

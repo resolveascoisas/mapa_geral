@@ -1908,8 +1908,7 @@
                     htmlImpact+=`<tr><td style="font-weight:700;color:var(--light);">${i+1}º</td><td class="row-header">${e}</td><td class="${pG.class}" onclick="window.openOverallPriorityAudit('${e.replace(/'/g,"\\'")}');return false;" style="cursor:pointer;">${pG.label}</td>`;
                     cols.forEach(c=>{
                         let cd=rD.componentes[c];
-                        if(cd){let p=window.getIPC(cd.indice);if(window.sarespAuditMap[e]?.[c])window.sarespAuditMap[e][c].classificacao=p.label;htmlImpact+=`<td class="${p.class}" onclick="window.openSarespAudit('${e.replace(/'/g,"\\'")}','${c.replace(/'/g,"\\'")}');return false;" style="cursor:pointer; line-height: 1.25;">${cd.ipp.toFixed(0)}<br><span style="font-size: 0.8em; font-weight: 600; opacity: 0.9;">${p.label}</span></td>`;}                        else htmlImpact+=`<td class="bg-empty" onclick="window.openSarespAuditEmpty()">-</td>`;
-                    });
+                        if(cd){let p=window.getIPC(cd.indice);if(window.sarespAuditMap[e]?.[c])window.sarespAuditMap[e][c].classificacao=p.label;htmlImpact+=`<td class="${p.class}" onclick="window.openSarespAudit('${e.replace(/'/g,"\\'")}','${c.replace(/'/g,"\\'")}');return false;" style="cursor:pointer; line-height: 1.25;"><span style="font-size: 0.75em; font-weight: 600; opacity: 0.85;">${cd.ipp.toFixed(0)}</span><br><span style="font-size: 1.05em; font-weight: 800;">${p.label}</span></td>`;}                    });
                     htmlImpact+=`</tr>`;
                 });
                 htmlImpact+=`</tbody></table>`;

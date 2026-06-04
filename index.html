@@ -365,19 +365,22 @@
         .tbl-btn-amber { background: rgba(245,158,11,.1); color: #b45309; }
         .tbl-btn-amber:hover { background: rgba(245,158,11,.2); }
 
-        /* ─── HEATMAP TABLE ─── */
-        table.heatmap { width: 100%; border-collapse: collapse; font-size: .82rem; }
-        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: center; vertical-align: middle; }
+        /* ─── HEATMAP TABLE (LARGURA FIXA E COMPRESSÃO) ─── */
+        table.heatmap { width: 100%; border-collapse: collapse; font-size: .82rem; table-layout: fixed; }
+        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: .5rem .3rem; text-align: center; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         table.heatmap th {
             background: var(--navy); color: rgba(255,255,255,.85);
             font-size: .75rem; font-weight: 700; letter-spacing: .04em;
-            cursor: pointer; user-select: none; white-space: nowrap;
+            cursor: pointer; user-select: none;
+            white-space: normal; /* permite empilhar o texto do cabeçalho */
+            line-height: 1.2;
         }
         table.heatmap th:hover { background: var(--navy2); }
         table.heatmap .row-header {
             text-align: left; background: var(--surface2); color: var(--text);
-            font-weight: 600; min-width: 200px; cursor: pointer;
+            font-weight: 600; cursor: pointer;
             transition: background .15s; font-size: .82rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         table.heatmap .row-header:hover { background: #e0e7ff; color: var(--blue); }
         table.heatmap tr.selected-row .row-header { background: #dbeafe !important; color: var(--blue) !important; border-left: 4px solid var(--blue); }
@@ -1084,10 +1087,9 @@
                 let turmasRaw = [];
                 let schoolAllAvg = [];
                 Object.keys(turmasMap).forEach(tName => {
-                    let tRows = turmasMap[tName].sort((a,b) => a.nota - b.nota); let N = tRows.length; let tr = tRows;
-                    if (N >= 5) { let tc = Math.floor(N * .10); tr = tRows.slice(tc, N - tc); }
+                    let tRows = turmasMap[tName]; 
                     let sP = 0, tW = 0, al = 0;
-                    tr.forEach(d => { let ps = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino); sP += d.nota*ps*d.avaliados; tW += ps*d.avaliados; al += d.avaliados; });
+                    tRows.forEach(d => { let ps = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino); sP += d.nota*ps*d.avaliados; tW += ps*d.avaliados; al += d.avaliados; });
                     if (tW > 0) {
                         let m = sP/tW;
                         schoolAllAvg.push(m);
@@ -1157,10 +1159,9 @@
                 cData.forEach(d => { if (!turmasMap[d.turma_nome]) turmasMap[d.turma_nome] = []; turmasMap[d.turma_nome].push(d); });
                 let turmasResult = [];
                 Object.keys(turmasMap).forEach(tName => {
-                    let tRows = turmasMap[tName].sort((a,b) => a.nota - b.nota); let N = tRows.length; let tr = tRows;
-                    if (N >= 5) { let tc = Math.floor(N * .10); tr = tRows.slice(tc, N - tc); }
+                    let tRows = turmasMap[tName];
                     let sP = 0, tW = 0, al = 0;
-                    tr.forEach(d => { let ps = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino); sP += d.nota*ps*d.avaliados; tW += ps*d.avaliados; al += d.avaliados; });
+                    tRows.forEach(d => { let ps = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino); sP += d.nota*ps*d.avaliados; tW += ps*d.avaliados; al += d.avaliados; });
                     if (tW > 0) {
                         let m = sP/tW; let z = (m - auditData.contextMean) / auditData.contextStdDev;
                         let ipp = Math.max(0, Math.min(200, 100 + z*20)); let dev = ipp - auditData.ippEscola;
@@ -1196,35 +1197,33 @@
                 <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
                     <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">3. Base de Dados</h4>
                     <p><strong>Alunos considerados:</strong> ${auditData.alunosConsiderados}</p>
-                    <p><strong>Avaliações analisadas:</strong> ${auditData.totalRowsOriginal}</p>
-                    <p><strong>Outliers removidos:</strong> ${auditData.valoresRemovidos} (Aparo Top/Bottom 10%)</p>
+                    <p><strong>Registros Analisados:</strong> O cálculo inclui 100% da base filtrada sem remoção de extremos estatísticos.</p>
                 </div>
                 <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
-                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">4–5. Cálculo da Média</h4>
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">4. Cálculo da Média Agregada</h4>
                     <div style="background:var(--navy);padding:.65rem 1rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:.82rem;color:var(--sky);text-align:center;margin:.5rem 0;">
-                        media = ${f(auditData.sumProductOriginal)} ÷ ${f(auditData.sumWeightOriginal)} = ${f(auditData.mediaOriginal)}<br>
-                        <span style="color:rgba(255,255,255,.5);">Após aparo:</span> ${f(auditData.mediaAparada)}
+                        media_turmas = ${f(auditData.sumProductOriginal)} ÷ ${f(auditData.sumWeightOriginal)} = <strong style="color:#fff;">${f(auditData.mediaOriginal)}</strong>
                     </div>
                 </div>
                 <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
-                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">6. Conversão do IPP</h4>
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">5. Conversão do IPP</h4>
                     <div style="background:var(--navy);padding:.65rem 1rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:.82rem;color:var(--sky);text-align:center;margin:.5rem 0;">
-                        z = (${f(auditData.mediaAparada)} − ${f(auditData.contextMean)}) / ${f(auditData.contextStdDev)} = ${f(auditData.zScore,3)}<br>
+                        z = (${f(auditData.mediaOriginal)} − ${f(auditData.contextMean)}) / ${f(auditData.contextStdDev)} = ${f(auditData.zScore,3)}<br>
                         IPP = 100 + (${f(auditData.zScore,3)} × 20) = <strong style="color:#fff;">${f(auditData.ippEscola,1)}</strong>
                     </div>
                 </div>
                 <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
-                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">7–11. Índice de Prioridade Final</h4>
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">6–10. Índice de Prioridade Final</h4>
                     <p><strong>IPP Escola:</strong> ${f(auditData.ippEscola,1)} &nbsp;|&nbsp; <strong>IPP Rede:</strong> ${auditData.ippRede!==undefined?f(auditData.ippRede,1):'-'} &nbsp;|&nbsp; <strong>Desvio:</strong> ${auditData.ippRede!==undefined?f(auditData.ippEscola-auditData.ippRede):'-'}</p>
                     <p><strong>Peso SARESP:</strong> ${auditData.pesoSaresp!==undefined?f(auditData.pesoSaresp,1):'-'} &nbsp;|&nbsp; <strong>Alunos:</strong> ${auditData.totalAlunosImpacto??'-'}</p>
                     <p><strong>Índice Final:</strong> ${auditData.indice!==undefined?f(auditData.indice,3):'-'}</p>
                 </div>
                 <div style="background:#fff0f3;padding:1rem;border-radius:var(--radius);border:1px solid #fecdd3;">
-                    <h4 style="font-size:.85rem;color:var(--rose);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">12. Classificação Final</h4>
+                    <h4 style="font-size:.85rem;color:var(--rose);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">11. Classificação Final</h4>
                     <p style="font-size:1rem;font-weight:700;">PRIORIDADE ${(auditData.classificacao||'NÃO AVALIADO').toUpperCase()}</p>
                 </div>
                 <div style="background:#eff6ff;padding:1rem;border-radius:var(--radius);border:1px solid #bfdbfe;">
-                    <h4 style="font-size:.85rem;color:var(--blue);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">13. Interpretação Pedagógica</h4>
+                    <h4 style="font-size:.85rem;color:var(--blue);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">12. Interpretação Pedagógica</h4>
                     <p style="font-style:italic;color:#1e40af;font-size:.88rem;">${msgInterpretacao}</p>
                 </div>
             </div>`;
@@ -1637,13 +1636,12 @@
             let cg = {}; dfFiltered.forEach(d=>{if(!cg[d.componente])cg[d.componente]=[];cg[d.componente].push(d);});
             let res = [], all = [];
             Object.keys(cg).forEach(cName=>{
-                let rows=cg[cName].sort((a,b)=>a.nota-b.nota), N=rows.length, tr=rows;
-                if(N>=5){let tc=Math.floor(N*.10);tr=rows.slice(tc,N-tc);}
-                let sP=0,tW=0; tr.forEach(d=>{let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);sP+=d.nota*p*d.avaliados;tW+=p*d.avaliados;});
-                let m=tW>0?sP/tW:0; res.push({label:cName,media:m,totalWeight:tW}); all.push(m);
+                let rows=cg[cName];
+                let sP=0,tW=0; rows.forEach(d=>{let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);sP+=d.nota*p*d.avaliados;tW+=p*d.avaliados;});
+                let m=tW>0?sP/tW:0; if(tW>0) { res.push({label:cName,media:m,totalWeight:tW}); all.push(m); }
             });
             let cm=all.length?all.reduce((a,b)=>a+b,0)/all.length:0;
-            let sd=Math.sqrt(all.reduce((a,b)=>a+Math.pow(b-cm,2),0)/all.length||1)||1;
+            let sd=Math.sqrt(all.reduce((a,b)=>a+Math.pow(b-cm,2),0)/(all.length||1))||1;
             res.forEach(m=>{let z=(m.media-cm)/sd,ipp=100+z*20;m.ipp=Math.max(0,Math.min(200,ipp));m.proficiencia=m.ipp<100?'Muito Baixo':m.ipp<=120?'Básico':m.ipp<=140?'Adequado':'Avançado';});
             return res;
         }
@@ -1722,9 +1720,14 @@
 
                 let gcg={};dfFiltered.forEach(d=>{if(!gcg[d.componente])gcg[d.componente]=[];gcg[d.componente].push(d);});
                 let allAvg=[];
-                Object.keys(gcg).forEach(cN=>{let rows=gcg[cN].sort((a,b)=>a.nota-b.nota),N=rows.length,tr=rows;if(N>=5){let tc=Math.floor(N*.10);tr=rows.slice(tc,N-tc);}let sP=0,tW=0;tr.forEach(d=>{let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);sP+=d.nota*p*d.avaliados;tW+=p*d.avaliados;});if(tW>0)allAvg.push(sP/tW);});
+                Object.keys(gcg).forEach(cN=>{
+                    let rows=gcg[cN];
+                    let sP=0,tW=0;
+                    rows.forEach(d=>{let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);sP+=d.nota*p*d.avaliados;tW+=p*d.avaliados;});
+                    if(tW>0)allAvg.push(sP/tW);
+                });
                 let cm=allAvg.length?allAvg.reduce((a,b)=>a+b,0)/allAvg.length:0;
-                let sd=Math.sqrt(allAvg.reduce((a,b)=>a+Math.pow(b-cm,2),0)/(allAvg.length||1)||1)||1;
+                let sd=Math.sqrt(allAvg.reduce((a,b)=>a+Math.pow(b-cm,2),0)/(allAvg.length||1))||1;
 
                 let cols=Array.from(new Set(dfFiltered.map(d=>d.componente))).sort();
                 let ents=Array.from(new Set(dfFiltered.map(d=>d[rowKey]))).sort();
@@ -1734,18 +1737,28 @@
                     mS[e]={componentes:{},notaGeralEstimada:null,sumIPPxPeso:0,sumPeso:0};
                     let ed=dfFiltered.filter(d=>d[rowKey]===e);
                     cols.forEach(c=>{
-                        let cd=ed.filter(d=>d.componente===c).sort((a,b)=>a.nota-b.nota);
+                        let cd=ed.filter(d=>d.componente===c);
                         if(!cd.length){mS[e].componentes[c]=null;return;}
-                        let N=cd.length,tr=cd,tc=0;if(N>=5){tc=Math.floor(N*.10);tr=cd.slice(tc,N-tc);}
-                        let osP=0,otW=0,oAl=0;cd.forEach(d=>{let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);osP+=d.nota*p*d.avaliados;otW+=p*d.avaliados;oAl+=d.avaliados;});
-                        let mo=otW>0?osP/otW:0;
-                        let sP=0,tW=0,al=0,pSC=10;
-                        tr.forEach((d,i)=>{let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);if(i===0)pSC=p;sP+=d.nota*p*d.avaliados;tW+=p*d.avaliados;al+=d.avaliados;});
+                        let N=cd.length;
+                        let sP=0,tW=0,oAl=0,pSC=10;
+                        cd.forEach((d,i)=>{
+                            let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);
+                            if(i===0)pSC=p;
+                            sP+=d.nota*p*d.avaliados;
+                            tW+=p*d.avaliados;
+                            oAl+=d.avaliados;
+                        });
+                        let mo=tW>0?sP/tW:0;
                         if(tW>0){
                             let ma=sP/tW,z=(ma-cm)/sd,ipp=Math.max(0,Math.min(200,100+z*20));
                             mS[e].componentes[c]=ipp;mS[e].sumIPPxPeso+=ipp*pSC;mS[e].sumPeso+=pSC;
                             let imp=pSC*oAl;if(imp>mxI)mxI=imp;
-                            window.sarespAuditMap[e][c]={entidade:e,componente:c,totalRowsOriginal:N,totalRowsTrimmed:tr.length,valoresRemovidos:tc*2,alunosConsiderados:oAl,sumProductOriginal:osP,sumWeightOriginal:otW,mediaOriginal:mo,sumProductAparada:sP,sumWeightAparada:tW,mediaAparada:ma,contextMean:cm,contextStdDev:sd,zScore:z,ippEscola:ipp,pesoSaresp:pSC,impactoBruto:imp};
+                            window.sarespAuditMap[e][c]={
+                                entidade:e,componente:c,totalRowsOriginal:N,
+                                alunosConsiderados:oAl,sumProductOriginal:sP,sumWeightOriginal:tW,
+                                mediaOriginal:mo,contextMean:cm,contextStdDev:sd,zScore:z,
+                                ippEscola:ipp,pesoSaresp:pSC,impactoBruto:imp
+                            };
                         }else{mS[e].componentes[c]=null;}
                     });
                     if(mS[e].sumPeso>0)mS[e].notaGeralEstimada=mS[e].sumIPPxPeso/mS[e].sumPeso;
@@ -1830,7 +1843,7 @@
                         <button class="tbl-btn tbl-btn-green" onclick="window.copyTableAsImage(event)"><img src="./imagens/camera.png" alt=""> Copiar imagem</button>
                         <button class="tbl-btn ${btn2026Class}" id="btn-toggle-2026-saresp" onclick="window.toggleOnly2026()">${btn2026Text}</button>
                         <button class="tbl-btn tbl-btn-amber" id="btn-toggle-metas-saresp" onclick="window.toggleMetas()">${btnMetasText}</button>
-                        <button class="tbl-btn" style="background:rgba(16,185,129,.1);color:var(--teal);font-weight:700;" onclick="document.getElementById('entenda-matriz-modal').style.display='flex'"><img src="./imagens/star.png" alt=""> Entenda a Matriz</button>
+                        <button class="tbl-btn" style="background:rgba(16,185,129,.1);color:var(--teal);font-weight:700;" onclick="document.getElementById('entenda-matriz-modal').style.display='flex'"><img src="./imagens/scale-comparison.png" alt=""> Entenda a Matriz</button>
                     </div>
                 </div>`;
                 
@@ -1842,7 +1855,7 @@
                     <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:#fef08a;border:1px solid #d97706;"></span> Moderada (&gt;0)</span>
                     <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--emerald);"></span> Baixa (≤0)</span>
                 </div>`;
-                htmlImpact+=`<table class="heatmap" style="margin-bottom:2rem;"><thead><tr><th>Ord.</th><th class="row-header" onclick="window.toggleSort('row_header')">Unidade ${sortColumn==='row_header'?(sortDirection==='asc'?'▲':'▼'):''}</th><th onclick="window.toggleSort('indice_geral')" style="cursor:pointer;">Prioridade Geral ${sortColumn==='indice_geral'?(sortDirection==='asc'?'▲':'▼'):''}</th>`;
+                htmlImpact+=`<table class="heatmap" style="margin-bottom:2rem; table-layout:fixed; width:100%;"><thead><tr><th style="width:45px;">Ord.</th><th class="row-header" onclick="window.toggleSort('row_header')" style="width:220px;">Unidade ${sortColumn==='row_header'?(sortDirection==='asc'?'▲':'▼'):''}</th><th onclick="window.toggleSort('indice_geral')" style="cursor:pointer;width:120px;">Prioridade Geral ${sortColumn==='indice_geral'?(sortDirection==='asc'?'▲':'▼'):''}</th>`;
                 cols.forEach(c=>htmlImpact+=`<th onclick="window.toggleSort('${c.replace(/'/g,"\\'")}');return false;" style="cursor:pointer;">${c} ${sortColumn===c?(sortDirection==='asc'?'▲':'▼'):''}</th>`);
                 htmlImpact+=`</tr></thead><tbody>`;
                 impEnts.forEach((e,i)=>{
@@ -1859,7 +1872,7 @@
 
                 let htmlSaresp = `<h3 style="margin-bottom:.6rem;color:var(--navy);font-size:.95rem;font-weight:700;"><img src="./imagens/stats.png" alt=""> Resumo Global</h3>`;
                 let metricsFiltered = sarespAreaFilter==='all' ? metrics : metrics.filter(m=>compMatchesArea(m.label, sarespAreaFilter));
-                htmlSaresp += `<table class="heatmap" style="margin-bottom:2rem;"><thead><tr><th>Componente</th><th>Registros Ponderados</th><th>Média Aparada Simulada</th><th style="color:var(--purple);">IPP Estimado</th><th>Nível</th></tr></thead><tbody>`;
+                htmlSaresp += `<table class="heatmap" style="margin-bottom:2rem; table-layout:fixed; width:100%;"><thead><tr><th style="width: 220px;">Componente</th><th style="width: 150px;">Registros Ponderados</th><th style="width: 150px;">Média Simulada</th><th style="color:var(--purple); width: 120px;">IPP Estimado</th><th style="width: 120px;">Nível</th></tr></thead><tbody>`;
                 metricsFiltered.forEach(m=>{let fc=m.media<3?'bg-red':m.media>5?'bg-green':'bg-yellow',tc=m.ipp<100?'bg-red':m.ipp>120?'bg-green':'bg-yellow';htmlSaresp+=`<tr><td class="row-header" style="text-align:center;font-weight:700;">${m.label}</td><td>${m.totalWeight.toLocaleString()}</td><td class="${fc}">${m.media.toFixed(2).replace('.',',')}</td><td style="font-weight:700;color:var(--purple);">${m.ipp.toFixed(1).replace('.',',')}</td><td class="${tc}">${m.proficiencia}</td></tr>`;});
                 htmlSaresp+=`</tbody></table>`;
 
@@ -1871,7 +1884,7 @@
                     <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--emerald);"></span> 120–140</span>
                     <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--sky);"></span> &gt;140</span>
                 </div>`;
-                htmlMatrix+=`<table class="heatmap" style="margin-bottom:2rem;"><thead><tr><th>Clas.</th><th class="row-header" onclick="window.toggleSort('row_header')">Unidade ${sortColumn==='row_header'?(sortDirection==='asc'?'▲':'▼'):''}</th><th onclick="window.toggleSort('nota_geral')" style="color:var(--purple);cursor:pointer;">Nota Geral Est. ${sortColumn==='nota_geral'?(sortDirection==='asc'?'▲':'▼'):''}</th>`;
+                htmlMatrix+=`<table class="heatmap" style="margin-bottom:2rem; table-layout:fixed; width:100%;"><thead><tr><th style="width:45px;">Clas.</th><th class="row-header" onclick="window.toggleSort('row_header')" style="width: 220px;">Unidade ${sortColumn==='row_header'?(sortDirection==='asc'?'▲':'▼'):''}</th><th onclick="window.toggleSort('nota_geral')" style="color:var(--purple);cursor:pointer; width: 120px;">Nota Geral Est. ${sortColumn==='nota_geral'?(sortDirection==='asc'?'▲':'▼'):''}</th>`;
                 cols.forEach(c=>htmlMatrix+=`<th onclick="window.toggleSort('${c.replace(/'/g,"\\'")}');return false;" style="cursor:pointer;">${c} ${sortColumn===c?(sortDirection==='asc'?'▲':'▼'):''}</th>`);
                 htmlMatrix+=`</tr></thead><tbody>`;
                 ents.forEach((e,i)=>{
@@ -1964,17 +1977,17 @@
 
             const TH = (label, col, style='') => `<th onclick="window.toggleSort('${col}')" style="cursor:pointer;${style}">${label} ${sortColumn===col?(sortDirection==='asc'?'▲':'▼'):''}</th>`;
             let html=`<table class="heatmap"><thead><tr>`;
-            html+=`<th>Clas.<br><span style="font-size:.7rem;opacity:.7;">/${rows.length}</span></th>`;
-            html+=TH('Unidade / Sala','row_header');
-            html+=TH('Pres.','avaliados');
-            html+=TH('Matric.','matriculados');
-            html+=TH('Part. %','participacao');
+            html+=`<th style="width:45px;">Clas.<br><span style="font-size:.7rem;opacity:.7;">/${rows.length}</span></th>`;
+            html+=TH('Unidade / Sala','row_header', 'width: 220px;');
+            html+=TH('Pres.','avaliados', 'width: 55px;');
+            html+=TH('Matric.','matriculados', 'width: 65px;');
+            html+=TH('Part. %','participacao', 'width: 70px;');
             colunas.forEach(c=>{
                 let lbl=c==='VARIACAO'?'Evolução<br><span style="font-size:.7rem;font-weight:400;">(Nota)</span>':c==='VARIACAO_PART'?'Evolução<br><span style="font-size:.7rem;font-weight:400;">(Partic.)</span>':c.includes('|||')?`${c.split('|||')[0]}<br><span style="font-size:.7rem;font-weight:400;">${c.split('|||')[1]}</span>`:c;
                 html+=TH(lbl,c);
             });
-            if(currentViewMode!=='compare') html+=TH('Média Geral','media_geral','border-left:3px solid rgba(255,255,255,.3);');
-            if(isUre&&isMetasVisible){html+=`<th style="color:#fef08a;">Meta Ouro</th><th style="color:var(--sky);">Meta Diamante</th>`;}
+            if(currentViewMode!=='compare') html+=TH('Média Geral','media_geral','border-left:3px solid rgba(255,255,255,.3); width: 85px;');
+            if(isUre&&isMetasVisible){html+=`<th style="color:#fef08a; width: 75px;">Meta Ouro</th><th style="color:var(--sky); width: 85px;">Meta Diamante</th>`;}
             html+=`</tr></thead><tbody>`;
 
             const FV = (v,prefix='',suffix='') => { const diff=parseFloat(v); return `${diff>0.1?'▲ ':(diff<-0.1?'▼ ':'')}${prefix}${Math.abs(diff).toFixed(2).replace('.',',')}${suffix}`; };

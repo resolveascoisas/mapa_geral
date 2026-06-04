@@ -906,7 +906,7 @@
         let sarespAreaFilter = 'all'; // 'all' | 'cnt' | 'chs' | 'lgg' | 'mat' | 'lpt'
         window.sarespTEFilter = 'all'; // 'all' | 'ef' | 'em'
         window.sarespAuditMap = {};
-        window.sarespOverallMap = {}; // para o detalhamento da prioridade geral
+        window.sarespOverallMap = {};
 
         const baseMetas = [
             { key: "ZUMBI DOS PALMARES", o: 3.4, d: 3.6 }, { key: "AVELINO APARECIDO", o: 3.4, d: 3.6 },
@@ -1031,6 +1031,13 @@
             
             if (isUreView) {
                 let cData = activeData.filter(d => (selSarespAvals.length === 0 || selSarespAvals.includes(d.aval_nome)) && d.nota > 0 && d.escola === ent && d.componente === comp);
+                
+                if (window.sarespTEFilter === 'ef') {
+                    cData = cData.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
+                } else if (window.sarespTEFilter === 'em') {
+                    cData = cData.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
+                }
+                
                 let turmasMap = {};
                 cData.forEach(d => { if (!turmasMap[d.turma_nome]) turmasMap[d.turma_nome] = []; turmasMap[d.turma_nome].push(d); });
                 
@@ -1099,6 +1106,13 @@
             } else {
                 // School view logic
                 let cData = activeData.filter(d => (selSarespAvals.length === 0 || selSarespAvals.includes(d.aval_nome)) && d.nota > 0 && d.escola === ent && d.componente === comp);
+                
+                if (window.sarespTEFilter === 'ef') {
+                    cData = cData.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
+                } else if (window.sarespTEFilter === 'em') {
+                    cData = cData.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
+                }
+
                 let turmasMap = {};
                 cData.forEach(d => { if (!turmasMap[d.turma_nome]) turmasMap[d.turma_nome] = []; turmasMap[d.turma_nome].push(d); });
                 let turmasResult = [];
@@ -1188,8 +1202,14 @@
             const selSA = getSelectedCheckboxes('saresp_aval');
             let df = activeData.filter(d => (selSA.length === 0 || selSA.includes(d.aval_nome)) && d.nota > 0);
             
-            if (window.sarespTEFilter === 'ef') df = df.filter(d => !['FIS','QUI','BIO','FIL','SOC'].includes(d.componente.toUpperCase()));
-            else if (window.sarespTEFilter === 'em') df = df.filter(d => d.componente.toUpperCase() !== 'CIE');
+            if (window.sarespTEFilter === 'ef') {
+                df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
+                df = df.filter(d => !['FIS','QUI','BIO','FIL','SOC'].includes(d.componente.toUpperCase()));
+            } else if (window.sarespTEFilter === 'em') {
+                df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
+                df = df.filter(d => d.componente.toUpperCase() !== 'CIE');
+            }
+
             let dfFiltered = sarespAreaFilter === 'all' ? df : df.filter(d => compMatchesArea(d.componente, sarespAreaFilter));
             
             let totalAlunosContext = 0;
@@ -1563,9 +1583,14 @@
             const sel = getSelectedCheckboxes('saresp_aval');
             let df = activeData.filter(d=>(sel.length===0||sel.includes(d.aval_nome))&&d.nota>0);
             
-            if (window.sarespTEFilter === 'ef') df = df.filter(d => !['FIS','QUI','BIO','FIL','SOC'].includes(d.componente.toUpperCase()));
-            else if (window.sarespTEFilter === 'em') df = df.filter(d => d.componente.toUpperCase() !== 'CIE');
-            
+            if (window.sarespTEFilter === 'ef') {
+                df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
+                df = df.filter(d => !['FIS','QUI','BIO','FIL','SOC'].includes(d.componente.toUpperCase()));
+            } else if (window.sarespTEFilter === 'em') {
+                df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
+                df = df.filter(d => d.componente.toUpperCase() !== 'CIE');
+            }
+
             let dfFiltered = sarespAreaFilter==='all' ? df : df.filter(d=>compMatchesArea(d.componente, sarespAreaFilter));
 
             let cg = {}; dfFiltered.forEach(d=>{if(!cg[d.componente])cg[d.componente]=[];cg[d.componente].push(d);});
@@ -1645,8 +1670,10 @@
                 let df=activeData.filter(d=>(selSA.length===0||selSA.includes(d.aval_nome))&&d.nota>0);
 
                 if (window.sarespTEFilter === 'ef') {
+                    df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
                     df = df.filter(d => !['FIS','QUI','BIO','FIL','SOC'].includes(d.componente.toUpperCase()));
                 } else if (window.sarespTEFilter === 'em') {
+                    df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
                     df = df.filter(d => d.componente.toUpperCase() !== 'CIE');
                 }
 

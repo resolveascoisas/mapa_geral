@@ -394,7 +394,10 @@
             text-align: left; background: var(--surface2); color: var(--text);
             font-weight: 600; cursor: pointer;
             transition: background .12s; font-size: .8rem;
-            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            
+            /* Propriedades alteradas para evitar o corte do texto */
+            white-space: normal; 
+            word-break: break-word; 
         }
         table.heatmap .row-header:hover { background: #e0e7ff; color: var(--blue); }
         table.heatmap tr.selected-row .row-header { background: #dbeafe !important; color: var(--blue) !important; border-left: 3px solid var(--blue); }

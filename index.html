@@ -253,6 +253,24 @@
         }
         .btn-clear:hover { border-color: var(--rose); color: var(--rose); background: rgba(244,63,94,.04); }
 
+        /* ─── ICONS (IMAGES) SETUP ─── */
+        .btn-toggle img, .area-btn img, .tbl-btn img, .header-btn img, h2 img, h3 img, .saresp-panel-title img {
+            height: 1.2em;
+            vertical-align: middle;
+            object-fit: contain;
+            transition: filter .2s;
+        }
+        
+        .btn-toggle img, .area-btn img { filter: opacity(0.7); }
+        .btn-toggle:hover img, .btn-toggle.active img,
+        .area-btn:hover img, .area-btn.active img {
+            filter: brightness(0) invert(1);
+        }
+        .header-btn img { filter: brightness(0) invert(0.8); }
+        .header-btn:hover img { filter: brightness(0) invert(1); }
+        .tbl-btn img { filter: opacity(0.8); }
+        h2 img, h3 img { filter: opacity(0.85); margin-right: .3rem; }
+
         /* ─── VIEW TABS ─── */
         .view-tabs {
             display: flex; gap: .4rem; margin-bottom: 1.25rem;
@@ -262,15 +280,16 @@
             box-shadow: var(--shadow);
         }
         .btn-toggle {
-            background: transparent; color: var(--muted);
-            border: none; padding: .55rem .9rem;
-            border-radius: 7px; font-family: inherit;
-            font-size: .82rem; font-weight: 600; cursor: pointer;
-            transition: all .2s; white-space: nowrap;
-            display: flex; align-items: center; gap: .35rem;
+            display: inline-flex; align-items: center; gap: .4rem;
+            padding: .55rem 1.1rem; border-radius: 99px;
+            font-family: inherit; font-size: .82rem; font-weight: 700;
+            cursor: pointer; border: 2px solid transparent;
+            transition: all .2s; letter-spacing: .02em; white-space: nowrap;
+            background: rgba(15,31,61,.07); color: var(--navy); border-color: rgba(15,31,61,.2);
         }
-        .btn-toggle:hover { background: var(--bg); color: var(--text); }
-        .btn-toggle.active { background: var(--navy); color: #fff; box-shadow: 0 2px 8px rgba(15,31,61,.25); }
+        .btn-toggle:hover, .btn-toggle.active { 
+            background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 4px 12px rgba(15,31,61,.3); 
+        }
 
         .sub-filter {
             padding: .6rem .85rem; border-radius: var(--radius);
@@ -597,7 +616,7 @@
     <div id="metodologia-modal" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="window.closeMetodologia()">&times;</span>
-            <h2>🧠 Entenda o Cálculo do Painel</h2>
+            <h2><img src="./imagens/calculator-simple.png" alt=""> Entenda o Cálculo do Painel</h2>
             <h3 style="font-size:.98rem;color:var(--text);margin:.75rem 0 .4rem;">Média Ponderada Real Bidimensional</h3>
             <p style="font-size:.88rem;color:var(--muted);line-height:1.6;margin-bottom:.75rem;text-align:justify;">
                 Este sistema <strong>não</strong> utiliza médias aritméticas simples. O impacto de cada nota é calculado levando em consideração dois fatores simultâneos:
@@ -617,7 +636,7 @@
     <!-- DISCLAIMER -->
     <div id="disclaimer-modal">
         <div class="modal-content">
-            <h2>⚠️ Versão Beta</h2>
+            <h2><img src="./imagens/thumbtack.png" alt=""> Versão Beta</h2>
             <p>Este painel encontra-se em fase de <strong>testes (Versão Beta)</strong> e seu caráter é estritamente analítico.</p>
             <p>As notas apresentadas podem diferir dos painéis disponibilizados no BI do <strong>Escola Total</strong> e nas tabelas oficiais publicadas pela URE. Isso ocorre porque o método de cálculo aplicado aqui difere intencionalmente para padronizar e aprofundar as análises.</p>
             <p>Utilizamos o <strong>Índice de Prioridade Pedagógica (IPP)</strong> para estimar a proficiência e definir focos de intervenção. O IPP não é uma nota oficial nem uma prévia exata do SARESP, mas sim um cálculo de referência focado na gestão analítica sem ruídos.</p>
@@ -638,7 +657,7 @@
                 <p>Metas Pactuadas: <strong id="modal-metas" style="color:var(--text);">...</strong></p>
                 <p>Classificação (No Contexto Atual): <strong id="modal-rank-context">Calculando...</strong></p>
             </div>
-            <h3 style="font-size:1rem;color:var(--navy);margin-top:1.5rem;margin-bottom:.5rem;">📊 Comparativo Histórico Transversal</h3>
+            <h3 style="font-size:1rem;color:var(--navy);margin-top:1.5rem;margin-bottom:.5rem;"><img src="./imagens/stats.png" alt=""> Comparativo Histórico Transversal</h3>
             <div id="modal-comparativo-container"></div>
         </div>
     </div>
@@ -647,7 +666,7 @@
     <div id="saresp-audit-modal" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="window.closeSarespAuditModal()">&times;</span>
-            <h2 id="saresp-audit-title" style="color:var(--purple);margin-bottom:1.5rem;display:flex;align-items:center;gap:.5rem;">🔎 Detalhamento do Cálculo (Prioridade Pedagógica)</h2>
+            <h2 id="saresp-audit-title" style="color:var(--purple);margin-bottom:1.5rem;display:flex;align-items:center;gap:.5rem;"><img src="./imagens/microscope-bacteria.png" alt=""> Detalhamento do Cálculo (Prioridade Pedagógica)</h2>
             <div id="saresp-audit-content"></div>
         </div>
     </div>
@@ -656,7 +675,7 @@
     <div id="entenda-matriz-modal">
         <div class="modal-content">
             <span class="modal-close" onclick="document.getElementById('entenda-matriz-modal').style.display='none'">&times;</span>
-            <h2 style="display:flex;align-items:center;gap:.5rem;">📐 Entenda a Matriz de Prioridade (IPP)</h2>
+            <h2 style="display:flex;align-items:center;gap:.5rem;"><img src="./imagens/scale-comparison.png" alt=""> Entenda a Matriz de Prioridade (IPP)</h2>
             <p style="font-size:.88rem;color:var(--muted);margin:.5rem 0 1.25rem;line-height:1.6;">A classificação de prioridade pedagógica <strong>não</strong> é simplesmente "quem tem a menor nota". Ela utiliza o <strong>Índice de Prioridade Pedagógica (IPP)</strong>, que combina três dimensões simultaneamente para identificar onde a intervenção terá maior impacto real.</p>
 
             <div class="entenda-step">
@@ -689,7 +708,7 @@
             </div>
 
             <div class="entenda-example">
-                💡 <strong>Por que uma escola com nota menor pode ter prioridade mais baixa?</strong><br>
+                <img src="./imagens/star.png" alt="" style="height:1em; vertical-align:middle; filter:opacity(0.8);"> <strong>Por que uma escola com nota menor pode ter prioridade mais baixa?</strong><br>
                 Exemplo: Escola A tem IPP 85 em Filosofia (nota baixa), com 20 alunos e peso 3 no SARESP. Escola B tem IPP 95 em Matemática, com 150 alunos e peso 24. O índice de impacto da Escola B supera o da Escola A, mesmo a Escola A tendo nota absoluta menor. A matriz responde à pergunta: <em>"Onde eu consigo mover mais o resultado da escola com a mesma intervenção?"</em>
             </div>
 
@@ -734,8 +753,8 @@
             </div>
 
             <div class="header-actions">
-                <button class="header-btn" onclick="window.openMetodologia()">❓ Metodologia</button>
-                <button class="header-btn" onclick="window.print()">🖨️ Imprimir</button>
+                <button class="header-btn" onclick="window.openMetodologia()"><img src="./imagens/calculator-simple.png" alt=""> Metodologia</button>
+                <button class="header-btn" onclick="window.print()"><img src="./imagens/memo-pad.png" alt=""> Imprimir</button>
                 <div class="header-divider"></div>
                 <div class="user-chip">
                     <div class="user-avatar" id="user-avatar-initials">U</div>
@@ -794,13 +813,13 @@
 
             <!-- VIEW TABS -->
             <div class="view-tabs">
-                <button class="btn-toggle active" id="btn-view-eval"            onclick="window.setViewMode('eval')">📋 Histórico</button>
-                <button class="btn-toggle"         id="btn-view-comp"            onclick="window.setViewMode('component')">📊 Componentes</button>
-                <button class="btn-toggle"         id="btn-view-single"          onclick="window.setViewMode('single_component')">🎯 Único Componente</button>
-                <button class="btn-toggle"         id="btn-view-single-aval"     onclick="window.setViewMode('single_eval')">🎯 Única Avaliação</button>
-                <button class="btn-toggle"         id="btn-view-compare"         onclick="window.setViewMode('compare')">⚖️ Comparativo</button>
-                <button class="btn-toggle"         id="btn-view-general-compare" onclick="window.setViewMode('general_compare')">📈 Comparativo Geral</button>
-                <button class="btn-toggle"         id="btn-view-saresp"          onclick="window.setViewMode('saresp')">🎯 Prioridades SARESP</button>
+                <button class="btn-toggle active" id="btn-view-eval"            onclick="window.setViewMode('eval')"><img src="./imagens/memo-pad.png" alt=""> Histórico</button>
+                <button class="btn-toggle"         id="btn-view-comp"            onclick="window.setViewMode('component')"><img src="./imagens/stats.png" alt=""> Componentes</button>
+                <button class="btn-toggle"         id="btn-view-single"          onclick="window.setViewMode('single_component')"><img src="./imagens/bullseye.png" alt=""> Único Componente</button>
+                <button class="btn-toggle"         id="btn-view-single-aval"     onclick="window.setViewMode('single_eval')"><img src="./imagens/bullseye.png" alt=""> Única Avaliação</button>
+                <button class="btn-toggle"         id="btn-view-compare"         onclick="window.setViewMode('compare')"><img src="./imagens/scale-comparison.png" alt=""> Comparativo</button>
+                <button class="btn-toggle"         id="btn-view-general-compare" onclick="window.setViewMode('general_compare')"><img src="./imagens/chart-line-up.png" alt=""> Comparativo Geral</button>
+                <button class="btn-toggle"         id="btn-view-saresp"          onclick="window.setViewMode('saresp')"><img src="./imagens/bullseye-arrow.png" alt=""> Prioridades SARESP</button>
 
                 <select id="sub-filter-comp" class="sub-filter" onchange="window.processViewAndRender()"></select>
                 <select id="sub-filter-aval" class="sub-filter" onchange="window.processViewAndRender()"></select>
@@ -863,10 +882,10 @@
                         </div>
                     </div>
                     <div class="table-actions">
-                        <button class="tbl-btn tbl-btn-green" onclick="window.copyTableAsImage(event)">📸 Copiar imagem</button>
-                        <button class="tbl-btn tbl-btn-purple" style="display:none;" id="btn-toggle-ranking" onclick="window.toggleRankingView()">🏆 Exibir Ranking</button>
-                        <button class="tbl-btn tbl-btn-blue" id="btn-toggle-2026" onclick="window.toggleOnly2026()">📅 Somente 2026</button>
-                        <button class="tbl-btn tbl-btn-amber" id="btn-toggle-metas" onclick="window.toggleMetas()">🎯 Exibir Metas</button>
+                        <button class="tbl-btn tbl-btn-green" onclick="window.copyTableAsImage(event)"><img src="./imagens/camera.png" alt=""> Copiar imagem</button>
+                        <button class="tbl-btn tbl-btn-purple" style="display:none;" id="btn-toggle-ranking" onclick="window.toggleRankingView()"><img src="./imagens/troph-cap.png" alt=""> Exibir Ranking</button>
+                        <button class="tbl-btn tbl-btn-blue" id="btn-toggle-2026" onclick="window.toggleOnly2026()"><img src="./imagens/calendar-lines.png" alt=""> Somente 2026</button>
+                        <button class="tbl-btn tbl-btn-amber" id="btn-toggle-metas" onclick="window.toggleMetas()"><img src="./imagens/bullseye.png" alt=""> Exibir Metas</button>
                     </div>
                 </div>
                 <div id="heatmap-container"></div>
@@ -874,7 +893,7 @@
 
             <!-- CHART CONTROLS -->
             <div id="chart-controls">
-                <button class="tbl-btn tbl-btn-blue" onclick="window.toggleChartDatasets(true)">☑️ Marcar Todas</button>
+                <button class="tbl-btn tbl-btn-blue" onclick="window.toggleChartDatasets(true)"><img src="./imagens/map-marker-check.png" alt=""> Marcar Todas</button>
                 <button class="tbl-btn" style="background:var(--bg);color:var(--muted);" onclick="window.toggleChartDatasets(false)">☐ Desmarcar Todas</button>
             </div>
 
@@ -941,8 +960,8 @@
         /* ── MODALS ── */
         window.closeSarespAuditModal = () => { document.getElementById('saresp-audit-modal').style.display = 'none'; };
         window.openSarespAuditEmpty = () => {
-            document.getElementById('saresp-audit-title').innerHTML = `🔎 Detalhamento do Cálculo (Prioridade Pedagógica)`;
-            document.getElementById('saresp-audit-content').innerHTML = `<div style="padding:2rem;text-align:center;color:var(--muted);"><h3 style="color:var(--rose);margin-bottom:.75rem;">⚠️ Sem dados suficientes</h3><p>Não há dados suficientes para análise dessa avaliação/componente.</p></div>`;
+            document.getElementById('saresp-audit-title').innerHTML = `<img src="./imagens/microscope-bacteria.png" alt=""> Detalhamento do Cálculo (Prioridade Pedagógica)`;
+            document.getElementById('saresp-audit-content').innerHTML = `<div style="padding:2rem;text-align:center;color:var(--muted);"><h3 style="color:var(--rose);margin-bottom:.75rem;"><img src="./imagens/thumbtack.png" alt=""> Sem dados suficientes</h3><p>Não há dados suficientes para análise dessa avaliação/componente.</p></div>`;
             document.getElementById('saresp-audit-modal').style.display = 'flex';
         };
         window.closeDisclaimer = () => document.getElementById('disclaimer-modal').style.display = 'none';
@@ -1013,7 +1032,7 @@
 
         /* ── SARESP AUDIT (Componente Específico) ── */
         window.openSarespAudit = function(ent, comp) {
-            document.getElementById('saresp-audit-title').innerHTML = `🔎 Detalhamento do Cálculo (Prioridade Pedagógica)`;
+            document.getElementById('saresp-audit-title').innerHTML = `<img src="./imagens/microscope-bacteria.png" alt=""> Detalhamento do Cálculo (Prioridade Pedagógica)`;
             const auditData = window.sarespAuditMap[ent]?.[comp];
             if (!auditData) return;
             const selSarespAvals = getSelectedCheckboxes('saresp_aval');
@@ -1194,7 +1213,7 @@
 
         /* ── SARESP AUDIT (Prioridade Geral da Entidade) ── */
         window.openOverallPriorityAudit = function(ent) {
-            document.getElementById('saresp-audit-title').innerHTML = `🔎 Detalhamento da Prioridade da Entidade`;
+            document.getElementById('saresp-audit-title').innerHTML = `<img src="./imagens/microscope-bacteria.png" alt=""> Detalhamento da Prioridade da Entidade`;
             
             const isUre = userProfile.tipo_usuario !== 'ESCOLA' && getSelectedCheckboxes('escola').length === 0;
             const rowKey = isUre ? 'escola' : 'turma_nome';
@@ -1276,19 +1295,19 @@
         window.toggleMetas = () => {
             isMetasVisible = !isMetasVisible;
             document.querySelectorAll('[id^="btn-toggle-metas"]').forEach(btn => {
-                btn.textContent = isMetasVisible ? '🎯 Ocultar Metas' : '🎯 Exibir Metas';
+                btn.innerHTML = isMetasVisible ? '<img src="./imagens/bullseye.png" alt=""> Ocultar Metas' : '<img src="./imagens/bullseye.png" alt=""> Exibir Metas';
             });
             window.renderHeatmapTable();
         };
         window.toggleRankingView = () => {
             isRankingView = !isRankingView;
-            document.getElementById('btn-toggle-ranking').textContent = isRankingView ? '🔢 Exibir Notas' : '🏆 Exibir Ranking';
+            document.getElementById('btn-toggle-ranking').innerHTML = isRankingView ? '<img src="./imagens/stats.png" alt=""> Exibir Notas' : '<img src="./imagens/troph-cap.png" alt=""> Exibir Ranking';
             window.renderHeatmapTable();
         };
         window.toggleOnly2026 = () => {
             isOnly2026 = !isOnly2026;
             document.querySelectorAll('[id^="btn-toggle-2026"]').forEach(btn => {
-                btn.textContent = isOnly2026 ? '📅 Incluir Anteriores' : '📅 Somente 2026';
+                btn.innerHTML = isOnly2026 ? '<img src="./imagens/calendar-lines.png" alt=""> Incluir Anteriores' : '<img src="./imagens/calendar-lines.png" alt=""> Somente 2026';
                 btn.className = isOnly2026 ? 'tbl-btn tbl-btn-green' : 'tbl-btn tbl-btn-blue';
             });
             window.applyFilters();
@@ -1313,12 +1332,13 @@
             window.resetRowSelection(); window.applyFilters();
         };
         window.copyTableAsImage = async (event) => {
-            const btn = event.target; const orig = btn.textContent; btn.textContent = '⏳ Copiando...';
+            const btn = event.currentTarget; 
+            const orig = btn.innerHTML; 
+            btn.innerHTML = '<img src="./imagens/camera.png" alt=""> Copiando...';
             try {
                 const wrap = document.createElement('div');
                 wrap.style.cssText = 'background:white;padding:20px;width:fit-content;color:#0f172a;font-family:DM Sans,sans-serif;position:absolute;left:-9999px;';
                 
-                // Add conditional title text
                 let titleText = document.getElementById('table-title-context').textContent;
                 if(currentViewMode === 'saresp') titleText = 'Prioridades SARESP';
                 
@@ -1330,9 +1350,9 @@
                 canvas.toBlob(async (blob) => {
                     try { await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); alert('Imagem copiada!'); }
                     catch (e) { alert('Erro ao copiar. Seu navegador pode não suportar esta ação.'); }
-                    finally { document.body.removeChild(wrap); btn.textContent = orig; }
+                    finally { document.body.removeChild(wrap); btn.innerHTML = orig; }
                 });
-            } catch(e) { alert('Erro ao gerar imagem.'); btn.textContent = orig; }
+            } catch(e) { alert('Erro ao gerar imagem.'); btn.innerHTML = orig; }
         };
 
         function getSelectedCheckboxes(k) { return Array.from(document.querySelectorAll(`.multi-select[data-filter="${k}"] input[type="checkbox"]:checked`)).map(cb => cb.value); }
@@ -1751,45 +1771,45 @@
                 <div class="saresp-panel" data-html2canvas-ignore="true">
                     <div class="saresp-panel-header">
                         <div class="saresp-panel-header-left">
-                            <div class="saresp-panel-title">🎯 Prioridades SARESP</div>
+                            <div class="saresp-panel-title"><img src="./imagens/bullseye-arrow.png" alt="" style="filter: brightness(0) invert(1);"> Prioridades SARESP</div>
                             <div class="saresp-panel-sub">Filtre por área do conhecimento para focar a análise pedagógica</div>
                         </div>
                     </div>
                     <div class="saresp-panel-body">
                         <div class="area-filter-label" style="margin-top:0;">Tipo de Ensino</div>
                         <div class="area-btns" style="margin-bottom:1.25rem;">
-                            <button id="saresp-te-all" class="area-btn te-btn-all ${window.sarespTEFilter==='all'?'active':''}" onclick="window.setSarespTE('all')">🏫 Ambos</button>
-                            <button id="saresp-te-ef" class="area-btn te-btn-ef ${window.sarespTEFilter==='ef'?'active':''}" onclick="window.setSarespTE('ef')">🎒 Ensino Fundamental</button>
-                            <button id="saresp-te-em" class="area-btn te-btn-em ${window.sarespTEFilter==='em'?'active':''}" onclick="window.setSarespTE('em')">🎓 Ensino Médio</button>
+                            <button id="saresp-te-all" class="area-btn te-btn-all ${window.sarespTEFilter==='all'?'active':''}" onclick="window.setSarespTE('all')"><img src="./imagens/school.png" alt=""> Ambos</button>
+                            <button id="saresp-te-ef" class="area-btn te-btn-ef ${window.sarespTEFilter==='ef'?'active':''}" onclick="window.setSarespTE('ef')"><img src="./imagens/apple-books.png" alt=""> Ensino Fundamental</button>
+                            <button id="saresp-te-em" class="area-btn te-btn-em ${window.sarespTEFilter==='em'?'active':''}" onclick="window.setSarespTE('em')"><img src="./imagens/graduation-cap.png" alt=""> Ensino Médio</button>
                         </div>
                         <div class="area-filter-label">Área do Conhecimento</div>
                         <div class="area-btns">
-                            <button id="area-btn-all" class="area-btn area-btn-all ${sarespAreaFilter==='all'?'active':''}" onclick="window.setSarespArea('all')">🌐 Geral</button>
-                            <button id="area-btn-cnt" class="area-btn area-btn-cnt ${sarespAreaFilter==='cnt'?'active':''}" onclick="window.setSarespArea('cnt')">🔬 CNT <span class="area-tag">BIO · QUI · FIS · CIE</span></button>
-                            <button id="area-btn-chs" class="area-btn area-btn-chs ${sarespAreaFilter==='chs'?'active':''}" onclick="window.setSarespArea('chs')">🏛️ CHS <span class="area-tag">HIS · GEO · FIL · SOC</span></button>
-                            <button id="area-btn-lgg" class="area-btn area-btn-lgg ${sarespAreaFilter==='lgg'?'active':''}" onclick="window.setSarespArea('lgg')">📖 LGG <span class="area-tag">LPT · ING</span></button>
-                            <button id="area-btn-mat" class="area-btn area-btn-mat ${sarespAreaFilter==='mat'?'active':''}" onclick="window.setSarespArea('mat')">📐 MAT <span class="area-tag">Matemática</span></button>
-                            <button id="area-btn-lpt" class="area-btn area-btn-lpt ${sarespAreaFilter==='lpt'?'active':''}" onclick="window.setSarespArea('lpt')">⭐ LPT/MAT <span class="area-tag">Port. + Mat.</span></button>
+                            <button id="area-btn-all" class="area-btn area-btn-all ${sarespAreaFilter==='all'?'active':''}" onclick="window.setSarespArea('all')"><img src="./imagens/earth-americas.png" alt=""> Geral</button>
+                            <button id="area-btn-cnt" class="area-btn area-btn-cnt ${sarespAreaFilter==='cnt'?'active':''}" onclick="window.setSarespArea('cnt')"><img src="./imagens/microscope-bacteria.png" alt=""> CNT <span class="area-tag">BIO · QUI · FIS · CIE</span></button>
+                            <button id="area-btn-chs" class="area-btn area-btn-chs ${sarespAreaFilter==='chs'?'active':''}" onclick="window.setSarespArea('chs')"><img src="./imagens/pillar.png" alt=""> CHS <span class="area-tag">HIS · GEO · FIL · SOC</span></button>
+                            <button id="area-btn-lgg" class="area-btn area-btn-lgg ${sarespAreaFilter==='lgg'?'active':''}" onclick="window.setSarespArea('lgg')"><img src="./imagens/english.png" alt=""> LGG <span class="area-tag">LPT · ING</span></button>
+                            <button id="area-btn-mat" class="area-btn area-btn-mat ${sarespAreaFilter==='mat'?'active':''}" onclick="window.setSarespArea('mat')"><img src="./imagens/square-root.png" alt=""> MAT <span class="area-tag">Matemática</span></button>
+                            <button id="area-btn-lpt" class="area-btn area-btn-lpt ${sarespAreaFilter==='lpt'?'active':''}" onclick="window.setSarespArea('lpt')"><img src="./imagens/star.png" alt=""> LPT/MAT <span class="area-tag">Port. + Mat.</span></button>
                         </div>
                         <div class="area-comps-hint" id="area-comps-hint"></div>
                     </div>
                 </div>`;
 
                 let btn2026Class = isOnly2026 ? 'tbl-btn-green' : 'tbl-btn-blue';
-                let btn2026Text = isOnly2026 ? '📅 Incluir Anteriores' : '📅 Somente 2026';
-                let btnMetasText = isMetasVisible ? '🎯 Ocultar Metas' : '🎯 Exibir Metas';
+                let btn2026Text = isOnly2026 ? '<img src="./imagens/calendar-lines.png" alt=""> Incluir Anteriores' : '<img src="./imagens/calendar-lines.png" alt=""> Somente 2026';
+                let btnMetasText = isMetasVisible ? '<img src="./imagens/bullseye.png" alt=""> Ocultar Metas' : '<img src="./imagens/bullseye.png" alt=""> Exibir Metas';
 
                 let htmlImpact = `
                 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:.75rem;">
                     <div>
-                        <h3 style="color:var(--navy);font-size:.95rem;font-weight:700;margin-bottom:.2rem;">📌 Matriz de Prioridade Pedagógica</h3>
+                        <h3 style="color:var(--navy);font-size:.95rem;font-weight:700;margin-bottom:.2rem;display:flex;align-items:center;gap:.3rem;"><img src="./imagens/thumbtack.png" alt=""> Matriz de Prioridade Pedagógica</h3>
                         <p style="font-size:.78rem;color:var(--muted);">Impacto real combinando defasagem IPP × peso SARESP × número de alunos</p>
                     </div>
                     <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-start;">
-                        <button class="tbl-btn tbl-btn-green" onclick="window.copyTableAsImage(event)">📸 Copiar imagem</button>
+                        <button class="tbl-btn tbl-btn-green" onclick="window.copyTableAsImage(event)"><img src="./imagens/camera.png" alt=""> Copiar imagem</button>
                         <button class="tbl-btn ${btn2026Class}" id="btn-toggle-2026-saresp" onclick="window.toggleOnly2026()">${btn2026Text}</button>
                         <button class="tbl-btn tbl-btn-amber" id="btn-toggle-metas-saresp" onclick="window.toggleMetas()">${btnMetasText}</button>
-                        <button class="tbl-btn" style="background:rgba(16,185,129,.1);color:var(--teal);font-weight:700;" onclick="document.getElementById('entenda-matriz-modal').style.display='flex'">💡 Entenda a Matriz</button>
+                        <button class="tbl-btn" style="background:rgba(16,185,129,.1);color:var(--teal);font-weight:700;" onclick="document.getElementById('entenda-matriz-modal').style.display='flex'"><img src="./imagens/star.png" alt=""> Entenda a Matriz</button>
                     </div>
                 </div>`;
                 
@@ -1816,13 +1836,13 @@
                 });
                 htmlImpact+=`</tbody></table>`;
 
-                let htmlSaresp = `<h3 style="margin-bottom:.6rem;color:var(--navy);font-size:.95rem;font-weight:700;">📊 Resumo Global</h3>`;
+                let htmlSaresp = `<h3 style="margin-bottom:.6rem;color:var(--navy);font-size:.95rem;font-weight:700;"><img src="./imagens/stats.png" alt=""> Resumo Global</h3>`;
                 let metricsFiltered = sarespAreaFilter==='all' ? metrics : metrics.filter(m=>compMatchesArea(m.label, sarespAreaFilter));
                 htmlSaresp += `<table class="heatmap" style="margin-bottom:2rem;"><thead><tr><th>Componente</th><th>Registros Ponderados</th><th>Média Aparada Simulada</th><th style="color:var(--purple);">IPP Estimado</th><th>Nível</th></tr></thead><tbody>`;
                 metricsFiltered.forEach(m=>{let fc=m.media<3?'bg-red':m.media>5?'bg-green':'bg-yellow',tc=m.ipp<100?'bg-red':m.ipp>120?'bg-green':'bg-yellow';htmlSaresp+=`<tr><td class="row-header" style="text-align:center;font-weight:700;">${m.label}</td><td>${m.totalWeight.toLocaleString()}</td><td class="${fc}">${m.media.toFixed(2).replace('.',',')}</td><td style="font-weight:700;color:var(--purple);">${m.ipp.toFixed(1).replace('.',',')}</td><td class="${tc}">${m.proficiencia}</td></tr>`;});
                 htmlSaresp+=`</tbody></table>`;
 
-                let htmlMatrix = `<h3 style="margin-bottom:.6rem;color:var(--navy);font-size:.95rem;font-weight:700;">🔵 Matriz de Proficiência IPP Estimada</h3>`;
+                let htmlMatrix = `<h3 style="margin-bottom:.6rem;color:var(--navy);font-size:.95rem;font-weight:700;"><img src="./imagens/bullseye-arrow.png" alt=""> Matriz de Proficiência IPP Estimada</h3>`;
                 htmlMatrix+=`<div style="font-size:.78rem;display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;background:var(--bg);padding:.6rem .85rem;border-radius:var(--radius);border:1px solid var(--border);">
                     <strong>Escala IPP:</strong>
                     <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--rose);"></span> &lt;100</span>

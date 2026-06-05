@@ -642,13 +642,11 @@
 </head>
 <body>
 
-    <!-- LOADING -->
     <div id="loading-overlay">
         <div class="spinner"></div>
         <div id="loading-text">Carregando...</div>
     </div>
 
-    <!-- METODOLOGIA MODAL -->
     <div id="metodologia-modal" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="window.closeMetodologia()">&times;</span>
@@ -669,7 +667,6 @@
         </div>
     </div>
 
-    <!-- DISCLAIMER -->
     <div id="disclaimer-modal">
         <div class="modal-content">
             <h2><img src="./imagens/thumbtack.png" alt=""> Versão Beta</h2>
@@ -681,7 +678,6 @@
         </div>
     </div>
 
-    <!-- RANKING MODAL -->
     <div id="ranking-modal" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="window.closeModal()">&times;</span>
@@ -698,7 +694,6 @@
         </div>
     </div>
 
-    <!-- SARESP AUDIT MODAL -->
     <div id="saresp-audit-modal" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="window.closeSarespAuditModal()">&times;</span>
@@ -707,7 +702,6 @@
         </div>
     </div>
 
-    <!-- ENTENDA A MATRIZ MODAL -->
     <div id="entenda-matriz-modal">
         <div class="modal-content">
             <span class="modal-close" onclick="document.getElementById('entenda-matriz-modal').style.display='none'">&times;</span>
@@ -754,7 +748,57 @@
         </div>
     </div>
 
-    <!-- LOGIN -->
+    <div id="simulator-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 850px;">
+            <span class="modal-close" onclick="document.getElementById('simulator-modal').style.display='none'">&times;</span>
+            
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+                <div style="flex:1; min-width:300px;">
+                    <h2 style="display:flex;align-items:center;gap:.5rem;color:var(--navy);margin-bottom:.4rem;"><img src="./imagens/rocket-lunch.png" alt=""> Simulador de Impactos</h2>
+                    <p style="font-size:.88rem;color:var(--muted);margin-bottom:0;line-height:1.5;">
+                        Clique em uma barra para simular como a variação da nota daquela entidade altera a média global.
+                    </p>
+                </div>
+                
+                <div style="display:flex; flex-direction:column; gap:.5rem; align-items:flex-end;">
+                    <button class="tbl-btn" style="background:var(--surface2); color:var(--text); border:1px solid var(--border); font-weight:700;" onclick="window.resetAllSimValues()"><span style="font-size:1.1em;">↺</span> Resetar Tudo</button>
+                    <div style="display:flex; gap:.75rem; font-size:.72rem; font-weight:700; background:var(--bg); padding:.35rem .65rem; border-radius:var(--radius); border:1px solid var(--border);">
+                        <div style="display:flex; align-items:center; gap:.25rem; color:var(--muted);"><div style="width:12px;height:0;border-bottom:2px dashed #0f172a;"></div> Média Original</div>
+                        <div style="display:flex; align-items:center; gap:.25rem; color:var(--emerald);"><div style="width:12px;height:2.5px;background:#059669;"></div> Média Simulada</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container" style="height: 360px; margin-top: 1.2rem; margin-bottom: 1.5rem; padding: 1rem; box-shadow: none; border: 1px solid var(--border); background: var(--surface2);">
+                <canvas id="simulatorChart"></canvas>
+            </div>
+
+            <div id="simulator-controls" style="display:none; background:var(--surface); padding:1.25rem; border-radius:var(--radius); border:1px solid var(--border); box-shadow:var(--shadow);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;">
+                    <h4 id="sim-entity-name" style="color:var(--navy); font-size:1.05rem; margin:0;">Nome da Entidade</h4>
+                    <div style="text-align:right; background:var(--bg); padding:.5rem 1rem; border-radius:var(--radius); border:1px solid var(--border);">
+                        <span style="font-size:.75rem; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.05em;">Nova Média Global</span><br>
+                        <strong id="sim-global-avg" style="font-size:1.35rem; color:var(--blue);">0.00</strong>
+                        <span id="sim-global-diff" style="font-size:.9rem; font-weight:800; margin-left:.4rem;"></span>
+                    </div>
+                </div>
+                
+                <div style="display:flex; align-items:center; gap:1.25rem; margin-bottom:.5rem;">
+                    <button class="tbl-btn" style="background:rgba(225,29,72,.1); color:var(--rose); font-size:1.1rem; padding:.2rem .8rem;" onclick="window.adjustSimValue(-0.1)">-</button>
+                    <input type="range" id="sim-slider" min="0" max="10" step="0.1" style="flex:1; accent-color:var(--blue); cursor:pointer;" oninput="window.updateSimChart()">
+                    <button class="tbl-btn" style="background:rgba(5,150,105,.1); color:var(--emerald); font-size:1.1rem; padding:.2rem .8rem;" onclick="window.adjustSimValue(0.1)">+</button>
+                </div>
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:.5rem;">
+                    <div style="font-size:.85rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">
+                        Nota Simulada: <span id="sim-entity-val" style="color:var(--text); font-size:1rem; font-family:'Geist Mono', monospace;">0.00</span>
+                    </div>
+                    <button class="tbl-btn" style="background:var(--bg); color:var(--muted); font-size:.75rem;" onclick="window.resetSimValue()">↺ Resetar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="login-section">
         <div class="login-box">
             <div class="login-logo-wrap">
@@ -776,7 +820,6 @@
         </div>
     </div>
 
-    <!-- DASHBOARD -->
     <div id="dashboard-section">
         <header>
             <div class="header-brand">
@@ -809,7 +852,6 @@
                 <p id="print-filters-text"></p>
             </div>
 
-            <!-- FILTERS -->
             <div class="filters-wrapper">
                 <div class="filters-label">Filtros globais principais</div>
                 <div class="filters-grid">
@@ -847,7 +889,6 @@
                 </div>
             </div>
 
-            <!-- VIEW TABS -->
             <div class="view-tabs">
                 <button class="btn-toggle active" id="btn-view-eval"            onclick="window.setViewMode('eval')"><img src="./imagens/memo-pad.png" alt=""> Histórico</button>
                 <button class="btn-toggle"         id="btn-view-comp"            onclick="window.setViewMode('component')"><img src="./imagens/stats.png" alt=""> Componentes</button>
@@ -866,7 +907,6 @@
                 </div>
             </div>
 
-            <!-- COMPARE FILTERS -->
             <div id="compare-filters">
                 <label>Analisar Evolução:</label>
                 <select id="comp-aval-1" onchange="window.processViewAndRender()"></select>
@@ -876,13 +916,11 @@
                 <select id="compare-filter-componente" onchange="window.processViewAndRender()"></select>
             </div>
 
-            <!-- SELECTED ROW -->
             <div id="selected-row-indicator">
                 <span id="selected-row-text">Filtro ativo</span>
                 <button class="tbl-btn" style="background:rgba(244,63,94,.1);color:var(--rose);font-size:.78rem;" onclick="window.resetRowSelection()">✕ Remover Filtro</button>
             </div>
 
-            <!-- CARDS -->
             <div class="cards-grid">
                 <div class="card">
                     <h3>Média Ponderada Real</h3>
@@ -906,7 +944,6 @@
                 </div>
             </div>
 
-            <!-- TABLE -->
             <div class="table-container">
                 <div class="table-toolbar">
                     <div>
@@ -927,19 +964,16 @@
                 <div id="heatmap-container"></div>
             </div>
 
-            <!-- CHART CONTROLS -->
             <div id="chart-controls">
                 <button class="tbl-btn tbl-btn-blue" onclick="window.toggleChartDatasets(true)"><img src="./imagens/map-marker-check.png" alt=""> Marcar Todas</button>
                 <button class="tbl-btn" style="background:var(--bg);color:var(--muted);" onclick="window.toggleChartDatasets(false)">☐ Desmarcar Todas</button>
             </div>
 
-            <!-- CHARTS -->
             <div class="charts-grid">
                 <div class="chart-container"><canvas id="chartComponentes"></canvas></div>
                 <div class="chart-container"><canvas id="chartEvolucao"></canvas></div>
             </div>
             
-            <!-- FOOTER -->
             <div class="dashboard-footer" data-html2canvas-ignore="true">
                 Desenvolvido por <strong>Juliano Curto</strong>. <br>
                 Ícones utilizados com atribuição ao <a href="https://www.flaticon.com/" target="_blank" rel="noopener noreferrer">Flaticon</a>.
@@ -1876,8 +1910,6 @@
 
                 let btn2026Class = isOnly2026 ? 'tbl-btn-green' : 'tbl-btn-blue';
                 let btn2026Text = isOnly2026 ? '<img src="./imagens/calendar-lines.png" alt=""> Incluir Anteriores' : '<img src="./imagens/calendar-lines.png" alt=""> Somente 2026';
-                let btnMetasText = isMetasVisible ? '<img src="./imagens/bullseye.png" alt=""> Ocultar Metas' : '<img src="./imagens/bullseye.png" alt=""> Exibir Metas';
-
                 let htmlImpact = `
                 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:.75rem;">
                     <div>
@@ -1887,7 +1919,7 @@
                     <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-start;">
                         <button class="tbl-btn tbl-btn-green" onclick="window.copyTableAsImage(event)"><img src="./imagens/camera.png" alt=""> Copiar imagem</button>
                         <button class="tbl-btn ${btn2026Class}" id="btn-toggle-2026-saresp" onclick="window.toggleOnly2026()">${btn2026Text}</button>
-                        <button class="tbl-btn tbl-btn-amber" id="btn-toggle-metas-saresp" onclick="window.toggleMetas()">${btnMetasText}</button>
+                        <button class="tbl-btn" style="background:rgba(14,165,233,.1);color:var(--sky);font-weight:700;" onclick="window.openSimulator()"><img src="./imagens/rocket-lunch.png" alt=""> Simulando Impactos</button>
                         <button class="tbl-btn" style="background:rgba(16,185,129,.1);color:var(--teal);font-weight:700;" onclick="document.getElementById('entenda-matriz-modal').style.display='flex'"><img src="./imagens/scale-comparison.png" alt=""> Entenda a Matriz</button>
                     </div>
                 </div>`;
@@ -2139,6 +2171,278 @@
             }
             await loadAndJoinData();
         }
+
+        /* ─── SIMULADOR DE IMPACTOS ─── */
+        window.simData = {};
+        window.simChart = null;
+
+        window.openSimulator = () => {
+            const isUre = userProfile.tipo_usuario !== 'ESCOLA' && getSelectedCheckboxes('escola').length === 0;
+            const rowKey = isUre ? 'escola' : 'turma_nome';
+            
+            let ents = [...new Set(activeData.map(d => d[rowKey]))].filter(Boolean);
+            let entStats = [];
+            let globalSp = 0, globalWt = 0;
+
+            ents.forEach(e => {
+                let ed = activeData.filter(d => d[rowKey] === e && d.nota > 0);
+                let sp = 0, wt = 0;
+                
+                ed.forEach(d => {
+                    let sw = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino);
+                    sp += d.nota * sw * d.avaliados;
+                    wt += sw * d.avaliados;
+                });
+                
+                if (wt > 0) {
+                    let avg = sp / wt;
+                    globalSp += sp;
+                    globalWt += wt;
+                    
+                    let hexColor = '#94a3b8'; 
+                    if (window.sarespOverallMap && window.sarespOverallMap[e]) {
+                        let ipc = window.getIPC(window.sarespOverallMap[e].indiceGeral);
+                        if(ipc.class === 'bg-dark-red') hexColor = '#9f1239';
+                        else if(ipc.class === 'bg-red') hexColor = '#e11d48';
+                        else if(ipc.class === 'bg-orange') hexColor = '#c2410c';
+                        else if(ipc.class === 'bg-yellow') hexColor = '#eab308';
+                        else if(ipc.class === 'bg-green') hexColor = '#059669';
+                    }
+                    
+                    entStats.push({ name: e, originalAvg: avg, currentAvg: avg, sp: sp, wt: wt, color: hexColor });
+                }
+            });
+
+            if (entStats.length === 0) {
+                alert('Sem dados suficientes para simulação no filtro atual.');
+                return;
+            }
+
+            let globalAvg = globalSp / globalWt;
+
+            // Ordena as entidades simulando o formato de sino (Distribuição Normal)
+            entStats.sort((a, b) => a.originalAvg - b.originalAvg);
+            let bellCurveArr = [];
+            let left = true;
+            for (let i = 0; i < entStats.length; i++) {
+                if (left) bellCurveArr.push(entStats[i]);
+                else bellCurveArr.unshift(entStats[i]);
+                left = !left;
+            }
+
+            window.simData = {
+                entities: bellCurveArr,
+                globalWt: globalWt,
+                originalGlobalAvg: globalAvg,
+                activeSimIndex: -1
+            };
+
+            document.getElementById('simulator-controls').style.display = 'none';
+            document.getElementById('simulator-modal').style.display = 'flex';
+            window.renderSimChart();
+        };
+
+        window.renderSimChart = () => {
+            const ctx = document.getElementById('simulatorChart').getContext('2d');
+            if (window.simChart) window.simChart.destroy();
+
+            const labels = window.simData.entities.map(e => ''); // Oculta nomes no eixo X para limpeza
+            const data = window.simData.entities.map(e => e.currentAvg);
+            const bgColors = window.simData.entities.map(e => e.color);
+
+            // Plugin customizado para desenhar a linha horizontal das Médias
+            const horizontalLinePlugin = {
+                id: 'horizontalLine',
+                afterDatasetsDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const yAxis = chart.scales.y;
+                    const chartArea = chart.chartArea;
+                    
+                    let currentGlobalSp = window.simData.entities.reduce((acc, e) => acc + (e.currentAvg * e.wt), 0);
+                    let currentGlobalAvg = currentGlobalSp / window.simData.globalWt;
+                    let originalGlobalAvg = window.simData.originalGlobalAvg;
+                    
+                    // LINHA 1: Média Original
+                    let yPosOrig = yAxis.getPixelForValue(originalGlobalAvg);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(chartArea.left, yPosOrig);
+                    ctx.lineTo(chartArea.right, yPosOrig);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(15, 23, 42, 0.5)'; // var(--text) opaco
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.roundRect(chartArea.right - 50, yPosOrig - 12, 50, 24, 4);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px "Geist Mono", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(originalGlobalAvg.toFixed(2), chartArea.right - 25, yPosOrig);
+                    
+                    // LINHA 2: Média Simulada (só mostra se houver diferença)
+                    if (Math.abs(currentGlobalAvg - originalGlobalAvg) > 0.005) {
+                        let yPosSim = yAxis.getPixelForValue(currentGlobalAvg);
+                        let simColor = currentGlobalAvg > originalGlobalAvg ? '#059669' : '#e11d48'; // Verde ou Vermelho
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(chartArea.left, yPosSim);
+                        ctx.lineTo(chartArea.right, yPosSim);
+                        ctx.lineWidth = 2.5;
+                        ctx.strokeStyle = simColor;
+                        ctx.setLineDash([]); // Linha contínua
+                        ctx.stroke();
+
+                        ctx.fillStyle = simColor;
+                        ctx.beginPath();
+                        ctx.roundRect(chartArea.right - 50, yPosSim - 12, 50, 24, 4);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(currentGlobalAvg.toFixed(2), chartArea.right - 25, yPosSim);
+                    }
+                    
+                    ctx.restore();
+                }
+            };
+
+            window.simChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Média',
+                        data: data,
+                        backgroundColor: bgColors,
+                        borderRadius: 4,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.2)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (ctx) => window.simData.entities[ctx[0].dataIndex].name,
+                                label: (ctx) => `Média: ${ctx.raw.toFixed(2)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 10, grid: { color: 'rgba(0,0,0,.04)' } },
+                        x: { grid: { display: false } }
+                    },
+                    onHover: (event, chartElement) => {
+                        event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) window.selectSimEntity(elements[0].index);
+                    }
+                },
+                plugins: [horizontalLinePlugin]
+            });
+        };
+
+        window.selectSimEntity = (idx) => {
+            window.simData.activeSimIndex = idx;
+            let entity = window.simData.entities[idx];
+            
+            document.getElementById('sim-entity-name').textContent = entity.name;
+            document.getElementById('sim-slider').value = entity.currentAvg;
+            
+            window.updateSimText();
+            
+            const controls = document.getElementById('simulator-controls');
+            controls.style.display = 'block';
+            controls.style.animation = 'scaleIn 0.2s ease-out';
+        };
+
+        window.adjustSimValue = (delta) => {
+            const slider = document.getElementById('sim-slider');
+            let val = parseFloat(slider.value) + delta;
+            if (val < 0) val = 0;
+            if (val > 10) val = 10;
+            slider.value = val.toFixed(1);
+            window.updateSimChart();
+        };
+
+        window.resetSimValue = () => {
+            let idx = window.simData.activeSimIndex;
+            if (idx === -1) return;
+            let original = window.simData.entities[idx].originalAvg;
+            document.getElementById('sim-slider').value = original.toFixed(1);
+            window.updateSimChart();
+        };
+
+        window.resetAllSimValues = () => {
+            if (!window.simData.entities) return;
+            window.simData.entities.forEach(e => e.currentAvg = e.originalAvg);
+            
+            // Se houver uma entidade ativa no slider, atualiza a barra para a original
+            if (window.simData.activeSimIndex !== -1) {
+                let activeOrig = window.simData.entities[window.simData.activeSimIndex].originalAvg;
+                document.getElementById('sim-slider').value = activeOrig.toFixed(1);
+            }
+            
+            window.updateSimChart();
+        };
+
+        window.updateSimChart = () => {
+            let idx = window.simData.activeSimIndex;
+            if (idx === -1) return;
+            
+            let newAvg = parseFloat(document.getElementById('sim-slider').value);
+            window.simData.entities[idx].currentAvg = newAvg;
+            
+            window.simChart.data.datasets[0].data[idx] = newAvg;
+            window.simChart.update();
+            
+            window.updateSimText();
+        };
+
+        window.updateSimText = () => {
+            let currentGlobalSp = window.simData.entities.reduce((acc, e) => acc + (e.currentAvg * e.wt), 0);
+            let currentGlobalAvg = currentGlobalSp / window.simData.globalWt;
+            
+            document.getElementById('sim-global-avg').textContent = currentGlobalAvg.toFixed(2);
+            
+            let diff = currentGlobalAvg - window.simData.originalGlobalAvg;
+            let diffEl = document.getElementById('sim-global-diff');
+            
+            if (Math.abs(diff) < 0.005) {
+                diffEl.textContent = '(0.00)';
+                diffEl.style.color = 'var(--muted)';
+            } else if (diff > 0) {
+                diffEl.textContent = `(+${diff.toFixed(2)})`;
+                diffEl.style.color = 'var(--emerald)';
+            } else {
+                diffEl.textContent = `(${diff.toFixed(2)})`;
+                diffEl.style.color = 'var(--rose)';
+            }
+
+            // Exibição da Nota Simulada individual
+            let idx = window.simData.activeSimIndex;
+            if (idx !== -1) {
+                let entity = window.simData.entities[idx];
+                let entDiff = entity.currentAvg - entity.originalAvg;
+                
+                let entDiffStr = "";
+                if (Math.abs(entDiff) >= 0.05) {
+                    entDiffStr = entDiff > 0 ? `(+${entDiff.toFixed(2)})` : `(${entDiff.toFixed(2)})`;
+                }
+                
+                let entDiffColor = entDiff > 0 ? 'var(--emerald)' : (entDiff < 0 ? 'var(--rose)' : 'inherit');
+                
+                document.getElementById('sim-entity-val').innerHTML = `${entity.currentAvg.toFixed(2)} <span style="color:${entDiffColor}; font-size:0.85em; margin-left:4px;">${entDiffStr}</span>`;
+            }
+        };
 
         window.onload=async()=>{try{if(!window.supabaseClient)return;const{data:{session}}=await window.supabaseClient.auth.getSession();if(session){currentUser=session.user;initDashboard();}}catch(e){console.error("Auto login error",e);}};
     </script>

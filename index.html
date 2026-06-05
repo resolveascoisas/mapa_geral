@@ -2382,16 +2382,29 @@
         };
 
         window.resetAllSimValues = () => {
-            if (!window.simData.entities) return;
-            window.simData.entities.forEach(e => e.currentAvg = e.originalAvg);
+            if (!window.simData || !window.simData.entities) return;
             
-            // Se houver uma entidade ativa no slider, atualiza a barra para a original
+            // 1. Restaura todas as entidades para a média original no objeto de dados e no gráfico
+            window.simData.entities.forEach((e, i) => {
+                e.currentAvg = e.originalAvg;
+                if (window.simChart && window.simChart.data.datasets[0]) {
+                    window.simChart.data.datasets[0].data[i] = e.originalAvg;
+                }
+            });
+            
+            // 2. Manda o gráfico se redesenhar por completo com as colunas nas posições originais
+            if (window.simChart) {
+                window.simChart.update();
+            }
+            
+            // 3. Se houver uma entidade ativa no slider, atualiza o controle deslizante dela
             if (window.simData.activeSimIndex !== -1) {
                 let activeOrig = window.simData.entities[window.simData.activeSimIndex].originalAvg;
                 document.getElementById('sim-slider').value = activeOrig.toFixed(1);
             }
             
-            window.updateSimChart();
+            // 4. Atualiza os textos da Média Global e limpa a variação da nota
+            window.updateSimText();
         };
 
         window.updateSimChart = () => {

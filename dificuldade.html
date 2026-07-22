@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Dificuldade e Desempenho</title>
+    <link rel="icon" type="image/png" href="./imagens/icone.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --navy:    #0c1a35; --navy2:   #142040;
+            --blue:    #1d4ed8; --blue2:   #2563eb;
+            --sky:     #0284c7; --teal:    #0f766e;
+            --emerald: #059669; --amber:   #d97706;
+            --rose:    #e11d48; --orange:  #c2410c;
+            --purple:  #6d28d9;
+            --bg:      #f1f5fb; --surface: #ffffff; --surface2:#f8fafd;
+            --border:  #e4eaf3; --border2: #c9d5e8;
+            --text:    #0d1829; --muted:   #5a6e8a; --light:   #8fa3bc;
+            --radius:  8px; --radius2: 14px;
+            --shadow:  0 1px 2px rgba(0,0,0,.04), 0 4px 20px rgba(12,26,53,.06);
+            --grad-blue: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+            --grad-header: linear-gradient(160deg, #0c1a35 0%, #0f2a52 60%, #1a3d72 100%);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14.5px; line-height: 1.55; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+        /* CARREGAMENTO E LOGIN */
+        #loading-overlay { position: fixed; inset: 0; background: rgba(12,26,53,.88); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; flex-direction: column; z-index: 9999; gap: 1.25rem; }
+        .spinner { width: 40px; height: 40px; border: 2.5px solid rgba(255,255,255,.12); border-top-color: #60a5fa; border-radius: 50%; animation: spin .7s linear infinite; }
+        #loading-text { color: rgba(255,255,255,.75); font-size: .88rem; font-weight: 500; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #login-section { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: var(--grad-header); position: relative; overflow: hidden; }
+        .login-box { position: relative; z-index: 1; background: rgba(255,255,255,.05); backdrop-filter: blur(28px) saturate(1.4); border: 1px solid rgba(255,255,255,.13); padding: 2.75rem 2.5rem; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 40px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.1); }
+        .login-title { color: #fff; font-size: 1.45rem; font-weight: 800; text-align: center; margin-bottom: .35rem; }
+        .login-sub { color: rgba(255,255,255,.45); font-size: .85rem; text-align: center; margin-bottom: 2.25rem; }
+        .input-group { margin-bottom: 1rem; }
+        .input-group label { display: block; font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.5); margin-bottom: .45rem; text-transform: uppercase; }
+        .input-group input { width: 100%; padding: .75rem 1rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.11); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .925rem; outline: none; }
+        .login-btn { width: 100%; padding: .875rem; background: var(--grad-blue); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .925rem; font-weight: 700; border: none; cursor: pointer; margin-top: .5rem; }
+
+        /* CABEÇALHO E ESTRUTURA */
+        #dashboard-section { display: none; }
+        header { background: var(--grad-header); padding: .85rem 2rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 24px rgba(0,0,0,.22); position: sticky; top: 0; z-index: 200; border-bottom: 1px solid rgba(255,255,255,.06); }
+        .header-brand h1 { font-size: .95rem; font-weight: 800; color: #fff; line-height: 1.2; }
+        .header-brand span { font-size: .7rem; color: rgba(255,255,255,.38); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+        
+        .header-actions { display: flex; align-items: center; gap: .75rem; }
+        .btn-metodologia { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.2); padding: .45rem .9rem; border-radius: var(--radius); font-family: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; transition: all .2s; }
+        .btn-metodologia:hover { background: rgba(255,255,255,.15); }
+
+        .btn-logout { background: transparent; color: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.15); padding: .45rem .9rem; border-radius: var(--radius); font-family: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; transition: all .2s; }
+        .btn-logout:hover { background: rgba(225,29,72,.15); color: #fca5a5; border-color: rgba(225,29,72,.3); }
+        
+        .container { padding: 1.5rem 2rem 2rem 2rem; max-width: 1600px; margin: 0 auto; }
+        
+        /* ABAS */
+        .view-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+        .btn-toggle { display: inline-flex; align-items: center; gap: .38rem; padding: .6rem 1.25rem; border-radius: 99px; font-family: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; border: 1.5px solid transparent; transition: all .18s; background: var(--surface); color: var(--muted); border-color: var(--border); box-shadow: var(--shadow); }
+        .btn-toggle:hover { background: var(--surface2); color: var(--navy); }
+        .btn-toggle.active { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 4px 12px rgba(12,26,53,.2); }
+
+        .toolbar { background: var(--surface); padding: 1.25rem 2rem; border-radius: var(--radius2); border: 1px solid var(--border); display: flex; align-items: center; gap: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: .4rem; }
+        .filter-group label { font-size: .75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+        .filter-group select { padding: .6rem .85rem; border-radius: var(--radius); border: 1.5px solid var(--border); font-family: inherit; font-size: .85rem; background: var(--surface2); color: var(--text); outline: none; min-width: 220px; font-weight: 600; cursor: pointer; }
+        
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .card { background: var(--surface); border-radius: var(--radius2); padding: 1.4rem 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; display: flex; flex-direction: column; justify-content: space-between; }
+        .card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--blue); border-radius: var(--radius2) var(--radius2) 0 0; }
+        .card.alert::after { background: var(--rose); }
+        .card.warning::after { background: var(--amber); }
+        .card.success::after { background: var(--emerald); }
+        .card h3 { font-size: .7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .25rem; }
+        .card .value { font-size: 1.6rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; line-height: 1.2; }
+        .card .desc { font-size: .75rem; color: var(--muted); margin-top: .5rem; font-weight: 500; }
+
+        .charts-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 1rem; margin-bottom: 1.5rem; }
+        .charts-grid.single { grid-template-columns: 1fr; }
+        @media (max-width: 1000px) { .charts-grid { grid-template-columns: 1fr; } }
+        .chart-container { background: var(--surface); border-radius: var(--radius2); padding: 1.4rem 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); height: 420px; display: flex; flex-direction: column; }
+        .chart-header { margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: flex-start; }
+        .chart-header h2 { font-size: 1rem; font-weight: 800; color: var(--navy); }
+        .chart-header p { font-size: .75rem; color: var(--muted); margin-top: .2rem; }
+        .canvas-wrapper { flex: 1; position: relative; }
+
+        /* PAINEL DE LEITURA EXECUTIVA */
+        .exec-summary-box { background: var(--surface); border-radius: var(--radius2); padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 1.5rem; border-left: 4px solid var(--blue); }
+        .exec-summary-box h3 { font-size: 0.95rem; font-weight: 800; color: var(--navy); margin-bottom: 0.5rem; display: flex; align-items: center; gap: .5rem; }
+        .exec-summary-box p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+
+        .table-container { background: var(--surface); border-radius: var(--radius2); padding: 1.4rem 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); overflow-x: auto; margin-bottom: 1.5rem; }
+        table { width: 100%; border-collapse: collapse; font-size: .82rem; white-space: nowrap; }
+        th, td { border-bottom: 1px solid var(--border); padding: .75rem 1rem; text-align: left; vertical-align: middle; }
+        th { background: var(--surface2); color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: .72rem; letter-spacing: .05em; }
+        tbody tr:hover { background: var(--surface2); }
+        
+        .badge { padding: .25rem .5rem; border-radius: 99px; font-size: .7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; width: max-content; }
+        .badge-danger { background: rgba(225,29,72,.1); color: var(--rose); border: 1px solid rgba(225,29,72,.2); }
+        .badge-warning { background: rgba(217,119,6,.1); color: var(--amber); border: 1px solid rgba(217,119,6,.2); }
+        .badge-success { background: rgba(5,150,105,.1); color: var(--emerald); border: 1px solid rgba(5,150,105,.2); }
+        .badge-purple { background: rgba(109,40,217,.1); color: var(--purple); border: 1px solid rgba(109,40,217,.2); }
+
+        .metric-mono { font-family: 'Geist Mono', monospace; font-weight: 600; }
+        
+        #view-detalhada, #view-global { display: none; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .cell-diagnostico { display: flex; flex-direction: column; align-items: center; gap: 4px; justify-content: center; }
+        .cell-diagnostico span.idr-label { font-size: 0.68rem; color: var(--muted); font-family: 'Geist Mono', monospace; font-weight: 600; }
+
+        /* MODAL DE METODOLOGIA */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(12,26,53,.65); backdrop-filter: blur(6px); z-index: 10000; justify-content: center; align-items: center; padding: 1rem; }
+        .modal-content { background: var(--surface); padding: 2rem; border-radius: var(--radius2); width: 100%; max-width: 750px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 40px 80px rgba(0,0,0,.28); }
+        .modal-close { position: absolute; top: 1rem; right: 1rem; cursor: pointer; width: 28px; height: 28px; background: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .95rem; color: var(--muted); font-weight: 700; border: 1px solid var(--border); }
+        .modal-close:hover { background: var(--border); color: var(--text); }
+        .modal-content h2 { margin-bottom: 1rem; color: var(--navy); font-size: 1.25rem; font-weight: 800; }
+        .modal-content h3 { color: var(--navy); font-size: 1rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.4rem; }
+        .modal-content p, .modal-content li { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.5rem; }
+        .modal-content ul { padding-left: 1.25rem; margin-bottom: 0.75rem; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay"><div class="spinner"></div><div id="loading-text">Processando IDR-R...</div></div>
+
+    <!-- MODAL DE METODOLOGIA -->
+    <div id="modal-metodologia" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('modal-metodologia').style.display='none'">&times;</span>
+            <h2>Metodologia e Interpretação dos Indicadores</h2>
+            
+            <p>Este painel utiliza o modelo de <strong>Dificuldade Robusta (IDR-R)</strong> para avaliar o nível de retenção das provas aplicadas na regional, mitigando distorções causadas por notas extremas (outliers) e garantindo uma leitura segura para a tomada de decisão pedagógica.</p>
+
+            <h3>1. Mediana Ponderada</h3>
+            <p>Em vez de depender exclusivamente da média tradicional (que pode ser puxada para cima ou para baixo por desempenhos isolados muito atípicos), utilizamos a <strong>mediana ponderada</strong> das notas por agrupamento (escola, turma ou componente), considerando o peso e o número de alunos avaliados.</p>
+
+            <h3>2. Índice Base de Dificuldade (IDR Base)</h3>
+            <p>Calculado pela divisão entre o resultado atual e o padrão histórico de referência da série:</p>
+            <ul>
+                <li><strong>IDR Base = Mediana Atual / Mediana Histórica</strong></li>
+                <li><em>IDR = 1.0:</em> Desempenho esperado (dentro do padrão).</li>
+                <li><em>IDR &lt; 1.0:</em> Avaliação mais difícil que o histórico.</li>
+                <li><em>IDR &gt; 1.0:</em> Avaliação mais fácil que o histórico.</li>
+            </ul>
+
+            <h3>3. Fator de Consistência (FC) e Desvio Padrão (DP)</h3>
+            <p>O desvio padrão ($\sigma$) mede a dispersão e a desigualdade dos resultados entre os segmentos. Para mensurar a confiabilidade de que a prova foi igualmente difícil ou fácil para todos, calculamos o Fator de Consistência:</p>
+            <ul>
+                <li><strong>FC = 1 / (1 + DP)</strong></li>
+                <li>Quanto maior o desvio padrão, menor a consistência e menor a garantia de que o comportamento foi homogêneo.</li>
+            </ul>
+
+            <h3>4. Índice de Dificuldade Robusta (IDR-R)</h3>
+            <p>Combina a mediana central com a consistência estatística da dispersão:</p>
+            <ul>
+                <li><strong>IDR-R = IDR Base × (0.7 + 0.3 × FC)</strong></li>
+            </ul>
+
+            <h3>5. Classificação do Nível de Dificuldade</h3>
+            <ul>
+                <li><strong>IDR-R &lt; 0.85:</strong> Muito Difícil</li>
+                <li><strong>0.85 ≤ IDR-R &lt; 0.95:</strong> Difícil</li>
+                <li><strong>0.95 ≤ IDR-R ≤ 1.05:</strong> Dentro do Esperado</li>
+                <li><strong>1.05 &lt; IDR-R ≤ 1.15:</strong> Fácil</li>
+                <li><strong>IDR-R &gt; 1.15:</strong> Muito Fácil</li>
+            </ul>
+
+            <h3>6. Diagnóstico de Estabilidade (Dispersão)</h3>
+            <ul>
+                <li><strong>DP &lt; 0.40:</strong> Muito Uniforme</li>
+                <li><strong>0.40 ≤ DP &lt; 0.80:</strong> Uniforme</li>
+                <li><strong>0.80 ≤ DP &lt; 1.20:</strong> Com Variação Moderada</li>
+                <li><strong>DP ≥ 1.20:</strong> Alta Disparidade</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-section">
+        <div class="login-box">
+            <div class="login-title">Dificuldade Robusta (IDR-R)</div>
+            <div class="login-sub">Gestão Estratégica Regional</div>
+            <div class="input-group">
+                <label>E-mail (PEC / Gestão)</label>
+                <input type="email" id="email" placeholder="seu@email.com" onkeypress="if(event.key==='Enter')window.handleLogin()">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key==='Enter')window.handleLogin()">
+            </div>
+            <button class="login-btn" onclick="window.handleLogin()">Acessar Módulo</button>
+            <div id="login-error">Credenciais inválidas.</div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard-section">
+        <header>
+            <div class="header-brand">
+                <div>
+                    <h1>Análise Robusta de Retenção e Dificuldade (IDR-R)</h1>
+                    <span>Seduc-SP — Inteligência Pedagógica</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-metodologia" onclick="document.getElementById('modal-metodologia').style.display='flex'">Metodologia</button>
+                <button class="btn-logout" onclick="window.handleLogout()">Sair</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <!-- NAVEGAÇÃO -->
+            <div class="view-tabs">
+                <button class="btn-toggle active" id="btn-tab-global" onclick="setTab('global')">Ranking Geral da Rede</button>
+                <button class="btn-toggle" id="btn-tab-detalhe" onclick="setTab('detalhe')">Análise Detalhada (Filtros)</button>
+            </div>
+
+            <!-- VIEW 1: RANKING GLOBAL -->
+            <div id="view-global">
+                <div class="toolbar">
+                    <div class="filter-group">
+                        <label>Filtrar por Série</label>
+                        <select id="filtro-serie-global" onchange="window.processarVisaoGlobal()">
+                            <option value="TODOS">Todas as Séries</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="cards-grid">
+                    <div class="card alert">
+                        <h3>Prova Mais Difícil (Série)</h3>
+                        <div class="value" id="kpi-g-dificil">-</div>
+                        <div class="desc">Menor IDR-R ponderado da série.</div>
+                    </div>
+                    <div class="card success">
+                        <h3>Componente Mais Fácil</h3>
+                        <div class="value" id="kpi-g-comp-facil">-</div>
+                        <div class="desc">Maior IDR-R frente à média de referência.</div>
+                    </div>
+                    <div class="card warning">
+                        <h3>Maior Polarização (Prova)</h3>
+                        <div class="value" id="kpi-g-polarizada">-</div>
+                        <div class="desc">Maior desvio padrão inter-escolas da rede.</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid single">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <div>
+                                <h2>Ranking de Dificuldade Global (IDR-R)</h2>
+                                <p>Da avaliação mais crítica (vermelho) para a mais acessível (verde), atenuando distorções de outliers.</p>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="graficoRankingProvas"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Matriz: Prova x Componente -->
+                <div class="table-container">
+                    <div class="chart-header">
+                        <div>
+                            <h2>Matriz de Facilidade: Avaliações vs. Componentes Curriculares</h2>
+                            <p>Mapa de calor baseado no IDR-R e Fator de Consistência por disciplina e avaliação.</p>
+                        </div>
+                    </div>
+                    <table id="tabelaComponentesGlobal">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 2: ANÁLISE DETALHADA -->
+            <div id="view-detalhada">
+                <div class="toolbar">
+                    <div class="filter-group">
+                        <label>Avaliação Base</label>
+                        <select id="filtro-aval" onchange="window.processarEstatisticas()"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Entidade / Agrupamento</label>
+                        <select id="filtro-entidade" onchange="window.processarEstatisticas()">
+                            <option value="GERAL">Visão Geral (Rede Inteira)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Componente Curricular</label>
+                        <select id="filtro-comp" onchange="window.processarEstatisticas()">
+                            <option value="TODOS">Todas as Disciplinas</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- LEITURA EXECUTIVA AUTOMÁTICA -->
+                <div class="exec-summary-box">
+                    <h3>💡 Análise Automática do Cenário</h3>
+                    <p id="texto-leitura-executiva">Analisando os dados do segmento selecionado...</p>
+                </div>
+
+                <div class="cards-grid">
+                    <div class="card" id="card-1">
+                        <h3>Nível Geral de Dificuldade</h3>
+                        <div class="value" id="kpi-idr">-</div>
+                        <div class="desc">Índice Geral de Dificuldade Ajustado.</div>
+                    </div>
+                    <div class="card" id="card-2">
+                        <h3>Desempenho Atual vs. Histórico</h3>
+                        <div class="value" id="kpi-mediana">-</div>
+                        <div class="desc">Nota mediana atual comparada à esperada.</div>
+                    </div>
+                    <div class="card" id="card-3">
+                        <h3>Variação de Notas (Dispersão)</h3>
+                        <div class="value" id="kpi-desvio">-</div>
+                        <div class="desc">Grau de diferença entre as notas obtidas.</div>
+                    </div>
+                    <div class="card" id="card-4">
+                        <h3>Índice de Confiabilidade</h3>
+                        <div class="value" id="kpi-fc">-</div>
+                        <div class="desc">Estabilidade e consistência da avaliação.</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <div>
+                                <h2>Relação: Dificuldade x Desvio</h2>
+                                <p>Eixo X: Nível de Dificuldade | Eixo Y: Disparidade de Notas</p>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="graficoDispersao"></canvas></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <div>
+                                <h2>Nível de Dificuldade por Segmento</h2>
+                                <p>Vermelho = Difícil | Azul = Esperado | Verde = Fácil</p>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="graficoComparativo"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="chart-header">
+                        <div>
+                            <h2>Detalhamento por Unidade / Turma</h2>
+                            <p id="tabela-subtitulo">Visão aprofundada por escola ou classe.</p>
+                        </div>
+                    </div>
+                    <table id="tabelaAnalise">
+                        <thead>
+                            <tr>
+                                <th id="th-agrupamento">Segmento</th>
+                                <th>Dificuldade</th>
+                                <th>Notas (Atual / Histórico)</th>
+                                <th>Disparidade (DP)</th>
+                                <th>Confiabilidade</th>
+                                <th>Comportamento</th>
+                                <th>Classificação</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kmplasayzhtjoelxnvif.supabase.co';
+        const supabaseKey = 'sb_publishable_24GErsvesucjCS2GKZkBUQ_8xMMXuoh';
+
+        let supabaseClient = null;
+        if (window.supabase) { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); window.supabaseClient = supabaseClient; }
+
+        let currentUser = null;
+        let globalData = [];
+        let historicoPorSerie = {}; 
+        let mediaPorSerie = {};     
+        let chartsInstance = {};
+
+        function showLoading(t='Calculando dados...') { document.getElementById('loading-text').textContent = t; document.getElementById('loading-overlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+        function extrairSerie(turma, tipoEnsino) {
+            const t = String(turma).toUpperCase();
+            const e = String(tipoEnsino).toUpperCase();
+            let isEM = e.includes('MEDIO') || t.includes('EM') || t.includes('MEDIO') || /^[123].*(EM|SÉRIE|SERIE)/.test(t);
+            
+            if (isEM) {
+                if (t.includes('1ª')) return '1ª Série EM';
+                if (t.includes('2ª')) return '2ª Série EM';
+                if (t.includes('3ª')) return '3ª Série EM';
+                return 'Ensino Médio (Outros)';
+            } else {
+                if (t.includes('6º')) return '6º Ano EF';
+                if (t.includes('7º')) return '7º Ano EF';
+                if (t.includes('8º')) return '8º Ano EF';
+                if (t.includes('9º')) return '9º Ano EF';
+                return 'Ensino Fundamental (Outros)';
+            }
+        }
+
+        window.setTab = (tab) => {
+            document.getElementById('btn-tab-global').classList.toggle('active', tab === 'global');
+            document.getElementById('btn-tab-detalhe').classList.toggle('active', tab === 'detalhe');
+            document.getElementById('view-global').style.display = tab === 'global' ? 'block' : 'none';
+            document.getElementById('view-detalhada').style.display = tab === 'detalhe' ? 'block' : 'none';
+            if (tab === 'global') processarVisaoGlobal();
+            else window.processarEstatisticas();
+        };
+
+        window.handleLogin = async () => {
+            const email = document.getElementById('email').value.trim(), pass = document.getElementById('password').value;
+            const err = document.getElementById('login-error'); err.style.display = 'none';
+            if (!email || !pass) { err.style.display='block'; err.textContent='Preencha os campos.'; return; }
+            try {
+                showLoading('Autenticando...');
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                if (error) { hideLoading(); err.style.display='block'; err.textContent=error.message; }
+                else { currentUser = data.user; await loadAndJoinData(); }
+            } catch(e) { hideLoading(); err.style.display='block'; err.textContent=e.message; }
+        };
+
+        window.handleLogout = async () => {
+            showLoading('Saindo...'); await supabaseClient.auth.signOut();
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'flex'; hideLoading();
+        };
+
+        async function fetchAllData(table) {
+            let all = [], limit = 1000, start = 0, hasMore = true;
+            while (hasMore) {
+                const { data, error } = await supabaseClient.from(table).select('*').range(start, start + limit - 1);
+                if (error) return { error }; all.push(...data);
+                if (data.length < limit) hasMore = false; else start += limit;
+            } return { data: all };
+        }
+
+        const calcMediana = (arr) => {
+            if (!arr.length) return 0;
+            const sorted = [...arr].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        };
+
+        const calcMedianaPonderada = (valores, pesos) => {
+            if (!valores.length) return 0;
+            let combined = valores.map((v, i) => ({ v, w: pesos[i] || 1 }));
+            combined.sort((a, b) => a.v - b.v);
+            let totalWeight = combined.reduce((sum, item) => sum + item.w, 0);
+            if (totalWeight <= 0) return calcMediana(valores);
+            let halfWeight = totalWeight / 2;
+            let cumulativeWeight = 0;
+            for (let item of combined) {
+                cumulativeWeight += item.w;
+                if (cumulativeWeight >= halfWeight) return item.v;
+            }
+            return combined[combined.length - 1].v;
+        };
+
+        const calcDesvioPadrao = (arr) => {
+            if (arr.length <= 1) return 0;
+            const mean = arr.reduce((a, b) => a + b) / arr.length;
+            const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length;
+            return Math.sqrt(variance);
+        };
+
+        const getClassificacaoIDRR = (idrr) => {
+            if (idrr < 0.85) return { text: 'Muito Difícil', badge: 'badge-danger' };
+            if (idrr < 0.95) return { text: 'Difícil', badge: 'badge-warning' };
+            if (idrr <= 1.05) return { text: 'Dentro do Esperado', badge: 'badge-success' };
+            if (idrr <= 1.15) return { text: 'Fácil', badge: 'badge-purple' };
+            return { text: 'Muito Fácil', badge: 'badge-purple' };
+        };
+
+        const getEstabilidadeDP = (dp) => {
+            if (dp < 0.40) return 'Muito Uniforme';
+            if (dp < 0.80) return 'Uniforme';
+            if (dp < 1.20) return 'Com Variação Moderada';
+            return 'Alta Disparidade';
+        };
+
+        async function loadAndJoinData() {
+            showLoading('Processando dados pedagógicos...');
+            try {
+                document.getElementById('login-section').style.display='none';
+                document.getElementById('dashboard-section').style.display='block';
+
+                const [rAva, rEsc, rDes, rTur] = await Promise.all([
+                    fetchAllData('avaliacoes'), fetchAllData('escolas'), fetchAllData('desempenho'), fetchAllData('turmas')
+                ]);
+
+                let escolasMap = new Map(); (rEsc.data||[]).forEach(e => { if(e.id_escola) escolasMap.set(e.id_escola, e); });
+                let turmasMap = new Map(); (rTur.data||[]).forEach(t => { if(t.id) turmasMap.set(t.id,t); });
+                let avalMap = new Map(); (rAva.data||[]).forEach(a => { if(a.id) avalMap.set(a.id,a); });
+
+                globalData = (rDes.data||[]).map(d => {
+                    const t = turmasMap.get(d.id)||{}, a = avalMap.get(d.id_avaliacao)||{}, eg = escolasMap.get(t.id_escola)||{};
+                    
+                    let aval_nome = a.nome||'N/A';
+                    let turma_nome = d.nome_limpo||t.nome_limpo||'N/A';
+                    let tipo_ensino = t.tipo_ensino||'N/A';
+                    let serie = extrairSerie(turma_nome, tipo_ensino);
+
+                    return {
+                        id_turma: d.id, nota: parseFloat(d.nota)||0, avaliados: parseInt(d.avaliados)||0, peso: parseFloat(d.peso)||1,
+                        matriculas: parseInt(t.matriculas)||0, componente: d.componente||'N/A',
+                        turma_nome: turma_nome, escola: t.escola||eg.nome_escola||'Desconhecida',
+                        aval_nome: aval_nome, serie: serie
+                    };
+                }).filter(d => d.escola !== 'Desconhecida' && d.nota > 0 && !d.serie.includes('Outros'));
+
+                const sSerie = document.getElementById('filtro-serie-global'); 
+                sSerie.innerHTML = '<option value="TODOS">Todas as Séries</option>';
+                const ordemSeries = ['6º Ano EF', '7º Ano EF', '8º Ano EF', '9º Ano EF', '1ª Série EM', '2ª Série EM', '3ª Série EM'];
+                let seriesPresentes = [...new Set(globalData.map(d => d.serie))];
+                ordemSeries.filter(s => seriesPresentes.includes(s)).forEach(s => sSerie.innerHTML += `<option value="${s}">${s}</option>`);
+
+                const sAval = document.getElementById('filtro-aval'); sAval.innerHTML = '';
+                [...new Set(globalData.map(d => d.aval_nome))].sort().forEach(av => sAval.innerHTML += `<option value="${av}">${av}</option>`);
+
+                const sEnt = document.getElementById('filtro-entidade'); sEnt.innerHTML = '<option value="GERAL">Visão Geral (Rede Inteira)</option>';
+                [...new Set(globalData.map(d => d.escola))].sort().forEach(e => sEnt.innerHTML += `<option value="${e}">${e}</option>`);
+
+                const sComp = document.getElementById('filtro-comp'); sComp.innerHTML = '<option value="TODOS">Todas as Disciplinas</option>';
+                [...new Set(globalData.map(d => d.componente))].sort().forEach(c => sComp.innerHTML += `<option value="${c}">${c}</option>`);
+
+                historicoPorSerie = {};
+                mediaPorSerie = {};
+
+                seriesPresentes.forEach(serie => {
+                    let dadosSerie = globalData.filter(d => d.serie === serie);
+                    let compsSerie = {};
+                    let allNotasS = [];
+
+                    dadosSerie.forEach(d => {
+                        let pesoReal = d.avaliados * d.peso;
+                        if(!compsSerie[d.componente]) compsSerie[d.componente] = { valores: [], pesos: [] };
+                        compsSerie[d.componente].valores.push(d.nota);
+                        compsSerie[d.componente].pesos.push(pesoReal);
+                        allNotasS.push(d.nota);
+                    });
+
+                    historicoPorSerie[serie] = {};
+                    for (let c in compsSerie) {
+                        historicoPorSerie[serie][c] = calcMedianaPonderada(compsSerie[c].valores, compsSerie[c].pesos);
+                    }
+                    mediaPorSerie[serie] = calcMediana(allNotasS);
+                });
+
+                setTab('global'); 
+                hideLoading();
+            } catch(e) { alert("Erro de sincronização: "+e.message); hideLoading(); }
+        }
+
+        window.processarVisaoGlobal = () => {
+            if (!globalData.length) return;
+
+            const serieFiltro = document.getElementById('filtro-serie-global').value;
+            let dataView = globalData;
+            if (serieFiltro !== 'TODOS') dataView = dataView.filter(d => d.serie === serieFiltro);
+
+            if (dataView.length === 0) {
+                document.getElementById('kpi-g-dificil').textContent = '-';
+                document.getElementById('kpi-g-comp-facil').textContent = '-';
+                document.getElementById('kpi-g-polarizada').textContent = '-';
+                document.querySelector('#tabelaComponentesGlobal thead').innerHTML = '';
+                document.querySelector('#tabelaComponentesGlobal tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;">Sem dados para a série selecionada.</td></tr>';
+                if(chartsInstance.ranking) chartsInstance.ranking.destroy();
+                return;
+            }
+
+            let baselineHistorico = {};
+            if (serieFiltro !== 'TODOS' && historicoPorSerie[serieFiltro]) {
+                baselineHistorico = historicoPorSerie[serieFiltro];
+            } else {
+                let tempVal = {}, tempPes = {};
+                dataView.forEach(d => {
+                    if(!tempVal[d.componente]) { tempVal[d.componente] = []; tempPes[d.componente] = []; }
+                    tempVal[d.componente].push(d.nota); tempPes[d.componente].push(d.avaliados * d.peso);
+                });
+                for(let c in tempVal) baselineHistorico[c] = calcMedianaPonderada(tempVal[c], tempPes[c]);
+            }
+
+            const calcProvas = {};
+            dataView.forEach(d => {
+                if(!calcProvas[d.aval_nome]) calcProvas[d.aval_nome] = { valores: [], pesos: [], notasArr: [] };
+                let pesoReal = d.avaliados * d.peso;
+                calcProvas[d.aval_nome].valores.push(d.nota);
+                calcProvas[d.aval_nome].pesos.push(pesoReal);
+                calcProvas[d.aval_nome].notasArr.push(d.nota);
+            });
+
+            let rankingArray = [];
+            for (let aval in calcProvas) {
+                let p = calcProvas[aval];
+                let medianaAtual = calcMedianaPonderada(p.valores, p.pesos);
+                let compsNaProva = [...new Set(dataView.filter(d => d.aval_nome === aval).map(d => d.componente))];
+                let histAmd = compsNaProva.reduce((acc, c) => acc + (baselineHistorico[c] || medianaAtual), 0) / (compsNaProva.length || 1);
+
+                let idrBase = histAmd > 0 ? medianaAtual / histAmd : 1;
+                let dp = calcDesvioPadrao(p.notasArr);
+                let fc = 1 / (1 + dp);
+                let idrR = idrBase * (0.7 + 0.3 * fc);
+
+                rankingArray.push({ aval, idrR, dp });
+            }
+            rankingArray.sort((a,b) => a.idrR - b.idrR);
+
+            let compVal = {}, compPes = {};
+            dataView.forEach(d => {
+                if(!compVal[d.componente]) { compVal[d.componente] = []; compPes[d.componente] = []; }
+                compVal[d.componente].push(d.nota); compPes[d.componente].push(d.avaliados * d.peso);
+            });
+            let compFacilStr = '-'; let maxIdrC = 0;
+            let refMediana = serieFiltro !== 'TODOS' && mediaPorSerie[serieFiltro] ? mediaPorSerie[serieFiltro] : Object.values(baselineHistorico).reduce((a,b)=>a+b,0)/Object.keys(baselineHistorico).length;
+
+            for (let c in compVal) {
+                let medC = calcMedianaPonderada(compVal[c], compPes[c]);
+                let idrC = refMediana > 0 ? medC / refMediana : 1;
+                if (idrC > maxIdrC) { maxIdrC = idrC; compFacilStr = c; }
+            }
+
+            if (rankingArray.length > 0) {
+                document.getElementById('kpi-g-dificil').textContent = rankingArray[0].aval;
+                let maiorPolarizacao = [...rankingArray].sort((a,b) => b.dp - a.dp)[0];
+                document.getElementById('kpi-g-polarizada').textContent = maiorPolarizacao.aval;
+            }
+            document.getElementById('kpi-g-comp-facil').textContent = compFacilStr;
+
+            let provasUnicas = [...new Set(dataView.map(d => d.aval_nome))].sort((a,b) => a.localeCompare(b));
+            let compsUnicos = [...new Set(dataView.map(d => d.componente))].sort();
+
+            let matriz = {};
+            dataView.forEach(d => {
+                if(!matriz[d.aval_nome]) matriz[d.aval_nome] = {};
+                if(!matriz[d.aval_nome][d.componente]) matriz[d.aval_nome][d.componente] = { valores: [], pesos: [] };
+                matriz[d.aval_nome][d.componente].valores.push(d.nota);
+                matriz[d.aval_nome][d.componente].pesos.push(d.avaliados * d.peso);
+            });
+
+            const thead = document.querySelector('#tabelaComponentesGlobal thead');
+            let theadHTML = `<tr><th style="width: 250px;">Avaliação</th>`;
+            compsUnicos.forEach(c => { theadHTML += `<th style="text-align:center;">${c}</th>`; });
+            theadHTML += `</tr>`;
+            thead.innerHTML = theadHTML;
+
+            const tbody = document.querySelector('#tabelaComponentesGlobal tbody');
+            let tbodyHTML = '';
+            provasUnicas.forEach(p => {
+                tbodyHTML += `<tr><td style="font-weight:700; color:var(--navy); border-right: 1px solid var(--border);">${p}</td>`;
+                compsUnicos.forEach(c => {
+                    if (matriz[p] && matriz[p][c] && matriz[p][c].valores.length > 0) {
+                        let medCell = calcMedianaPonderada(matriz[p][c].valores, matriz[p][c].pesos);
+                        let medHist = baselineHistorico[c] || medCell;
+                        let idrB = medHist > 0 ? medCell / medHist : 1;
+                        let dpC = calcDesvioPadrao(matriz[p][c].valores);
+                        let fcC = 1 / (1 + dpC);
+                        let idrRCell = idrB * (0.7 + 0.3 * fcC);
+
+                        let infoClass = getClassificacaoIDRR(idrRCell);
+
+                        tbodyHTML += `
+                            <td style="text-align: center; border-right: 1px dashed var(--border);">
+                                <div class="cell-diagnostico">
+                                    <span class="badge ${infoClass.badge}">${infoClass.text}</span>
+                                    <span class="idr-label">IDR-R: ${idrRCell.toFixed(2)}</span>
+                                </div>
+                            </td>`;
+                    } else {
+                        tbodyHTML += `<td style="text-align: center; color:var(--muted); border-right: 1px dashed var(--border);">-</td>`;
+                    }
+                });
+                tbodyHTML += `</tr>`;
+            });
+            tbody.innerHTML = tbodyHTML;
+
+            if(chartsInstance.ranking) chartsInstance.ranking.destroy();
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+            chartsInstance.ranking = new Chart(document.getElementById('graficoRankingProvas').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: rankingArray.map(d => d.aval),
+                    datasets: [{
+                        label: 'Nível de Dificuldade (IDR-R)',
+                        data: rankingArray.map(d => d.idrR),
+                        backgroundColor: rankingArray.map(d => d.idrR < 0.95 ? '#e11d48' : (d.idr > 1.05 ? '#059669' : '#3b82f6')),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { title: { display: true, text: 'Índice de Dificuldade', font: {weight: 'bold'} }, grid: { color: 'rgba(0,0,0,0.04)' } },
+                        x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45 } }
+                    }
+                }
+            });
+        }
+
+        window.processarEstatisticas = () => {
+            if (!globalData.length) return;
+
+            const selAval = document.getElementById('filtro-aval').value;
+            const selEntidade = document.getElementById('filtro-entidade').value;
+            const selComp = document.getElementById('filtro-comp').value;
+
+            let chaveAgrupamento = ''; let labelAgrupamento = '';
+            if (selEntidade === 'GERAL' && selComp === 'TODOS') { chaveAgrupamento = 'componente'; labelAgrupamento = 'Disciplina'; } 
+            else if (selEntidade === 'GERAL' && selComp !== 'TODOS') { chaveAgrupamento = 'escola'; labelAgrupamento = 'Unidade Escolar'; } 
+            else if (selEntidade !== 'GERAL' && selComp === 'TODOS') { chaveAgrupamento = 'componente'; labelAgrupamento = 'Disciplina (Nesta Escola)'; } 
+            else { chaveAgrupamento = 'turma_nome'; labelAgrupamento = 'Turma'; }
+            document.getElementById('th-agrupamento').textContent = labelAgrupamento;
+
+            let dadosHistoricos = globalData;
+            if (selEntidade !== 'GERAL') dadosHistoricos = dadosHistoricos.filter(d => d.escola === selEntidade);
+            if (selComp !== 'TODOS') dadosHistoricos = dadosHistoricos.filter(d => d.componente === selComp);
+
+            const calcHist = {};
+            dadosHistoricos.forEach(d => {
+                const chave = d[chaveAgrupamento];
+                if (!calcHist[chave]) calcHist[chave] = { valores: [], pesos: [] };
+                calcHist[chave].valores.push(d.nota);
+                calcHist[chave].pesos.push(d.avaliados * d.peso);
+            });
+
+            let dadosAtuais = globalData.filter(d => d.aval_nome === selAval);
+            if (selEntidade !== 'GERAL') dadosAtuais = dadosAtuais.filter(d => d.escola === selEntidade);
+            if (selComp !== 'TODOS') dadosAtuais = dadosAtuais.filter(d => d.componente === selComp);
+
+            const calcAtual = {};
+            dadosAtuais.forEach(d => {
+                const chave = d[chaveAgrupamento];
+                if (!calcAtual[chave]) calcAtual[chave] = { valores: [], pesos: [], somaPond: 0, pesoTot: 0 };
+                calcAtual[chave].valores.push(d.nota);
+                calcAtual[chave].pesos.push(d.avaliados * d.peso);
+                calcAtual[chave].somaPond += d.nota * d.avaliados * d.peso;
+                calcAtual[chave].pesoTot += d.avaliados * d.peso;
+            });
+
+            let arrayFinal = [];
+            for (const chave in calcAtual) {
+                let vals = calcAtual[chave].valores;
+                let pess = calcAtual[chave].pesos;
+                if (vals.length > 0) {
+                    let medianaAtual = calcMedianaPonderada(vals, pess);
+                    let mediaPonderadaAtual = calcAtual[chave].pesoTot > 0 ? calcAtual[chave].somaPond / calcAtual[chave].pesoTot : medianaAtual;
+                    
+                    let histItem = calcHist[chave];
+                    let medianaHist = histItem && histItem.valores.length > 0 ? calcMedianaPonderada(histItem.valores, histItem.pesos) : medianaAtual;
+
+                    let idrBase = medianaHist > 0 ? medianaAtual / medianaHist : 1;
+                    let dp = calcDesvioPadrao(vals);
+                    let fc = 1 / (1 + dp);
+                    let idrR = idrBase * (0.7 + 0.3 * fc);
+
+                    let classObj = getClassificacaoIDRR(idrR);
+                    let estabilidade = getEstabilidadeDP(dp);
+
+                    arrayFinal.push({ chave, medianaAtual, mediaPonderadaAtual, medianaHist, idrBase, dp, fc, idrR, classObj, estabilidade });
+                }
+            }
+
+            arrayFinal.sort((a,b) => a.idrR - b.idrR);
+            renderDetalhamento(arrayFinal);
+        };
+
+        function renderDetalhamento(dados) {
+            if (!dados.length) {
+                ['kpi-idr', 'kpi-mediana', 'kpi-desvio', 'kpi-fc'].forEach(id => document.getElementById(id).textContent = '-');
+                document.getElementById('texto-leitura-executiva').textContent = 'Sem dados suficientes para gerar a interpretação no filtro selecionado.';
+                document.querySelector('#tabelaAnalise tbody').innerHTML = '';
+                if(chartsInstance.dispersao) chartsInstance.dispersao.destroy();
+                if(chartsInstance.comparativo) chartsInstance.comparativo.destroy();
+                return;
+            }
+
+            const avgIDRR = dados.reduce((a, b) => a + b.idrR, 0) / dados.length;
+            const avgMedAtual = dados.reduce((a, b) => a + b.medianaAtual, 0) / dados.length;
+            const avgMedHist = dados.reduce((a, b) => a + b.medianaHist, 0) / dados.length;
+            const avgDP = dados.reduce((a, b) => a + b.dp, 0) / dados.length;
+            const avgFC = dados.reduce((a, b) => a + b.fc, 0) / dados.length;
+
+            document.getElementById('kpi-idr').textContent = avgIDRR.toFixed(2);
+            document.getElementById('kpi-mediana').innerHTML = `${avgMedAtual.toFixed(2).replace('.',',')} <span style="font-size:.7rem;color:var(--muted)">/ ${avgMedHist.toFixed(2).replace('.',',')}</span>`;
+            document.getElementById('kpi-desvio').textContent = avgDP.toFixed(2);
+            document.getElementById('kpi-fc').textContent = avgFC.toFixed(2);
+
+            let textoExec = `A avaliação apresenta um nível geral de dificuldade de ${avgIDRR.toFixed(2)}. `;
+            if (avgIDRR < 0.85) textoExec += `Isso indica que o conteúdo exigiu muito mais dos estudantes do que o padrão histórico. `;
+            else if (avgIDRR < 0.95) textoExec += `O desempenho ficou um pouco abaixo do histórico esperado. `;
+            else if (avgIDRR <= 1.05) textoExec += `O aproveitamento está totalmente dentro da normalidade esperada. `;
+            else textoExec += `O desempenho superou a média histórica, indicando maior facilidade. `;
+
+            textoExec += `A variação de notas (desvio padrão de ${avgDP.toFixed(2)}) demonstra um comportamento `;
+            if (avgDP < 0.80) textoExec += `uniforme em toda a regional (queda ou avanço geral da rede).`;
+            else textoExec += `com forte disparidade, evidenciando que algumas unidades enfrentaram maiores barreiras que outras.`;
+
+            document.getElementById('texto-leitura-executiva').textContent = textoExec;
+
+            const tbody = document.querySelector('#tabelaAnalise tbody');
+            tbody.innerHTML = '';
+            dados.forEach(d => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight:700; color:var(--navy);">${d.chave}</td>
+                        <td><strong class="metric-mono" style="color:${d.idrR < 0.85 ? 'var(--rose)' : 'inherit'}">${d.idrR.toFixed(2)}</strong></td>
+                        <td class="metric-mono">${d.medianaAtual.toFixed(2).replace('.',',')} <span style="font-size:.7rem;color:var(--muted)">/ ${d.medianaHist.toFixed(2).replace('.',',')}</span></td>
+                        <td class="metric-mono">${d.dp.toFixed(2)}</td>
+                        <td class="metric-mono">${d.fc.toFixed(2)}</td>
+                        <td><span style="font-size:0.78rem; font-weight:600; color:var(--muted);">${d.estabilidade}</span></td>
+                        <td><span class="badge ${d.classObj.badge}">${d.classObj.text}</span></td>
+                    </tr>
+                `;
+            });
+
+            if(chartsInstance.dispersao) chartsInstance.dispersao.destroy();
+            if(chartsInstance.comparativo) chartsInstance.comparativo.destroy();
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+            const scatterData = dados.map(d => ({ x: d.idrR, y: d.dp, label: d.chave }));
+            chartsInstance.dispersao = new Chart(document.getElementById('graficoDispersao').getContext('2d'), {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Segmentos', data: scatterData,
+                        backgroundColor: scatterData.map(d => d.x < 0.85 ? '#e11d48' : '#3b82f6'),
+                        pointRadius: 6, pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw.label} | Índice: ${ctx.raw.x.toFixed(2)} | Disparidade: ${ctx.raw.y.toFixed(2)}` } } },
+                    scales: { x: { title: { display: true, text: 'Nível de Dificuldade', font: {weight: 'bold'} } }, y: { title: { display: true, text: 'Disparidade (Desvio Padrão)', font: {weight: 'bold'} }, beginAtZero: true } }
+                }
+            });
+
+            // GRÁFICO COM CORES BASEADAS NO NÍVEL DE DIFICULDADE (Vermelho = Difícil, Verde = Fácil)
+            const topData = [...dados].slice(0, 15);
+            const coresBarras = topData.map(d => {
+                if (d.idrR < 0.95) return '#e11d48'; // Vermelho (Difícil)
+                if (d.idrR > 1.05) return '#059669'; // Verde (Fácil)
+                return '#3b82f6'; // Azul (Esperado)
+            });
+
+            chartsInstance.comparativo = new Chart(document.getElementById('graficoComparativo').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: topData.map(d => d.chave.length > 15 ? d.chave.substring(0,12)+'...' : d.chave),
+                    datasets: [{
+                        label: 'Nível de Dificuldade',
+                        data: topData.map(d => d.idrR),
+                        backgroundColor: coresBarras,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { title: { display: true, text: 'Índice de Dificuldade (Referência: 1.0)', font: {weight: 'bold'} }, beginAtZero: false, suggestedMin: 0.5, suggestedMax: 1.5, grid: { color: 'rgba(0,0,0,0.04)' } }, 
+                        x: { grid: { display: false } } 
+                    }
+                }
+            });
+        }
+
+        window.onload = async () => {
+            try {
+                if(!window.supabaseClient) return;
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if(session) { currentUser = session.user; await loadAndJoinData(); }
+            } catch(e) {}
+        };
+    </script>
+</body>
+</html>

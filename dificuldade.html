@@ -73,6 +73,18 @@
         .filter-group { display: flex; flex-direction: column; gap: .4rem; }
         .filter-group label { font-size: .75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
         .filter-group select { padding: .6rem .85rem; border-radius: var(--radius); border: 1.5px solid var(--border); font-family: inherit; font-size: .85rem; background: var(--surface2); color: var(--text); outline: none; min-width: 220px; font-weight: 600; cursor: pointer; }
+
+        /* MULTI-SELECT COM CHECKBOX */
+        .multi-select { position: relative; user-select: none; min-width: 240px; }
+        .select-display { padding: .6rem .85rem; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--surface2); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: .85rem; color: var(--text); font-weight: 600; min-height: 40px; transition: border-color .2s; }
+        .select-display:hover { border-color: var(--blue2); }
+        .select-display span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .select-display::after { content: '▾'; font-size: .8rem; color: var(--light); margin-left: .5rem; }
+        .select-options { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); max-height: 240px; overflow-y: auto; z-index: 100; display: none; box-shadow: var(--shadow2, 0 8px 32px rgba(12,26,53,.12)); }
+        .select-options.show { display: block; }
+        .select-options label { display: flex; align-items: center; gap: .6rem; padding: .6rem .85rem; cursor: pointer; font-size: .85rem; font-weight: 500; color: var(--text); border-bottom: 1px solid var(--bg); transition: background .15s; }
+        .select-options label:hover { background: var(--bg); color: var(--blue); }
+        .select-options input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--blue); }
         
         .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .card { background: var(--surface); border-radius: var(--radius2); padding: 1.4rem 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; display: flex; flex-direction: column; justify-content: space-between; }
@@ -131,56 +143,47 @@
 </head>
 <body>
 
-    <div id="loading-overlay"><div class="spinner"></div><div id="loading-text">Processando IDR-R...</div></div>
+    <div id="loading-overlay"><div class="spinner"></div><div id="loading-text">Calculando dados...</div></div>
 
     <!-- MODAL DE METODOLOGIA -->
     <div id="modal-metodologia" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="document.getElementById('modal-metodologia').style.display='none'">&times;</span>
-            <h2>Metodologia e Interpretação dos Indicadores</h2>
+            <h2>Entenda como calculamos o Índice de Retenção (IR)</h2>
             
-            <p>Este painel utiliza o modelo de <strong>Dificuldade Robusta (IDR-R)</strong> para avaliar o nível de retenção das provas aplicadas na regional, mitigando distorções causadas por notas extremas (outliers) e garantindo uma leitura segura para a tomada de decisão pedagógica.</p>
+            <p>O <strong>Índice de Retenção (IR)</strong> mede se uma prova ou componente apresentou nível de dificuldade acima ou abaixo do esperado para a rede, protegendo a análise de distorções provocadas por notas extremas isoladas (como turmas fora da curva).</p>
 
-            <h3>1. Mediana Ponderada</h3>
-            <p>Em vez de depender exclusivamente da média tradicional (que pode ser puxada para cima ou para baixo por desempenhos isolados muito atípicos), utilizamos a <strong>mediana ponderada</strong> das notas por agrupamento (escola, turma ou componente), considerando o peso e o número de alunos avaliados.</p>
+            <h3>1. Nota Central de Referência (Mediana)</h3>
+            <p>Para evitar que notas muito altas ou muito baixas puxem a média de forma artificial, utilizamos a <strong>mediana ponderada</strong>. Ela representa o ponto central real de aproveitamento das turmas e escolas.</p>
 
-            <h3>2. Índice Base de Dificuldade (IDR Base)</h3>
-            <p>Calculado pela divisão entre o resultado atual e o padrão histórico de referência da série:</p>
+            <h3>2. Comparação com o Histórico (IR Base)</h3>
+            <p>Cruzamos o resultado atual com o padrão histórico daquela mesma série:</p>
             <ul>
-                <li><strong>IDR Base = Mediana Atual / Mediana Histórica</strong></li>
-                <li><em>IDR = 1.0:</em> Desempenho esperado (dentro do padrão).</li>
-                <li><em>IDR &lt; 1.0:</em> Avaliação mais difícil que o histórico.</li>
-                <li><em>IDR &gt; 1.0:</em> Avaliação mais fácil que o histórico.</li>
+                <li><strong>IR Base = Nota Central Atual / Nota Central Histórica</strong></li>
+                <li><em>IR = 1.0:</em> O desempenho está exatamente no patamar esperado.</li>
+                <li><em>IR &lt; 1.0:</em> A avaliação exigiu mais dos alunos (maior dificuldade/retenção).</li>
+                <li><em>IR &gt; 1.0:</em> Os alunos tiveram maior facilidade que o histórico.</li>
             </ul>
 
-            <h3>3. Fator de Consistência (FC) e Desvio Padrão (DP)</h3>
-            <p>O desvio padrão ($\sigma$) mede a dispersão e a desigualdade dos resultados entre os segmentos. Para mensurar a confiabilidade de que a prova foi igualmente difícil ou fácil para todos, calculamos o Fator de Consistência:</p>
-            <ul>
-                <li><strong>FC = 1 / (1 + DP)</strong></li>
-                <li>Quanto maior o desvio padrão, menor a consistência e menor a garantia de que o comportamento foi homogêneo.</li>
-            </ul>
+            <h3>3. Segurança Estatística (Fator de Consistência)</h3>
+            <p>Calculamos o desvio padrão das notas para entender se o resultado foi equilibrado ou se houve muita diferença entre as turmas/escolas. Quanto mais equilibrado o cenário, maior a confiança de que a dificuldade foi generalizada.</p>
 
-            <h3>4. Índice de Dificuldade Robusta (IDR-R)</h3>
-            <p>Combina a mediana central com a consistência estatística da dispersão:</p>
-            <ul>
-                <li><strong>IDR-R = IDR Base × (0.7 + 0.3 × FC)</strong></li>
-            </ul>
+            <h3>4. Índice Final (IR)</h3>
+            <p>O índice final combina o resultado central com o grau de consistência da avaliação, gerando um indicador confiável e nivelado para a gestão pedagógica.</p>
 
             <h3>5. Classificação do Nível de Dificuldade</h3>
             <ul>
-                <li><strong>IDR-R &lt; 0.85:</strong> Muito Difícil</li>
-                <li><strong>0.85 ≤ IDR-R &lt; 0.95:</strong> Difícil</li>
-                <li><strong>0.95 ≤ IDR-R ≤ 1.05:</strong> Dentro do Esperado</li>
-                <li><strong>1.05 &lt; IDR-R ≤ 1.15:</strong> Fácil</li>
-                <li><strong>IDR-R &gt; 1.15:</strong> Muito Fácil</li>
+                <li><strong>IR &lt; 0.85:</strong> Muito Difícil</li>
+                <li><strong>0.85 ≤ IR &lt; 0.95:</strong> Difícil</li>
+                <li><strong>0.95 ≤ IR ≤ 1.05:</strong> Dentro do Esperado</li>
+                <li><strong>1.05 &lt; IR ≤ 1.15:</strong> Fácil</li>
+                <li><strong>IR &gt; 1.15:</strong> Muito Fácil</li>
             </ul>
 
-            <h3>6. Diagnóstico de Estabilidade (Dispersão)</h3>
+            <h3>6. Comportamento das Notas (Disparidade)</h3>
             <ul>
-                <li><strong>DP &lt; 0.40:</strong> Muito Uniforme</li>
-                <li><strong>0.40 ≤ DP &lt; 0.80:</strong> Uniforme</li>
-                <li><strong>0.80 ≤ DP &lt; 1.20:</strong> Com Variação Moderada</li>
-                <li><strong>DP ≥ 1.20:</strong> Alta Disparidade</li>
+                <li><strong>Baixo:</strong> Comportamento muito uniforme na regional.</li>
+                <li><strong>Alto:</strong> Forte disparidade de resultados entre as unidades.</li>
             </ul>
         </div>
     </div>
@@ -188,17 +191,17 @@
     <!-- LOGIN -->
     <div id="login-section">
         <div class="login-box">
-            <div class="login-title">Dificuldade Robusta (IDR-R)</div>
-            <div class="login-sub">Gestão Estratégica Regional</div>
+            <div class="login-title">Índice de Retenção (IR)</div>
+            <div class="login-sub">Painel de Acompanhamento Pedagógico</div>
             <div class="input-group">
-                <label>E-mail (PEC / Gestão)</label>
+                <label>E-mail de Acesso</label>
                 <input type="email" id="email" placeholder="seu@email.com" onkeypress="if(event.key==='Enter')window.handleLogin()">
             </div>
             <div class="input-group">
                 <label>Senha</label>
                 <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key==='Enter')window.handleLogin()">
             </div>
-            <button class="login-btn" onclick="window.handleLogin()">Acessar Módulo</button>
+            <button class="login-btn" onclick="window.handleLogin()">Entrar no Sistema</button>
             <div id="login-error">Credenciais inválidas.</div>
         </div>
     </div>
@@ -208,8 +211,8 @@
         <header>
             <div class="header-brand">
                 <div>
-                    <h1>Análise Robusta de Retenção e Dificuldade (IDR-R)</h1>
-                    <span>Seduc-SP — Inteligência Pedagógica</span>
+                    <h1>Análise de Retenção e Dificuldade (IR)</h1>
+                    <span>Gestão Pedagógica — URE Avaré</span>
                 </div>
             </div>
             <div class="header-actions">
@@ -221,18 +224,19 @@
         <div class="container">
             <!-- NAVEGAÇÃO -->
             <div class="view-tabs">
-                <button class="btn-toggle active" id="btn-tab-global" onclick="setTab('global')">Ranking Geral da Rede</button>
-                <button class="btn-toggle" id="btn-tab-detalhe" onclick="setTab('detalhe')">Análise Detalhada (Filtros)</button>
+                <button class="btn-toggle active" id="btn-tab-global" onclick="setTab('global')">Visão Geral das Provas</button>
+                <button class="btn-toggle" id="btn-tab-detalhe" onclick="setTab('detalhe')">Análise por Escola / Turma</button>
             </div>
 
-            <!-- VIEW 1: RANKING GLOBAL -->
+            <!-- VISÃO GERAL -->
             <div id="view-global">
                 <div class="toolbar">
                     <div class="filter-group">
-                        <label>Filtrar por Série</label>
-                        <select id="filtro-serie-global" onchange="window.processarVisaoGlobal()">
-                            <option value="TODOS">Todas as Séries</option>
-                        </select>
+                        <label>Filtrar por Série (Múltipla Seleção)</label>
+                        <div class="multi-select" data-filter="serie_global">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas as Séries</span></div>
+                            <div class="select-options" id="options-serie-global"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -240,15 +244,15 @@
                     <div class="card alert">
                         <h3>Prova Mais Difícil (Série)</h3>
                         <div class="value" id="kpi-g-dificil">-</div>
-                        <div class="desc">Menor IDR-R ponderado da série.</div>
+                        <div class="desc">Menor Índice de Retenção (IR) ponderado.</div>
                     </div>
                     <div class="card success">
-                        <h3>Componente Mais Fácil</h3>
+                        <h3>Componente Mais Acessível</h3>
                         <div class="value" id="kpi-g-comp-facil">-</div>
-                        <div class="desc">Maior IDR-R frente à média de referência.</div>
+                        <div class="desc">Maior IR frente à média de referência.</div>
                     </div>
                     <div class="card warning">
-                        <h3>Maior Polarização (Prova)</h3>
+                        <h3>Maior Disparidade (Prova)</h3>
                         <div class="value" id="kpi-g-polarizada">-</div>
                         <div class="desc">Maior desvio padrão inter-escolas da rede.</div>
                     </div>
@@ -258,8 +262,8 @@
                     <div class="chart-container">
                         <div class="chart-header">
                             <div>
-                                <h2>Ranking de Dificuldade Global (IDR-R)</h2>
-                                <p>Da avaliação mais crítica (vermelho) para a mais acessível (verde), atenuando distorções de outliers.</p>
+                                <h2>Panorama Geral de Dificuldade das Avaliações (IR)</h2>
+                                <p>Da avaliação mais desafiadora (vermelho) à mais acessível (verde).</p>
                             </div>
                         </div>
                         <div class="canvas-wrapper"><canvas id="graficoRankingProvas"></canvas></div>
@@ -270,8 +274,8 @@
                 <div class="table-container">
                     <div class="chart-header">
                         <div>
-                            <h2>Matriz de Facilidade: Avaliações vs. Componentes Curriculares</h2>
-                            <p>Mapa de calor baseado no IDR-R e Fator de Consistência por disciplina e avaliação.</p>
+                            <h2>Mapa de Calor: Provas vs. Disciplinas</h2>
+                            <p>Nível de dificuldade identificado em cada componente para as séries selecionadas.</p>
                         </div>
                     </div>
                     <table id="tabelaComponentesGlobal">
@@ -281,28 +285,28 @@
                 </div>
             </div>
 
-            <!-- VIEW 2: ANÁLISE DETALHADA -->
+            <!-- ANÁLISE DETALHADA -->
             <div id="view-detalhada">
                 <div class="toolbar">
                     <div class="filter-group">
-                        <label>Avaliação Base</label>
+                        <label>Avaliação</label>
                         <select id="filtro-aval" onchange="window.processarEstatisticas()"></select>
                     </div>
                     <div class="filter-group">
-                        <label>Entidade / Agrupamento</label>
+                        <label>Foco da Análise</label>
                         <select id="filtro-entidade" onchange="window.processarEstatisticas()">
                             <option value="GERAL">Visão Geral (Rede Inteira)</option>
                         </select>
                     </div>
                     <div class="filter-group">
-                        <label>Componente Curricular</label>
+                        <label>Disciplina</label>
                         <select id="filtro-comp" onchange="window.processarEstatisticas()">
                             <option value="TODOS">Todas as Disciplinas</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- LEITURA EXECUTIVA AUTOMÁTICA -->
+                <!-- RESUMO EXECUTIVO -->
                 <div class="exec-summary-box">
                     <h3>💡 Análise Automática do Cenário</h3>
                     <p id="texto-leitura-executiva">Analisando os dados do segmento selecionado...</p>
@@ -310,14 +314,14 @@
 
                 <div class="cards-grid">
                     <div class="card" id="card-1">
-                        <h3>Nível Geral de Dificuldade</h3>
+                        <h3>Índice de Retenção (IR)</h3>
                         <div class="value" id="kpi-idr">-</div>
-                        <div class="desc">Índice Geral de Dificuldade Ajustado.</div>
+                        <div class="desc">Grau de dificuldade geral ajustado.</div>
                     </div>
                     <div class="card" id="card-2">
                         <h3>Desempenho Atual vs. Histórico</h3>
                         <div class="value" id="kpi-mediana">-</div>
-                        <div class="desc">Nota mediana atual comparada à esperada.</div>
+                        <div class="desc">Nota central atual comparada à esperada.</div>
                     </div>
                     <div class="card" id="card-3">
                         <h3>Variação de Notas (Dispersão)</h3>
@@ -336,7 +340,7 @@
                         <div class="chart-header">
                             <div>
                                 <h2>Relação: Dificuldade x Desvio</h2>
-                                <p>Eixo X: Nível de Dificuldade | Eixo Y: Disparidade de Notas</p>
+                                <p>Eixo X: Índice de Retenção (IR) | Eixo Y: Disparidade de Notas</p>
                             </div>
                         </div>
                         <div class="canvas-wrapper"><canvas id="graficoDispersao"></canvas></div>
@@ -344,7 +348,7 @@
                     <div class="chart-container">
                         <div class="chart-header">
                             <div>
-                                <h2>Nível de Dificuldade por Segmento</h2>
+                                <h2>Nível de Dificuldade por Segmento (IR)</h2>
                                 <p>Vermelho = Difícil | Azul = Esperado | Verde = Fácil</p>
                             </div>
                         </div>
@@ -363,7 +367,7 @@
                         <thead>
                             <tr>
                                 <th id="th-agrupamento">Segmento</th>
-                                <th>Dificuldade</th>
+                                <th>Índice de Retenção (IR)</th>
                                 <th>Notas (Atual / Histórico)</th>
                                 <th>Disparidade (DP)</th>
                                 <th>Confiabilidade</th>
@@ -412,6 +416,31 @@
                 if (t.includes('9º')) return '9º Ano EF';
                 return 'Ensino Fundamental (Outros)';
             }
+        }
+
+        // Funções de Dropdown para Checkbox Multi-Select
+        window.toggleDropdown = (el) => {
+            const opts = el.nextElementSibling;
+            const showing = opts.classList.contains('show');
+            document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            if (!showing) opts.classList.add('show');
+        };
+
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.multi-select')) {
+                document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            }
+        });
+
+        function updateMultiSelectDisplay(k) {
+            const c = document.querySelector(`.multi-select[data-filter="${k}"]`); if (!c) return;
+            const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
+            const span = c.querySelector('.select-display span');
+            span.textContent = cbs.length === 0 ? 'Todas as Séries' : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionadas`;
+        }
+
+        function getSelectedCheckboxes(k) {
+            return Array.from(document.querySelectorAll(`.multi-select[data-filter="${k}"] input[type="checkbox"]:checked`)).map(cb => cb.value);
         }
 
         window.setTab = (tab) => {
@@ -479,11 +508,11 @@
             return Math.sqrt(variance);
         };
 
-        const getClassificacaoIDRR = (idrr) => {
-            if (idrr < 0.85) return { text: 'Muito Difícil', badge: 'badge-danger' };
-            if (idrr < 0.95) return { text: 'Difícil', badge: 'badge-warning' };
-            if (idrr <= 1.05) return { text: 'Dentro do Esperado', badge: 'badge-success' };
-            if (idrr <= 1.15) return { text: 'Fácil', badge: 'badge-purple' };
+        const getClassificacaoIR = (ir) => {
+            if (ir < 0.85) return { text: 'Muito Difícil', badge: 'badge-danger' };
+            if (ir < 0.95) return { text: 'Difícil', badge: 'badge-warning' };
+            if (ir <= 1.05) return { text: 'Dentro do Esperado', badge: 'badge-success' };
+            if (ir <= 1.15) return { text: 'Fácil', badge: 'badge-purple' };
             return { text: 'Muito Fácil', badge: 'badge-purple' };
         };
 
@@ -524,11 +553,15 @@
                     };
                 }).filter(d => d.escola !== 'Desconhecida' && d.nota > 0 && !d.serie.includes('Outros'));
 
-                const sSerie = document.getElementById('filtro-serie-global'); 
-                sSerie.innerHTML = '<option value="TODOS">Todas as Séries</option>';
+                // Popular Checkbox de Séries
+                const containerOpts = document.getElementById('options-serie-global');
+                containerOpts.innerHTML = '';
                 const ordemSeries = ['6º Ano EF', '7º Ano EF', '8º Ano EF', '9º Ano EF', '1ª Série EM', '2ª Série EM', '3ª Série EM'];
                 let seriesPresentes = [...new Set(globalData.map(d => d.serie))];
-                ordemSeries.filter(s => seriesPresentes.includes(s)).forEach(s => sSerie.innerHTML += `<option value="${s}">${s}</option>`);
+                ordemSeries.filter(s => seriesPresentes.includes(s)).forEach(s => {
+                    containerOpts.innerHTML += `<label><input type="checkbox" value="${s}" onchange="updateMultiSelectDisplay('serie_global'); window.processarVisaoGlobal();"> ${s}</label>`;
+                });
+                updateMultiSelectDisplay('serie_global');
 
                 const sAval = document.getElementById('filtro-aval'); sAval.innerHTML = '';
                 [...new Set(globalData.map(d => d.aval_nome))].sort().forEach(av => sAval.innerHTML += `<option value="${av}">${av}</option>`);
@@ -570,23 +603,25 @@
         window.processarVisaoGlobal = () => {
             if (!globalData.length) return;
 
-            const serieFiltro = document.getElementById('filtro-serie-global').value;
+            const seriesSelecionadas = getSelectedCheckboxes('serie_global');
             let dataView = globalData;
-            if (serieFiltro !== 'TODOS') dataView = dataView.filter(d => d.serie === serieFiltro);
+            if (seriesSelecionadas.length > 0) {
+                dataView = dataView.filter(d => seriesSelecionadas.includes(d.serie));
+            }
 
             if (dataView.length === 0) {
                 document.getElementById('kpi-g-dificil').textContent = '-';
                 document.getElementById('kpi-g-comp-facil').textContent = '-';
                 document.getElementById('kpi-g-polarizada').textContent = '-';
                 document.querySelector('#tabelaComponentesGlobal thead').innerHTML = '';
-                document.querySelector('#tabelaComponentesGlobal tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;">Sem dados para a série selecionada.</td></tr>';
+                document.querySelector('#tabelaComponentesGlobal tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;">Sem dados para as séries selecionadas.</td></tr>';
                 if(chartsInstance.ranking) chartsInstance.ranking.destroy();
                 return;
             }
 
             let baselineHistorico = {};
-            if (serieFiltro !== 'TODOS' && historicoPorSerie[serieFiltro]) {
-                baselineHistorico = historicoPorSerie[serieFiltro];
+            if (seriesSelecionadas.length === 1 && historicoPorSerie[seriesSelecionadas[0]]) {
+                baselineHistorico = historicoPorSerie[seriesSelecionadas[0]];
             } else {
                 let tempVal = {}, tempPes = {};
                 dataView.forEach(d => {
@@ -615,24 +650,24 @@
                 let idrBase = histAmd > 0 ? medianaAtual / histAmd : 1;
                 let dp = calcDesvioPadrao(p.notasArr);
                 let fc = 1 / (1 + dp);
-                let idrR = idrBase * (0.7 + 0.3 * fc);
+                let ir = idrBase * (0.7 + 0.3 * fc);
 
-                rankingArray.push({ aval, idrR, dp });
+                rankingArray.push({ aval, ir, dp });
             }
-            rankingArray.sort((a,b) => a.idrR - b.idrR);
+            rankingArray.sort((a,b) => a.ir - b.ir);
 
             let compVal = {}, compPes = {};
             dataView.forEach(d => {
                 if(!compVal[d.componente]) { compVal[d.componente] = []; compPes[d.componente] = []; }
                 compVal[d.componente].push(d.nota); compPes[d.componente].push(d.avaliados * d.peso);
             });
-            let compFacilStr = '-'; let maxIdrC = 0;
-            let refMediana = serieFiltro !== 'TODOS' && mediaPorSerie[serieFiltro] ? mediaPorSerie[serieFiltro] : Object.values(baselineHistorico).reduce((a,b)=>a+b,0)/Object.keys(baselineHistorico).length;
+            let compFacilStr = '-'; let maxIrComp = 0;
+            let refMediana = seriesSelecionadas.length === 1 && mediaPorSerie[seriesSelecionadas[0]] ? mediaPorSerie[seriesSelecionadas[0]] : Object.values(baselineHistorico).reduce((a,b)=>a+b,0)/Object.keys(baselineHistorico).length;
 
             for (let c in compVal) {
                 let medC = calcMedianaPonderada(compVal[c], compPes[c]);
-                let idrC = refMediana > 0 ? medC / refMediana : 1;
-                if (idrC > maxIdrC) { maxIdrC = idrC; compFacilStr = c; }
+                let irC = refMediana > 0 ? medC / refMediana : 1;
+                if (irC > maxIrComp) { maxIrComp = irC; compFacilStr = c; }
             }
 
             if (rankingArray.length > 0) {
@@ -670,15 +705,15 @@
                         let idrB = medHist > 0 ? medCell / medHist : 1;
                         let dpC = calcDesvioPadrao(matriz[p][c].valores);
                         let fcC = 1 / (1 + dpC);
-                        let idrRCell = idrB * (0.7 + 0.3 * fcC);
+                        let irCell = idrB * (0.7 + 0.3 * fcC);
 
-                        let infoClass = getClassificacaoIDRR(idrRCell);
+                        let infoClass = getClassificacaoIR(irCell);
 
                         tbodyHTML += `
                             <td style="text-align: center; border-right: 1px dashed var(--border);">
                                 <div class="cell-diagnostico">
                                     <span class="badge ${infoClass.badge}">${infoClass.text}</span>
-                                    <span class="idr-label">IDR-R: ${idrRCell.toFixed(2)}</span>
+                                    <span class="idr-label">IR: ${irCell.toFixed(2)}</span>
                                 </div>
                             </td>`;
                     } else {
@@ -697,9 +732,9 @@
                 data: {
                     labels: rankingArray.map(d => d.aval),
                     datasets: [{
-                        label: 'Nível de Dificuldade (IDR-R)',
-                        data: rankingArray.map(d => d.idrR),
-                        backgroundColor: rankingArray.map(d => d.idrR < 0.95 ? '#e11d48' : (d.idr > 1.05 ? '#059669' : '#3b82f6')),
+                        label: 'Índice de Retenção (IR)',
+                        data: rankingArray.map(d => d.ir),
+                        backgroundColor: rankingArray.map(d => d.ir < 0.95 ? '#e11d48' : (d.ir > 1.05 ? '#059669' : '#3b82f6')),
                         borderRadius: 4
                     }]
                 },
@@ -707,7 +742,7 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { title: { display: true, text: 'Índice de Dificuldade', font: {weight: 'bold'} }, grid: { color: 'rgba(0,0,0,0.04)' } },
+                        y: { title: { display: true, text: 'Índice de Retenção (IR)', font: {weight: 'bold'} }, grid: { color: 'rgba(0,0,0,0.04)' } },
                         x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45 } }
                     }
                 }
@@ -768,16 +803,16 @@
                     let idrBase = medianaHist > 0 ? medianaAtual / medianaHist : 1;
                     let dp = calcDesvioPadrao(vals);
                     let fc = 1 / (1 + dp);
-                    let idrR = idrBase * (0.7 + 0.3 * fc);
+                    let ir = idrBase * (0.7 + 0.3 * fc);
 
-                    let classObj = getClassificacaoIDRR(idrR);
+                    let classObj = getClassificacaoIR(ir);
                     let estabilidade = getEstabilidadeDP(dp);
 
-                    arrayFinal.push({ chave, medianaAtual, mediaPonderadaAtual, medianaHist, idrBase, dp, fc, idrR, classObj, estabilidade });
+                    arrayFinal.push({ chave, medianaAtual, mediaPonderadaAtual, medianaHist, idrBase, dp, fc, ir, classObj, estabilidade });
                 }
             }
 
-            arrayFinal.sort((a,b) => a.idrR - b.idrR);
+            arrayFinal.sort((a,b) => a.ir - b.ir);
             renderDetalhamento(arrayFinal);
         };
 
@@ -791,21 +826,21 @@
                 return;
             }
 
-            const avgIDRR = dados.reduce((a, b) => a + b.idrR, 0) / dados.length;
+            const avgIR = dados.reduce((a, b) => a + b.ir, 0) / dados.length;
             const avgMedAtual = dados.reduce((a, b) => a + b.medianaAtual, 0) / dados.length;
             const avgMedHist = dados.reduce((a, b) => a + b.medianaHist, 0) / dados.length;
             const avgDP = dados.reduce((a, b) => a + b.dp, 0) / dados.length;
             const avgFC = dados.reduce((a, b) => a + b.fc, 0) / dados.length;
 
-            document.getElementById('kpi-idr').textContent = avgIDRR.toFixed(2);
+            document.getElementById('kpi-idr').textContent = avgIR.toFixed(2);
             document.getElementById('kpi-mediana').innerHTML = `${avgMedAtual.toFixed(2).replace('.',',')} <span style="font-size:.7rem;color:var(--muted)">/ ${avgMedHist.toFixed(2).replace('.',',')}</span>`;
             document.getElementById('kpi-desvio').textContent = avgDP.toFixed(2);
             document.getElementById('kpi-fc').textContent = avgFC.toFixed(2);
 
-            let textoExec = `A avaliação apresenta um nível geral de dificuldade de ${avgIDRR.toFixed(2)}. `;
-            if (avgIDRR < 0.85) textoExec += `Isso indica que o conteúdo exigiu muito mais dos estudantes do que o padrão histórico. `;
-            else if (avgIDRR < 0.95) textoExec += `O desempenho ficou um pouco abaixo do histórico esperado. `;
-            else if (avgIDRR <= 1.05) textoExec += `O aproveitamento está totalmente dentro da normalidade esperada. `;
+            let textoExec = `A avaliação apresenta um Índice de Retenção (IR) de ${avgIR.toFixed(2)}. `;
+            if (avgIR < 0.85) textoExec += `Isso indica que o conteúdo exigiu muito mais dos estudantes do que o padrão histórico. `;
+            else if (avgIR < 0.95) textoExec += `O desempenho ficou um pouco abaixo do histórico esperado. `;
+            else if (avgIR <= 1.05) textoExec += `O aproveitamento está totalmente dentro da normalidade esperada. `;
             else textoExec += `O desempenho superou a média histórica, indicando maior facilidade. `;
 
             textoExec += `A variação de notas (desvio padrão de ${avgDP.toFixed(2)}) demonstra um comportamento `;
@@ -820,7 +855,7 @@
                 tbody.innerHTML += `
                     <tr>
                         <td style="font-weight:700; color:var(--navy);">${d.chave}</td>
-                        <td><strong class="metric-mono" style="color:${d.idrR < 0.85 ? 'var(--rose)' : 'inherit'}">${d.idrR.toFixed(2)}</strong></td>
+                        <td><strong class="metric-mono" style="color:${d.ir < 0.85 ? 'var(--rose)' : 'inherit'}">${d.ir.toFixed(2)}</strong></td>
                         <td class="metric-mono">${d.medianaAtual.toFixed(2).replace('.',',')} <span style="font-size:.7rem;color:var(--muted)">/ ${d.medianaHist.toFixed(2).replace('.',',')}</span></td>
                         <td class="metric-mono">${d.dp.toFixed(2)}</td>
                         <td class="metric-mono">${d.fc.toFixed(2)}</td>
@@ -834,7 +869,7 @@
             if(chartsInstance.comparativo) chartsInstance.comparativo.destroy();
             Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
 
-            const scatterData = dados.map(d => ({ x: d.idrR, y: d.dp, label: d.chave }));
+            const scatterData = dados.map(d => ({ x: d.ir, y: d.dp, label: d.chave }));
             chartsInstance.dispersao = new Chart(document.getElementById('graficoDispersao').getContext('2d'), {
                 type: 'scatter',
                 data: {
@@ -846,15 +881,14 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw.label} | Índice: ${ctx.raw.x.toFixed(2)} | Disparidade: ${ctx.raw.y.toFixed(2)}` } } },
-                    scales: { x: { title: { display: true, text: 'Nível de Dificuldade', font: {weight: 'bold'} } }, y: { title: { display: true, text: 'Disparidade (Desvio Padrão)', font: {weight: 'bold'} }, beginAtZero: true } }
+                    scales: { x: { title: { display: true, text: 'Índice de Retenção (IR)', font: {weight: 'bold'} } }, y: { title: { display: true, text: 'Disparidade (Desvio Padrão)', font: {weight: 'bold'} }, beginAtZero: true } }
                 }
             });
 
-            // GRÁFICO COM CORES BASEADAS NO NÍVEL DE DIFICULDADE (Vermelho = Difícil, Verde = Fácil)
             const topData = [...dados].slice(0, 15);
             const coresBarras = topData.map(d => {
-                if (d.idrR < 0.95) return '#e11d48'; // Vermelho (Difícil)
-                if (d.idrR > 1.05) return '#059669'; // Verde (Fácil)
+                if (d.ir < 0.95) return '#e11d48'; // Vermelho (Difícil)
+                if (d.ir > 1.05) return '#059669'; // Verde (Fácil)
                 return '#3b82f6'; // Azul (Esperado)
             });
 
@@ -863,8 +897,8 @@
                 data: {
                     labels: topData.map(d => d.chave.length > 15 ? d.chave.substring(0,12)+'...' : d.chave),
                     datasets: [{
-                        label: 'Nível de Dificuldade',
-                        data: topData.map(d => d.idrR),
+                        label: 'Índice de Retenção',
+                        data: topData.map(d => d.ir),
                         backgroundColor: coresBarras,
                         borderRadius: 4
                     }]
@@ -872,7 +906,7 @@
                 options: {
                     responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                     scales: { 
-                        y: { title: { display: true, text: 'Índice de Dificuldade (Referência: 1.0)', font: {weight: 'bold'} }, beginAtZero: false, suggestedMin: 0.5, suggestedMax: 1.5, grid: { color: 'rgba(0,0,0,0.04)' } }, 
+                        y: { title: { display: true, text: 'Índice de Retenção (Referência: 1.0)', font: {weight: 'bold'} }, beginAtZero: false, suggestedMin: 0.5, suggestedMax: 1.5, grid: { color: 'rgba(0,0,0,0.04)' } }, 
                         x: { grid: { display: false } } 
                     }
                 }

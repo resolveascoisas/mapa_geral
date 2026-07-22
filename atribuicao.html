@@ -107,7 +107,7 @@
 
         /* Abas de Navegação (Views) */
         .view-tabs {
-            display: flex; gap: .35rem; margin-bottom: 1.25rem; align-items: center;
+            display: flex; gap: .35rem; margin-bottom: 1.25rem; align-items: center; flex-wrap: wrap;
             background: var(--surface); padding: .4rem .5rem; border-radius: var(--radius2); border: 1px solid var(--border);
             box-shadow: var(--shadow); width: fit-content;
         }
@@ -248,6 +248,7 @@
             <div class="view-tabs">
                 <button class="btn-toggle active" id="btn-view-completa" onclick="switchViewMode('completa')">Visão Completa</button>
                 <button class="btn-toggle" id="btn-view-resumo" onclick="switchViewMode('resumo')">Resumo por Professor e Componente</button>
+                <button class="btn-toggle" id="btn-view-especial" onclick="switchViewMode('especial')">Educação Especial (AEE / LIBRAS)</button>
             </div>
 
             <!-- FILTROS -->
@@ -290,7 +291,7 @@
             <!-- CARDS DE RESUMO -->
             <div class="cards-grid">
                 <div class="card">
-                    <h3>Registros Listados</h3>
+                    <h3 id="card-label-registros">Registros Listados</h3>
                     <div class="value" id="card-total-atrib">0</div>
                 </div>
                 <div class="card">
@@ -336,7 +337,7 @@
         let filteredData = [];
         let avaliacoesList = [];
         let onlyAvaliadas = false;
-        let currentView = 'completa';
+        let currentView = 'completa'; // 'completa', 'resumo' ou 'especial'
 
         let sortColumn = 'professor';
         let sortDirection = 'asc';
@@ -467,6 +468,7 @@
                     const profEscola = String(a.escola || '').trim().toUpperCase();
                     const profTurma = String(a.turma || '').trim().toUpperCase();
                     const profDiscOriginal = String(a.disciplina || '').trim().toUpperCase();
+                    const tipoAtribuicao = String(a.tipo_atribuicao || '').trim().toUpperCase();
 
                     const discTraduzida = disciplinaMap[profDiscOriginal] || profDiscOriginal;
                     const idEscola = escolaNomeParaId.get(profEscola);
@@ -488,11 +490,21 @@
                         notasPorAvaliacao[av.id] = notaMedia;
                     });
 
+                    // Aplica formatação de LIBRAS na turma se o tipo de atribuição contiver LIBRAS
+                    let turmaFormatada = a.turma || '-';
+                    if (tipoAtribuicao.includes('LIBRAS')) {
+                        turmaFormatada += ' <strong>(LIBRAS)</strong>';
+                    }
+
                     return {
                         professor: a.professor || 'Não informado',
                         escola: a.escola || '-',
-                        turma: a.turma || '-',
+                        turma: turmaFormatada,
+                        turmaTextoPuro: a.turma || '-',
                         disciplina: a.disciplina || '-',
+                        tipo_atribuicao: a.tipo_atribuicao || '-',
+                        _turmaUpper: profTurma,
+                        _tipoAtribUpper: tipoAtribuicao,
                         notasPorAvaliacao: notasPorAvaliacao,
                         temNota: temAlgumaNota
                     };
@@ -511,11 +523,17 @@
             currentView = mode;
             document.getElementById('btn-view-completa').classList.toggle('active', mode === 'completa');
             document.getElementById('btn-view-resumo').classList.toggle('active', mode === 'resumo');
-            document.getElementById('table-title-context').textContent = mode === 'completa' ? 'Visão Completa de Atribuições' : 'Resumo por Professor e Componente';
+            document.getElementById('btn-view-especial').classList.toggle('active', mode === 'especial');
+            
+            let titleText = 'Visão Completa de Atribuições';
+            if (mode === 'resumo') titleText = 'Resumo por Professor e Componente';
+            if (mode === 'especial') titleText = 'Educação Especial (Uma linha por professor)';
+            document.getElementById('table-title-context').textContent = titleText;
             
             sortColumn = 'professor';
             sortDirection = 'asc';
-            renderDashboard();
+            updateAllFiltersOptions();
+            applyFilters();
         }
 
         function toggleDropdown(el) {
@@ -552,13 +570,17 @@
             const disciplinasDisponiveis = new Set();
 
             globalData.forEach(d => {
+                if (currentView === 'especial') {
+                    if (!d._turmaUpper.includes('AEE') && !d._tipoAtribUpper.includes('LIBRAS')) return;
+                }
+
                 const matchEscola = sEscola.length === 0 || sEscola.includes(d.escola);
-                const matchTurma = sTurma.length === 0 || sTurma.includes(d.turma);
+                const matchTurma = sTurma.length === 0 || sTurma.includes(d.turmaTextoPuro);
                 const matchDisc = sDisc.length === 0 || sDisc.includes(d.disciplina);
                 const matchNota = !onlyAvaliadas || d.temNota;
 
                 if (matchTurma && matchDisc && matchNota && d.escola && d.escola !== '-') escolasDisponiveis.add(d.escola);
-                if (matchEscola && matchDisc && matchNota && d.turma && d.turma !== '-') turmasDisponiveis.add(d.turma);
+                if (matchEscola && matchDisc && matchNota && d.turmaTextoPuro && d.turmaTextoPuro !== '-') turmasDisponiveis.add(d.turmaTextoPuro);
                 if (matchEscola && matchTurma && matchNota && d.disciplina && d.disciplina !== '-') disciplinasDisponiveis.add(d.disciplina);
             });
 
@@ -608,8 +630,12 @@
             const sDisc = getSelectedCheckboxes('disciplina');
 
             filteredData = globalData.filter(d => {
+                if (currentView === 'especial') {
+                    if (!d._turmaUpper.includes('AEE') && !d._tipoAtribUpper.includes('LIBRAS')) return false;
+                }
+
                 const matchEscola = sEscola.length === 0 || sEscola.includes(d.escola);
-                const matchTurma = sTurma.length === 0 || sTurma.includes(d.turma);
+                const matchTurma = sTurma.length === 0 || sTurma.includes(d.turmaTextoPuro);
                 const matchDisc = sDisc.length === 0 || sDisc.includes(d.disciplina);
                 const matchNota = !onlyAvaliadas || d.temNota;
 
@@ -635,7 +661,6 @@
             return 'bg-green';
         }
 
-        // Função de Exportação para Excel
         function exportarExcel() {
             const container = document.getElementById('heatmap-container');
             const table = container.querySelector('table');
@@ -644,18 +669,26 @@
                 return;
             }
 
-            const wb = XLSX.utils.table_to_book(table, { sheet: currentView === 'completa' ? "Visao_Completa" : "Resumo_Professor" });
-            const nomeArquivo = currentView === 'completa' ? 'Atribuicoes_Visao_Completa.xlsx' : 'Resumo_Professor_Componente.xlsx';
-            XLSX.writeFile(wb, nomeArquivo);
+            let sheetName = 'Visao_Completa';
+            let fileName = 'Atribuicoes_Visao_Completa.xlsx';
+            if (currentView === 'resumo') {
+                sheetName = 'Resumo_Professor';
+                fileName = 'Resumo_Professor_Componente.xlsx';
+            } else if (currentView === 'especial') {
+                sheetName = 'Educacao_Especial';
+                fileName = 'Atribuicoes_Educacao_Especial.xlsx';
+            }
+
+            const wb = XLSX.utils.table_to_book(table, { sheet: sheetName });
+            XLSX.writeFile(wb, fileName);
         }
 
         function renderDashboard() {
-            document.getElementById('card-total-atrib').textContent = filteredData.length;
-            document.getElementById('card-total-prof').textContent = new Set(filteredData.map(d => d.professor)).size;
-            document.getElementById('card-total-com-notas').textContent = filteredData.filter(d => d.temNota).length;
-
             const container = document.getElementById('heatmap-container');
             if (filteredData.length === 0) {
+                document.getElementById('card-total-atrib').textContent = 0;
+                document.getElementById('card-total-prof').textContent = 0;
+                document.getElementById('card-total-com-notas').textContent = 0;
                 container.innerHTML = '<p style="padding:1rem;color:var(--muted);text-align:center;">Nenhum registro encontrado para os filtros selecionados.</p>';
                 return;
             }
@@ -673,6 +706,11 @@
 
             // ================= VISÃO COMPLETA =================
             if (currentView === 'completa') {
+                document.getElementById('card-label-registros').textContent = 'Registros Listados';
+                document.getElementById('card-total-atrib').textContent = filteredData.length;
+                document.getElementById('card-total-prof').textContent = new Set(filteredData.map(d => d.professor)).size;
+                document.getElementById('card-total-com-notas').textContent = filteredData.filter(d => d.temNota).length;
+
                 filteredData.sort((a, b) => {
                     let vA, vB;
                     if (sortColumn.startsWith('aval_')) {
@@ -692,7 +730,7 @@
                 html += `<th style="width:45px;">#</th>`;
                 html += `<th onclick="toggleSort('professor')" style="width:200px;text-align:left;">Professor${getArrow('professor')}</th>`;
                 html += `<th onclick="toggleSort('escola')" style="width:160px;text-align:left;">Escola${getArrow('escola')}</th>`;
-                html += `<th onclick="toggleSort('turma')" style="width:100px;">Turma${getArrow('turma')}</th>`;
+                html += `<th onclick="toggleSort('turma')" style="width:120px;">Turma${getArrow('turma')}</th>`;
                 html += `<th onclick="toggleSort('disciplina')" style="width:130px;text-align:left;">Disciplina${getArrow('disciplina')}</th>`;
 
                 avalsOrdenadas.forEach(av => {
@@ -706,7 +744,7 @@
                     html += `<td style="font-weight:700;color:var(--light);">${idx + 1}</td>`;
                     html += `<td class="row-header" style="font-weight:700;">${d.professor}</td>`;
                     html += `<td class="row-header" style="font-weight:500;color:var(--muted);">${d.escola}</td>`;
-                    html += `<td><strong>${d.turma}</strong></td>`;
+                    html += `<td>${d.turma}</td>`;
                     html += `<td class="row-header" style="font-weight:600;color:var(--blue);">${d.disciplina}</td>`;
 
                     avalsOrdenadas.forEach(av => {
@@ -722,7 +760,7 @@
                 container.innerHTML = html + `</tbody></table>`;
             } 
             // ================= RESUMO POR PROFESSOR E COMPONENTE =================
-            else {
+            else if (currentView === 'resumo') {
                 const mapResumo = new Map();
 
                 filteredData.forEach(d => {
@@ -774,6 +812,11 @@
                     };
                 });
 
+                document.getElementById('card-label-registros').textContent = 'Linhas de Resumo';
+                document.getElementById('card-total-atrib').textContent = linhasResumo.length;
+                document.getElementById('card-total-prof').textContent = new Set(linhasResumo.map(r => r.professor)).size;
+                document.getElementById('card-total-com-notas').textContent = linhasResumo.filter(r => r.temNota).length;
+
                 linhasResumo.sort((a, b) => {
                     let vA, vB;
                     if (sortColumn.startsWith('aval_')) {
@@ -815,6 +858,122 @@
                     html += `<td class="row-header" style="font-weight:600;color:var(--blue);">${r.disciplina}</td>`;
                     html += `<td class="row-header" style="font-weight:500;color:var(--muted);">${r.escolasArr.join(', ')}</td>`;
                     html += `<td class="row-header" style="font-weight:500;">${r.turmasArr.join(', ')}</td>`;
+
+                    avalsOrdenadas.forEach(av => {
+                        const nota = r.notasPorAvaliacao[av.id];
+                        if (nota !== null && nota !== undefined) {
+                            html += `<td class="${getNotaClass(nota)}">${nota.toFixed(2).replace('.', ',')}</td>`;
+                        } else {
+                            html += `<td class="bg-empty">-</td>`;
+                        }
+                    });
+                    html += `</tr>`;
+                });
+                container.innerHTML = html + `</tbody></table>`;
+            }
+            // ================= EDUCAÇÃO ESPECIAL (UMA LINHA POR PROFESSOR) =================
+            else {
+                const mapEspecial = new Map();
+
+                filteredData.forEach(d => {
+                    const profName = d.professor;
+                    if (!mapEspecial.has(profName)) {
+                        mapEspecial.set(profName, {
+                            professor: profName,
+                            escolas: new Set(),
+                            turmas: new Set(),
+                            disciplinas: new Set(),
+                            temNota: false,
+                            somaNotasPorAvaliacao: {},
+                            contNotasPorAvaliacao: {}
+                        });
+                    }
+
+                    const obj = mapEspecial.get(profName);
+                    if (d.escola && d.escola !== '-') obj.escolas.add(d.escola);
+                    if (d.turma && d.turma !== '-') obj.turmas.add(d.turma);
+                    if (d.disciplina && d.disciplina !== '-') obj.disciplinas.add(d.disciplina);
+                    if (d.temNota) obj.temNota = true;
+
+                    if (d.notasPorAvaliacao) {
+                        Object.keys(d.notasPorAvaliacao).forEach(avalId => {
+                            const n = d.notasPorAvaliacao[avalId];
+                            if (n !== null && n !== undefined) {
+                                if (!obj.somaNotasPorAvaliacao[avalId]) {
+                                    obj.somaNotasPorAvaliacao[avalId] = 0;
+                                    obj.contNotasPorAvaliacao[avalId] = 0;
+                                }
+                                obj.somaNotasPorAvaliacao[avalId] += n;
+                                obj.contNotasPorAvaliacao[avalId]++;
+                            }
+                        });
+                    }
+                });
+
+                let linhasEspecial = Array.from(mapEspecial.values()).map(r => {
+                    const mediasFinais = {};
+                    Object.keys(r.somaNotasPorAvaliacao).forEach(avalId => {
+                        mediasFinais[avalId] = r.somaNotasPorAvaliacao[avalId] / r.contNotasPorAvaliacao[avalId];
+                    });
+                    return {
+                        professor: r.professor,
+                        escolasArr: Array.from(r.escolas).sort(),
+                        turmasArr: Array.from(r.turmas).sort(),
+                        disciplinasArr: Array.from(r.disciplinas).sort(),
+                        temNota: r.temNota,
+                        notasPorAvaliacao: mediasFinais
+                    };
+                });
+
+                document.getElementById('card-label-registros').textContent = 'Professores Especiais';
+                document.getElementById('card-total-atrib').textContent = linhasEspecial.length;
+                document.getElementById('card-total-prof').textContent = linhasEspecial.length;
+                document.getElementById('card-total-com-notas').textContent = linhasEspecial.filter(r => r.temNota).length;
+
+                linhasEspecial.sort((a, b) => {
+                    let vA, vB;
+                    if (sortColumn.startsWith('aval_')) {
+                        const avalId = sortColumn.replace('aval_', '');
+                        vA = a.notasPorAvaliacao[avalId] ?? -999;
+                        vB = b.notasPorAvaliacao[avalId] ?? -999;
+                    } else if (sortColumn === 'escola') {
+                        vA = a.escolasArr.join(', ').toLowerCase();
+                        vB = b.escolasArr.join(', ').toLowerCase();
+                    } else if (sortColumn === 'turma') {
+                        vA = a.turmasArr.join(', ').toLowerCase();
+                        vB = b.turmasArr.join(', ').toLowerCase();
+                    } else if (sortColumn === 'disciplina') {
+                        vA = a.disciplinasArr.join(', ').toLowerCase();
+                        vB = b.disciplinasArr.join(', ').toLowerCase();
+                    } else {
+                        vA = String(a[sortColumn] || '').toLowerCase();
+                        vB = String(b[sortColumn] || '').toLowerCase();
+                    }
+                    if (vA < vB) return sortDirection === 'asc' ? -1 : 1;
+                    if (vA > vB) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                let html = `<table class="heatmap"><thead><tr>`;
+                html += `<th style="width:45px;">#</th>`;
+                html += `<th onclick="toggleSort('professor')" style="width:220px;text-align:left;">Professor${getArrow('professor')}</th>`;
+                html += `<th onclick="toggleSort('escola')" style="width:180px;text-align:left;">Escolas${getArrow('escola')}</th>`;
+                html += `<th onclick="toggleSort('turma')" style="width:200px;text-align:left;">Turmas (AEE / LIBRAS)${getArrow('turma')}</th>`;
+                html += `<th onclick="toggleSort('disciplina')" style="width:140px;text-align:left;">Componentes${getArrow('disciplina')}</th>`;
+
+                avalsOrdenadas.forEach(av => {
+                    const colKey = `aval_${av.id}`;
+                    html += `<th onclick="toggleSort('${colKey}')">${av.bimestre || '-'}<br><span style="font-size:.65rem;font-weight:400;">${av.nome || ''}</span>${getArrow(colKey)}</th>`;
+                });
+                html += `</tr></thead><tbody>`;
+
+                linhasEspecial.forEach((r, idx) => {
+                    html += `<tr>`;
+                    html += `<td style="font-weight:700;color:var(--light);">${idx + 1}</td>`;
+                    html += `<td class="row-header" style="font-weight:700;">${r.professor}</td>`;
+                    html += `<td class="row-header" style="font-weight:500;color:var(--muted);">${r.escolasArr.join(', ')}</td>`;
+                    html += `<td class="row-header" style="font-weight:500;color:var(--blue);">${r.turmasArr.join(', ')}</td>`;
+                    html += `<td class="row-header" style="font-weight:500;">${r.disciplinasArr.join(', ')}</td>`;
 
                     avalsOrdenadas.forEach(av => {
                         const nota = r.notasPorAvaliacao[av.id];

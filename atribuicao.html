@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Atribuições e Avaliações</title>
+    <link rel="icon" type="image/png" href="./imagens/icone.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --navy:    #0c1a35;
+            --navy2:   #142040;
+            --blue:    #1d4ed8;
+            --blue2:   #2563eb;
+            --sky:     #0284c7;
+            --teal:    #0f766e;
+            --emerald: #059669;
+            --amber:   #d97706;
+            --rose:    #e11d48;
+            --bg:      #f1f5fb;
+            --surface: #ffffff;
+            --surface2:#f8fafd;
+            --border:  #e4eaf3;
+            --border2: #c9d5e8;
+            --text:    #0d1829;
+            --muted:   #5a6e8a;
+            --light:   #8fa3bc;
+            --radius:  8px;
+            --radius2: 14px;
+            --shadow:  0 1px 2px rgba(0,0,0,.04), 0 4px 20px rgba(12,26,53,.06);
+            --grad-blue: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+            --grad-header: linear-gradient(160deg, #0c1a35 0%, #0f2a52 60%, #1a3d72 100%);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            font-size: 14.5px;
+            line-height: 1.55;
+        }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+        #loading-overlay {
+            position: fixed; inset: 0;
+            background: rgba(12,26,53,.88);
+            backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center;
+            flex-direction: column; z-index: 9999; gap: 1.25rem;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 2.5px solid rgba(255,255,255,.12);
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+        #loading-text { color: rgba(255,255,255,.75); font-size: .88rem; font-weight: 500; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Login */
+        #login-section {
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; background: var(--grad-header); position: relative; overflow: hidden;
+        }
+        .login-box {
+            position: relative; z-index: 1; background: rgba(255,255,255,.05);
+            backdrop-filter: blur(28px); border: 1px solid rgba(255,255,255,.13);
+            padding: 2.75rem 2.5rem; border-radius: 20px; width: 100%; max-width: 400px;
+            box-shadow: 0 40px 80px rgba(0,0,0,.45);
+        }
+        .login-title { color: #fff; font-size: 1.45rem; font-weight: 800; text-align: center; margin-bottom: .35rem; }
+        .login-sub { color: rgba(255,255,255,.45); font-size: .85rem; text-align: center; margin-bottom: 2.25rem; }
+        .input-group { margin-bottom: 1rem; }
+        .input-group label { display: block; font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.5); margin-bottom: .45rem; text-transform: uppercase; }
+        .input-group input {
+            width: 100%; padding: .75rem 1rem; background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.11); border-radius: var(--radius); color: #fff;
+            font-family: inherit; font-size: .925rem; outline: none;
+        }
+        .login-btn { width: 100%; padding: .875rem; background: var(--grad-blue); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .925rem; font-weight: 700; border: none; cursor: pointer; margin-top: .5rem; }
+        #login-error { color: #fca5a5; font-size: .84rem; margin-top: .75rem; display: none; text-align: center; font-weight: 500; }
+
+        /* Header */
+        header {
+            background: var(--grad-header); padding: .85rem 2rem;
+            display: flex; align-items: center; gap: 1.5rem;
+            position: sticky; top: 0; z-index: 200; border-bottom: 1px solid rgba(255,255,255,.06);
+        }
+        .header-brand h1 { font-size: .95rem; font-weight: 800; color: #fff; line-height: 1.2; }
+        .header-brand span { font-size: .7rem; color: rgba(255,255,255,.38); font-weight: 600; text-transform: uppercase; }
+        .header-actions { display: flex; gap: .45rem; align-items: center; margin-left: auto; }
+        .btn-logout { background: transparent; color: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.15); padding: .45rem .9rem; border-radius: var(--radius); font-size: .8rem; font-weight: 600; cursor: pointer; }
+
+        .container { padding: 1.75rem 2rem; max-width: 1600px; margin: 0 auto; }
+
+        /* Abas de Navegação (Views) */
+        .view-tabs {
+            display: flex; gap: .35rem; margin-bottom: 1.25rem; align-items: center;
+            background: var(--surface); padding: .4rem .5rem; border-radius: var(--radius2); border: 1px solid var(--border);
+            box-shadow: var(--shadow); width: fit-content;
+        }
+        .btn-toggle {
+            display: inline-flex; align-items: center; gap: .38rem; padding: .5rem 1.1rem; border-radius: 99px;
+            font-family: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; border: 1.5px solid transparent;
+            transition: all .18s; background: transparent; color: var(--muted);
+        }
+        .btn-toggle:hover { background: var(--bg); color: var(--navy); border-color: var(--border2); }
+        .btn-toggle.active { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 2px 10px rgba(12,26,53,.25); }
+
+        /* Filtros */
+        .filters-wrapper {
+            background: var(--surface); border-radius: var(--radius2);
+            padding: 1.1rem 1.5rem; margin-bottom: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border);
+        }
+        .filters-label { font-size: .7rem; font-weight: 800; color: var(--light); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .8rem; }
+        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .7rem; align-items: end; }
+        
+        .filter-item label { display: block; font-size: .72rem; font-weight: 700; color: var(--muted); margin-bottom: .3rem; text-transform: uppercase; }
+        .multi-select { position: relative; user-select: none; }
+        .select-display {
+            padding: .6rem .85rem; border: 1.5px solid var(--border); border-radius: var(--radius);
+            background: var(--surface2); cursor: pointer; display: flex; justify-content: space-between;
+            align-items: center; font-size: .875rem; color: var(--text); min-height: 40px;
+        }
+        .select-options {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius);
+            max-height: 260px; overflow-y: auto; z-index: 100; display: none; box-shadow: var(--shadow);
+        }
+        .select-options.show { display: block; }
+        .select-options label {
+            display: flex; align-items: center; gap: .6rem; padding: .6rem .85rem;
+            cursor: pointer; font-size: .85rem; border-bottom: 1px solid var(--bg); font-weight: normal; text-transform: none;
+        }
+        .select-options label:hover { background: var(--bg); color: var(--blue); }
+        
+        .btn-clear {
+            background: transparent; border: 1.5px solid var(--border2); color: var(--muted);
+            border-radius: var(--radius); padding: .6rem .85rem; font-size: .85rem; font-weight: 600;
+            cursor: pointer; height: 40px; width: 100%; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-toggle-filter {
+            background: var(--surface2); border: 1.5px solid var(--border2); color: var(--muted);
+            border-radius: var(--radius); padding: .6rem .85rem; font-size: .85rem; font-weight: 600;
+            cursor: pointer; height: 40px; width: 100%; display: flex; align-items: center; justify-content: center; gap: .4rem;
+            transition: all .2s;
+        }
+        .btn-toggle-filter.active { background: rgba(5,150,105,.1); border-color: var(--emerald); color: var(--emerald); }
+
+        .btn-excel {
+            display: inline-flex; align-items: center; gap: .4rem;
+            background: rgba(5,150,105,.1); color: #065f46; border: 1px solid rgba(5,150,105,.25);
+            padding: .45rem .9rem; border-radius: 6px; font-family: inherit; font-size: .78rem; font-weight: 700;
+            cursor: pointer; transition: all .18s;
+        }
+        .btn-excel:hover { background: rgba(5,150,105,.2); }
+
+        /* Cards Resumo */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .card {
+            background: var(--surface); border-radius: var(--radius2); padding: 1.4rem 1.5rem;
+            box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden;
+        }
+        .card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2.5px; background: var(--grad-blue); }
+        .card h3 { font-size: .68rem; font-weight: 800; color: var(--light); text-transform: uppercase; margin-bottom: .65rem; }
+        .card .value { font-size: 2.1rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; line-height: 1; }
+
+        /* Tabela Heatmap */
+        .table-container {
+            background: var(--surface); border-radius: var(--radius2); padding: 1.4rem 1.5rem;
+            box-shadow: var(--shadow); border: 1px solid var(--border); overflow-x: auto;
+        }
+        .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; }
+        .table-title { font-size: .95rem; font-weight: 800; color: var(--navy); }
+        
+        table.heatmap { width: 100%; border-collapse: collapse; font-size: .8rem; }
+        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: .45rem .35rem; text-align: center; vertical-align: middle; white-space: nowrap; }
+        table.heatmap th {
+            background: var(--navy); color: rgba(255,255,255,.85);
+            font-size: .72rem; font-weight: 700; letter-spacing: .05em; white-space: normal; line-height: 1.25;
+            cursor: pointer; user-select: none; transition: background .15s;
+        }
+        table.heatmap th:hover { background: var(--navy2); }
+        table.heatmap .row-header {
+            text-align: left; background: var(--surface2); color: var(--text); font-weight: 600; font-size: .8rem; white-space: normal;
+        }
+
+        /* Cores das células de notas */
+        .bg-red { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
+        .bg-yellow { background: #fef08a !important; color: #78350f !important; font-weight: 700; }
+        .bg-green { background: var(--emerald) !important; color: #fff !important; font-weight: 700; }
+        .bg-empty { background: var(--bg) !important; color: var(--light) !important; }
+
+        #dashboard-section { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Sincronizando dados...</div>
+    </div>
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-section">
+        <div class="login-box">
+            <div class="login-title">Painel de Atribuições</div>
+            <div class="login-sub">Sistema de Gestão Educacional</div>
+            <div class="input-group">
+                <label>E-mail</label>
+                <input type="email" id="email" placeholder="seu@email.com" onkeypress="if(event.key==='Enter')handleLogin()">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key==='Enter')handleLogin()">
+            </div>
+            <button class="login-btn" onclick="handleLogin()">Entrar no Painel</button>
+            <div id="login-error">Credenciais inválidas.</div>
+        </div>
+    </div>
+
+    <!-- TELA DO PAINEL -->
+    <div id="dashboard-section">
+        <header>
+            <div class="header-brand">
+                <h1 id="dash-title">Painel de Atribuições e Avaliações</h1>
+                <span>Gestão Integrada</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-logout" onclick="handleLogout()">Sair</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <!-- ABAS DE NAVEGAÇÃO -->
+            <div class="view-tabs">
+                <button class="btn-toggle active" id="btn-view-completa" onclick="switchViewMode('completa')">Visão Completa</button>
+                <button class="btn-toggle" id="btn-view-resumo" onclick="switchViewMode('resumo')">Resumo por Professor e Componente</button>
+            </div>
+
+            <!-- FILTROS -->
+            <div class="filters-wrapper">
+                <div class="filters-label">Filtros Adaptativos</div>
+                <div class="filters-grid">
+                    <div class="filter-item">
+                        <label>Escola</label>
+                        <div class="multi-select" data-filter="escola">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Turma</label>
+                        <div class="multi-select" data-filter="turma">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Componente / Disciplina</label>
+                        <div class="multi-select" data-filter="disciplina">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Filtro de Notas</label>
+                        <button id="btn-toggle-avaliadas" class="btn-toggle-filter" onclick="toggleAvaliadasFilter()">
+                            <span>☐ Ver notas das avaliações</span>
+                        </button>
+                    </div>
+                    <div class="filter-item" style="display:flex;align-items:flex-end;">
+                        <button class="btn-clear" onclick="clearFilters()">✕ Limpar Filtros</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARDS DE RESUMO -->
+            <div class="cards-grid">
+                <div class="card">
+                    <h3>Registros Listados</h3>
+                    <div class="value" id="card-total-atrib">0</div>
+                </div>
+                <div class="card">
+                    <h3>Professores Únicos</h3>
+                    <div class="value" id="card-total-prof">0</div>
+                </div>
+                <div class="card">
+                    <h3>Com Avaliações Registradas</h3>
+                    <div class="value" id="card-total-com-notas">0</div>
+                </div>
+            </div>
+
+            <!-- TABELA DINÂMICA -->
+            <div class="table-container">
+                <div class="table-toolbar">
+                    <div class="table-title" id="table-title-context">Visão Completa de Atribuições</div>
+                    <button class="btn-excel" onclick="exportarExcel()">📥 Exportar Excel</button>
+                </div>
+                <div id="heatmap-container">
+                    <table class="heatmap">
+                        <thead>
+                            <tr><th>Carregando...</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Aguarde a sincronização dos dados.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kmplasayzhtjoelxnvif.supabase.co';
+        const supabaseKey = 'sb_publishable_24GErsvesucjCS2GKZkBUQ_8xMMXuoh';
+
+        let supabaseClient = null;
+        if (window.supabase) {
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        }
+
+        let globalData = [];
+        let filteredData = [];
+        let avaliacoesList = [];
+        let onlyAvaliadas = false;
+        let currentView = 'completa';
+
+        let sortColumn = 'professor';
+        let sortDirection = 'asc';
+
+        const disciplinaMap = {
+            "MATEMATICA": "MAT",
+            "LINGUA PORTUGUESA": "LPT",
+            "HISTORIA": "HIS",
+            "GEOGRAFIA": "GEO",
+            "LINGUA INGLESA": "ING",
+            "INGLES": "ING",
+            "FILOSOFIA": "FIL",
+            "FISICA": "FIS",
+            "BIOLOGIA": "BIO",
+            "QUIMICA": "QUI",
+            "SOCIOLOGIA": "SOC",
+            "CIENCIAS": "CIE"
+        };
+
+        function showLoading(text='Carregando...') {
+            document.getElementById('loading-text').textContent = text;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('password').value;
+            const err = document.getElementById('login-error');
+            err.style.display = 'none';
+
+            if (!email || !pass) {
+                err.style.display = 'block';
+                err.textContent = 'Preencha todos os campos.';
+                return;
+            }
+
+            try {
+                showLoading('Autenticando...');
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                if (error) throw error;
+                initDashboard();
+            } catch (e) {
+                hideLoading();
+                err.style.display = 'block';
+                err.textContent = 'Erro: ' + e.message;
+            }
+        }
+
+        async function handleLogout() {
+            showLoading('Saindo...');
+            await supabaseClient.auth.signOut();
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'flex';
+            hideLoading();
+        }
+
+        async function fetchAllData(table) {
+            let all = [], limit = 1000, start = 0, hasMore = true;
+            while (hasMore) {
+                const { data, error } = await supabaseClient.from(table).select('*').range(start, start + limit - 1);
+                if (error) throw error;
+                all.push(...data);
+                if (data.length < limit) hasMore = false;
+                else start += limit;
+            }
+            return all;
+        }
+
+        async function loadDatabase() {
+            showLoading('Sincronizando banco de dados...');
+            try {
+                const [atribuicoes, escolas, turmas, avaliacoes, desempenho] = await Promise.all([
+                    fetchAllData('atribuicoes'),
+                    fetchAllData('escolas'),
+                    fetchAllData('turmas'),
+                    fetchAllData('avaliacoes'),
+                    fetchAllData('desempenho')
+                ]);
+
+                avaliacoesList = avaliacoes;
+
+                const avalMap = new Map();
+                avaliacoes.forEach(a => { if(a.id) avalMap.set(a.id, a); });
+
+                const escolaNomeParaId = new Map();
+                escolas.forEach(e => {
+                    if (e.nome_escola) {
+                        escolaNomeParaId.set(String(e.nome_escola).trim().toUpperCase(), e.id_escola);
+                    }
+                });
+
+                const turmaChaveParaId = new Map();
+                turmas.forEach(t => {
+                    const idEscola = t.id_escola;
+                    const nomeLimpo = String(t.nome_limpo || t.turma || '').trim().toUpperCase();
+                    if (idEscola && nomeLimpo) {
+                        turmaChaveParaId.set(`${idEscola}|${nomeLimpo}`, t.id);
+                    }
+                });
+
+                const notasIndex = new Map();
+                desempenho.forEach(d => {
+                    if (!d.id || !d.id_avaliacao) return;
+                    const idTurma = d.id;
+                    const idAval = d.id_avaliacao;
+                    const compOriginal = String(d.componente || '').trim().toUpperCase();
+
+                    const key = `${idTurma}|${compOriginal}|${idAval}`;
+                    if (!notasIndex.has(key)) {
+                        notasIndex.set(key, { somaProduto: 0, pesoTotal: 0 });
+                    }
+
+                    const notaVal = parseFloat(d.nota) || 0;
+                    const pesoVal = parseFloat(d.peso) || 1;
+                    const avaliadosVal = parseInt(d.avaliados) || 1;
+
+                    if (notaVal > 0) {
+                        const item = notasIndex.get(key);
+                        item.somaProduto += notaVal * pesoVal * avaliadosVal;
+                        item.pesoTotal += pesoVal * avaliadosVal;
+                    }
+                });
+
+                globalData = atribuicoes.map(a => {
+                    const profEscola = String(a.escola || '').trim().toUpperCase();
+                    const profTurma = String(a.turma || '').trim().toUpperCase();
+                    const profDiscOriginal = String(a.disciplina || '').trim().toUpperCase();
+
+                    const discTraduzida = disciplinaMap[profDiscOriginal] || profDiscOriginal;
+                    const idEscola = escolaNomeParaId.get(profEscola);
+                    const idTurma = idEscola ? turmaChaveParaId.get(`${idEscola}|${profTurma}`) : null;
+
+                    const notasPorAvaliacao = {};
+                    let temAlgumaNota = false;
+
+                    avaliacoes.forEach(av => {
+                        let notaMedia = null;
+                        if (idTurma) {
+                            const chave = `${idTurma}|${discTraduzida}|${av.id}`;
+                            const dados = notasIndex.get(chave);
+                            if (dados && dados.pesoTotal > 0) {
+                                notaMedia = dados.somaProduto / dados.pesoTotal;
+                                temAlgumaNota = true;
+                            }
+                        }
+                        notasPorAvaliacao[av.id] = notaMedia;
+                    });
+
+                    return {
+                        professor: a.professor || 'Não informado',
+                        escola: a.escola || '-',
+                        turma: a.turma || '-',
+                        disciplina: a.disciplina || '-',
+                        notasPorAvaliacao: notasPorAvaliacao,
+                        temNota: temAlgumaNota
+                    };
+                });
+
+                updateAllFiltersOptions();
+                applyFilters();
+                hideLoading();
+            } catch (e) {
+                hideLoading();
+                alert('Erro ao carregar dados: ' + e.message);
+            }
+        }
+
+        function switchViewMode(mode) {
+            currentView = mode;
+            document.getElementById('btn-view-completa').classList.toggle('active', mode === 'completa');
+            document.getElementById('btn-view-resumo').classList.toggle('active', mode === 'resumo');
+            document.getElementById('table-title-context').textContent = mode === 'completa' ? 'Visão Completa de Atribuições' : 'Resumo por Professor e Componente';
+            
+            sortColumn = 'professor';
+            sortDirection = 'asc';
+            renderDashboard();
+        }
+
+        function toggleDropdown(el) {
+            const opts = el.nextElementSibling;
+            const showing = opts.classList.contains('show');
+            document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            if (!showing) opts.classList.add('show');
+        }
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.multi-select')) {
+                document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            }
+        });
+
+        function updateMultiSelectDisplay(k) {
+            const c = document.querySelector(`.multi-select[data-filter="${k}"]`);
+            if (!c) return;
+            const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
+            const span = c.querySelector('.select-display span');
+            span.textContent = cbs.length === 0 ? 'Todas' : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionados`;
+        }
+
+        function getSelectedCheckboxes(k) {
+            return Array.from(document.querySelectorAll(`.multi-select[data-filter="${k}"] input[type="checkbox"]:checked`)).map(cb => cb.value);
+        }
+
+        function updateAllFiltersOptions() {
+            const sEscola = getSelectedCheckboxes('escola');
+            const sTurma = getSelectedCheckboxes('turma');
+            const sDisc = getSelectedCheckboxes('disciplina');
+
+            const escolasDisponiveis = new Set();
+            const turmasDisponiveis = new Set();
+            const disciplinasDisponiveis = new Set();
+
+            globalData.forEach(d => {
+                const matchEscola = sEscola.length === 0 || sEscola.includes(d.escola);
+                const matchTurma = sTurma.length === 0 || sTurma.includes(d.turma);
+                const matchDisc = sDisc.length === 0 || sDisc.includes(d.disciplina);
+                const matchNota = !onlyAvaliadas || d.temNota;
+
+                if (matchTurma && matchDisc && matchNota && d.escola && d.escola !== '-') escolasDisponiveis.add(d.escola);
+                if (matchEscola && matchDisc && matchNota && d.turma && d.turma !== '-') turmasDisponiveis.add(d.turma);
+                if (matchEscola && matchTurma && matchNota && d.disciplina && d.disciplina !== '-') disciplinasDisponiveis.add(d.disciplina);
+            });
+
+            rebuildDropdown('escola', Array.from(escolasDisponiveis).sort(), sEscola);
+            rebuildDropdown('turma', Array.from(turmasDisponiveis).sort(), sTurma);
+            rebuildDropdown('disciplina', Array.from(disciplinasDisponiveis).sort(), sDisc);
+        }
+
+        function rebuildDropdown(filterKey, availableValues, currentSelected) {
+            const container = document.querySelector(`.multi-select[data-filter="${filterKey}"] .select-options`);
+            if (!container) return;
+
+            container.innerHTML = '';
+            availableValues.forEach(val => {
+                const isChecked = currentSelected.includes(val);
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${val.replace(/"/g,'&quot;')}" ${isChecked ? 'checked' : ''} onchange="updateMultiSelectDisplay('${filterKey}'); updateAllFiltersOptions(); applyFilters();"> ${val}`;
+                container.appendChild(label);
+            });
+            updateMultiSelectDisplay(filterKey);
+        }
+
+        function toggleAvaliadasFilter() {
+            onlyAvaliadas = !onlyAvaliadas;
+            const btn = document.getElementById('btn-toggle-avaliadas');
+            if (onlyAvaliadas) {
+                btn.classList.add('active');
+                btn.querySelector('span').textContent = '☑ Ver notas das avaliações';
+            } else {
+                btn.classList.remove('active');
+                btn.querySelector('span').textContent = '☐ Ver notas das avaliações';
+            }
+            updateAllFiltersOptions();
+            applyFilters();
+        }
+
+        function clearFilters() {
+            document.querySelectorAll('.multi-select input[type="checkbox"]').forEach(cb => cb.checked = false);
+            if (onlyAvaliadas) toggleAvaliadasFilter();
+            updateAllFiltersOptions();
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const sEscola = getSelectedCheckboxes('escola');
+            const sTurma = getSelectedCheckboxes('turma');
+            const sDisc = getSelectedCheckboxes('disciplina');
+
+            filteredData = globalData.filter(d => {
+                const matchEscola = sEscola.length === 0 || sEscola.includes(d.escola);
+                const matchTurma = sTurma.length === 0 || sTurma.includes(d.turma);
+                const matchDisc = sDisc.length === 0 || sDisc.includes(d.disciplina);
+                const matchNota = !onlyAvaliadas || d.temNota;
+
+                return matchEscola && matchTurma && matchDisc && matchNota;
+            });
+
+            renderDashboard();
+        }
+
+        window.toggleSort = (col) => {
+            if (sortColumn === col) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = col;
+                sortDirection = 'asc';
+            }
+            renderDashboard();
+        };
+
+        function getNotaClass(n) {
+            if (n < 3) return 'bg-red';
+            if (n <= 5) return 'bg-yellow';
+            return 'bg-green';
+        }
+
+        // Função de Exportação para Excel
+        function exportarExcel() {
+            const container = document.getElementById('heatmap-container');
+            const table = container.querySelector('table');
+            if (!table) {
+                alert('Nenhum dado para exportar.');
+                return;
+            }
+
+            const wb = XLSX.utils.table_to_book(table, { sheet: currentView === 'completa' ? "Visao_Completa" : "Resumo_Professor" });
+            const nomeArquivo = currentView === 'completa' ? 'Atribuicoes_Visao_Completa.xlsx' : 'Resumo_Professor_Componente.xlsx';
+            XLSX.writeFile(wb, nomeArquivo);
+        }
+
+        function renderDashboard() {
+            document.getElementById('card-total-atrib').textContent = filteredData.length;
+            document.getElementById('card-total-prof').textContent = new Set(filteredData.map(d => d.professor)).size;
+            document.getElementById('card-total-com-notas').textContent = filteredData.filter(d => d.temNota).length;
+
+            const container = document.getElementById('heatmap-container');
+            if (filteredData.length === 0) {
+                container.innerHTML = '<p style="padding:1rem;color:var(--muted);text-align:center;">Nenhum registro encontrado para os filtros selecionados.</p>';
+                return;
+            }
+
+            let avalsOrdenadas = [];
+            if (onlyAvaliadas) {
+                avalsOrdenadas = [...avaliacoesList].sort((a,b) => {
+                    const b1 = String(a.bimestre || '').toLowerCase();
+                    const b2 = String(b.bimestre || '').toLowerCase();
+                    return b1.localeCompare(b2) || String(a.nome || '').localeCompare(String(b.nome || ''));
+                });
+            }
+
+            const getArrow = (col) => sortColumn === col ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+
+            // ================= VISÃO COMPLETA =================
+            if (currentView === 'completa') {
+                filteredData.sort((a, b) => {
+                    let vA, vB;
+                    if (sortColumn.startsWith('aval_')) {
+                        const avalId = sortColumn.replace('aval_', '');
+                        vA = a.notasPorAvaliacao[avalId] ?? -999;
+                        vB = b.notasPorAvaliacao[avalId] ?? -999;
+                    } else {
+                        vA = String(a[sortColumn] || '').toLowerCase();
+                        vB = String(b[sortColumn] || '').toLowerCase();
+                    }
+                    if (vA < vB) return sortDirection === 'asc' ? -1 : 1;
+                    if (vA > vB) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                let html = `<table class="heatmap"><thead><tr>`;
+                html += `<th style="width:45px;">#</th>`;
+                html += `<th onclick="toggleSort('professor')" style="width:200px;text-align:left;">Professor${getArrow('professor')}</th>`;
+                html += `<th onclick="toggleSort('escola')" style="width:160px;text-align:left;">Escola${getArrow('escola')}</th>`;
+                html += `<th onclick="toggleSort('turma')" style="width:100px;">Turma${getArrow('turma')}</th>`;
+                html += `<th onclick="toggleSort('disciplina')" style="width:130px;text-align:left;">Disciplina${getArrow('disciplina')}</th>`;
+
+                avalsOrdenadas.forEach(av => {
+                    const colKey = `aval_${av.id}`;
+                    html += `<th onclick="toggleSort('${colKey}')">${av.bimestre || '-'}<br><span style="font-size:.65rem;font-weight:400;">${av.nome || ''}</span>${getArrow(colKey)}</th>`;
+                });
+                html += `</tr></thead><tbody>`;
+
+                filteredData.forEach((d, idx) => {
+                    html += `<tr>`;
+                    html += `<td style="font-weight:700;color:var(--light);">${idx + 1}</td>`;
+                    html += `<td class="row-header" style="font-weight:700;">${d.professor}</td>`;
+                    html += `<td class="row-header" style="font-weight:500;color:var(--muted);">${d.escola}</td>`;
+                    html += `<td><strong>${d.turma}</strong></td>`;
+                    html += `<td class="row-header" style="font-weight:600;color:var(--blue);">${d.disciplina}</td>`;
+
+                    avalsOrdenadas.forEach(av => {
+                        const nota = d.notasPorAvaliacao[av.id];
+                        if (nota !== null && nota !== undefined) {
+                            html += `<td class="${getNotaClass(nota)}">${nota.toFixed(2).replace('.', ',')}</td>`;
+                        } else {
+                            html += `<td class="bg-empty">-</td>`;
+                        }
+                    });
+                    html += `</tr>`;
+                });
+                container.innerHTML = html + `</tbody></table>`;
+            } 
+            // ================= RESUMO POR PROFESSOR E COMPONENTE =================
+            else {
+                const mapResumo = new Map();
+
+                filteredData.forEach(d => {
+                    const chave = `${d.professor}___${d.disciplina}`;
+                    if (!mapResumo.has(chave)) {
+                        mapResumo.set(chave, {
+                            professor: d.professor,
+                            disciplina: d.disciplina,
+                            escolas: new Set(),
+                            turmas: new Set(),
+                            temNota: false,
+                            somaNotasPorAvaliacao: {},
+                            contNotasPorAvaliacao: {}
+                        });
+                    }
+
+                    const obj = mapResumo.get(chave);
+                    if (d.escola && d.escola !== '-') obj.escolas.add(d.escola);
+                    if (d.turma && d.turma !== '-') obj.turmas.add(d.turma);
+                    if (d.temNota) obj.temNota = true;
+
+                    if (d.notasPorAvaliacao) {
+                        Object.keys(d.notasPorAvaliacao).forEach(avalId => {
+                            const n = d.notasPorAvaliacao[avalId];
+                            if (n !== null && n !== undefined) {
+                                if (!obj.somaNotasPorAvaliacao[avalId]) {
+                                    obj.somaNotasPorAvaliacao[avalId] = 0;
+                                    obj.contNotasPorAvaliacao[avalId] = 0;
+                                }
+                                obj.somaNotasPorAvaliacao[avalId] += n;
+                                obj.contNotasPorAvaliacao[avalId]++;
+                            }
+                        });
+                    }
+                });
+
+                let linhasResumo = Array.from(mapResumo.values()).map(r => {
+                    const mediasFinais = {};
+                    Object.keys(r.somaNotasPorAvaliacao).forEach(avalId => {
+                        mediasFinais[avalId] = r.somaNotasPorAvaliacao[avalId] / r.contNotasPorAvaliacao[avalId];
+                    });
+                    return {
+                        professor: r.professor,
+                        disciplina: r.disciplina,
+                        escolasArr: Array.from(r.escolas).sort(),
+                        turmasArr: Array.from(r.turmas).sort(),
+                        temNota: r.temNota,
+                        notasPorAvaliacao: mediasFinais
+                    };
+                });
+
+                linhasResumo.sort((a, b) => {
+                    let vA, vB;
+                    if (sortColumn.startsWith('aval_')) {
+                        const avalId = sortColumn.replace('aval_', '');
+                        vA = a.notasPorAvaliacao[avalId] ?? -999;
+                        vB = b.notasPorAvaliacao[avalId] ?? -999;
+                    } else if (sortColumn === 'escola') {
+                        vA = a.escolasArr.join(', ').toLowerCase();
+                        vB = b.escolasArr.join(', ').toLowerCase();
+                    } else if (sortColumn === 'turma') {
+                        vA = a.turmasArr.join(', ').toLowerCase();
+                        vB = b.turmasArr.join(', ').toLowerCase();
+                    } else {
+                        vA = String(a[sortColumn] || '').toLowerCase();
+                        vB = String(b[sortColumn] || '').toLowerCase();
+                    }
+                    if (vA < vB) return sortDirection === 'asc' ? -1 : 1;
+                    if (vA > vB) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                let html = `<table class="heatmap"><thead><tr>`;
+                html += `<th style="width:45px;">#</th>`;
+                html += `<th onclick="toggleSort('professor')" style="width:200px;text-align:left;">Professor${getArrow('professor')}</th>`;
+                html += `<th onclick="toggleSort('disciplina')" style="width:140px;text-align:left;">Componente / Disc.${getArrow('disciplina')}</th>`;
+                html += `<th onclick="toggleSort('escola')" style="width:160px;text-align:left;">Escolas${getArrow('escola')}</th>`;
+                html += `<th onclick="toggleSort('turma')" style="width:160px;text-align:left;">Turmas Consolidadas${getArrow('turma')}</th>`;
+
+                avalsOrdenadas.forEach(av => {
+                    const colKey = `aval_${av.id}`;
+                    html += `<th onclick="toggleSort('${colKey}')">${av.bimestre || '-'}<br><span style="font-size:.65rem;font-weight:400;">${av.nome || ''}</span>${getArrow(colKey)}</th>`;
+                });
+                html += `</tr></thead><tbody>`;
+
+                linhasResumo.forEach((r, idx) => {
+                    html += `<tr>`;
+                    html += `<td style="font-weight:700;color:var(--light);">${idx + 1}</td>`;
+                    html += `<td class="row-header" style="font-weight:700;">${r.professor}</td>`;
+                    html += `<td class="row-header" style="font-weight:600;color:var(--blue);">${r.disciplina}</td>`;
+                    html += `<td class="row-header" style="font-weight:500;color:var(--muted);">${r.escolasArr.join(', ')}</td>`;
+                    html += `<td class="row-header" style="font-weight:500;">${r.turmasArr.join(', ')}</td>`;
+
+                    avalsOrdenadas.forEach(av => {
+                        const nota = r.notasPorAvaliacao[av.id];
+                        if (nota !== null && nota !== undefined) {
+                            html += `<td class="${getNotaClass(nota)}">${nota.toFixed(2).replace('.', ',')}</td>`;
+                        } else {
+                            html += `<td class="bg-empty">-</td>`;
+                        }
+                    });
+                    html += `</tr>`;
+                });
+                container.innerHTML = html + `</tbody></table>`;
+            }
+        }
+
+        async function initDashboard() {
+            showLoading('Carregando sistema...');
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('dashboard-section').style.display = 'block';
+            await loadDatabase();
+        }
+
+        window.onload = async () => {
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                initDashboard();
+            }
+        };
+    </script>
+</body>
+</html>

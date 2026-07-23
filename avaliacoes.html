@@ -1,0 +1,2504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Desempenho Educacional</title>
+    <link rel="icon" type="image/png" href="./imagens/icone.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --navy:    #0c1a35;
+            --navy2:   #142040;
+            --blue:    #1d4ed8;
+            --blue2:   #2563eb;
+            --sky:     #0284c7;
+            --teal:    #0f766e;
+            --emerald: #059669;
+            --amber:   #d97706;
+            --rose:    #e11d48;
+            --crimson: #9f1239;
+            --orange:  #c2410c;
+            --purple:  #6d28d9;
+
+            --bg:      #f1f5fb;
+            --surface: #ffffff;
+            --surface2:#f8fafd;
+            --border:  #e4eaf3;
+            --border2: #c9d5e8;
+            --text:    #0d1829;
+            --muted:   #5a6e8a;
+            --light:   #8fa3bc;
+
+            --radius:  8px;
+            --radius2: 14px;
+            --shadow:  0 1px 2px rgba(0,0,0,.04), 0 4px 20px rgba(12,26,53,.06);
+            --shadow2: 0 8px 32px rgba(12,26,53,.12);
+
+            /* Accent gradient */
+            --grad-blue: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+            --grad-header: linear-gradient(160deg, #0c1a35 0%, #0f2a52 60%, #1a3d72 100%);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            font-size: 14.5px;
+            line-height: 1.55;
+        }
+
+        /* ─── SCROLLBAR ─── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+        /* ─── LOADING ─── */
+        #loading-overlay {
+            position: fixed; inset: 0;
+            background: rgba(12,26,53,.88);
+            backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center;
+            flex-direction: column; z-index: 9999; gap: 1.25rem;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 2.5px solid rgba(255,255,255,.12);
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+        #loading-text { color: rgba(255,255,255,.75); font-size: .88rem; font-weight: 500; letter-spacing: .04em; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── BUTTONS ─── */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+            background: var(--blue); color: #fff; border: none;
+            padding: .65rem 1.35rem; border-radius: var(--radius);
+            font-family: inherit; font-size: .875rem; font-weight: 600;
+            cursor: pointer; transition: background .18s, transform .12s, box-shadow .18s;
+            letter-spacing: .01em; white-space: nowrap;
+        }
+        .btn:hover { background: var(--blue2); box-shadow: 0 4px 16px rgba(29,78,216,.28); }
+        .btn:active { transform: scale(.975); }
+
+        .btn-ghost {
+            background: transparent; color: var(--muted);
+            border: 1.5px solid var(--border2);
+            padding: .5rem 1rem; font-size: .84rem;
+        }
+        .btn-ghost:hover { background: var(--surface2); color: var(--text); box-shadow: none; }
+
+        .btn-danger { background: var(--rose); }
+        .btn-danger:hover { background: #e11d48; box-shadow: 0 4px 12px rgba(244,63,94,.3); }
+
+        .btn-logout {
+            background: transparent; color: rgba(255,255,255,.55);
+            border: 1px solid rgba(255,255,255,.15);
+            padding: .45rem .9rem; border-radius: var(--radius);
+            font-family: inherit; font-size: .8rem; font-weight: 600;
+            cursor: pointer; transition: all .2s;
+        }
+        .btn-logout:hover { background: rgba(225,29,72,.15); color: #fca5a5; border-color: rgba(225,29,72,.3); }
+
+        /* ─── LOGIN ─── */
+        #login-section {
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh;
+            background: var(--grad-header);
+            position: relative; overflow: hidden;
+        }
+        #login-section::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: 
+                radial-gradient(ellipse 70% 55% at 65% 115%, rgba(29,78,216,.4) 0%, transparent 65%),
+                radial-gradient(ellipse 45% 45% at 8% -5%, rgba(2,132,199,.22) 0%, transparent 55%),
+                radial-gradient(ellipse 30% 30% at 95% 10%, rgba(109,40,217,.15) 0%, transparent 50%);
+        }
+        #login-section::after {
+            content: '';
+            position: absolute; inset: 0;
+            background-image: radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+        .login-box {
+            position: relative; z-index: 1;
+            background: rgba(255,255,255,.05);
+            backdrop-filter: blur(28px) saturate(1.4);
+            border: 1px solid rgba(255,255,255,.13);
+            padding: 2.75rem 2.5rem; border-radius: 20px;
+            width: 100%; max-width: 400px;
+            box-shadow: 0 40px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.1);
+            animation: fadeUp .5s cubic-bezier(.22,1,.36,1);
+        }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+        .login-logo-wrap { display: flex; justify-content: center; margin-bottom: 2.25rem; }
+        .login-logo-wrap img { max-height: 50px; filter: brightness(0) invert(1); opacity: .9; }
+
+        .login-title { color: #fff; font-size: 1.45rem; font-weight: 800; text-align: center; margin-bottom: .35rem; letter-spacing: -.01em; }
+        .login-sub { color: rgba(255,255,255,.45); font-size: .85rem; text-align: center; margin-bottom: 2.25rem; }
+
+        .input-group { margin-bottom: 1rem; }
+        .input-group label { display: block; font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.5); margin-bottom: .45rem; letter-spacing: .06em; text-transform: uppercase; }
+        .input-group input {
+            width: 100%; padding: .75rem 1rem;
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.11);
+            border-radius: var(--radius); color: #fff;
+            font-family: inherit; font-size: .925rem;
+            transition: border-color .2s, background .2s, box-shadow .2s;
+            outline: none;
+        }
+        .input-group input::placeholder { color: rgba(255,255,255,.25); }
+        .input-group input:focus { border-color: rgba(96,165,250,.6); background: rgba(255,255,255,.09); box-shadow: 0 0 0 3px rgba(96,165,250,.12); }
+
+        .login-btn { width: 100%; padding: .875rem; background: var(--grad-blue); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .925rem; font-weight: 700; border: none; cursor: pointer; transition: all .2s; margin-top: .5rem; letter-spacing: .02em; box-shadow: 0 4px 20px rgba(29,78,216,.4); }
+        .login-btn:hover { filter: brightness(1.1); box-shadow: 0 8px 28px rgba(29,78,216,.55); transform: translateY(-1px); }
+
+        #login-error { color: #fca5a5; font-size: .84rem; margin-top: .75rem; display: none; text-align: center; font-weight: 500; }
+
+        /* ─── DASHBOARD ─── */
+        #dashboard-section { display: none; animation: fadeIn .35s ease; }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+        /* ─── SIDEBAR / HEADER ─── */
+        header {
+            background: var(--grad-header);
+            padding: .85rem 2rem;
+            display: flex; align-items: center; gap: 1.5rem;
+            box-shadow: 0 2px 24px rgba(0,0,0,.22);
+            position: sticky; top: 0; z-index: 200;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+        }
+        .header-brand { display: flex; align-items: center; gap: .75rem; flex-shrink: 0; }
+        .header-brand img { max-height: 36px; filter: brightness(0) invert(1); opacity: .88; }
+        .header-brand-text h1 { font-size: .95rem; font-weight: 800; color: #fff; line-height: 1.2; letter-spacing: -.01em; }
+        .header-brand-text span { font-size: .7rem; color: rgba(255,255,255,.38); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+
+        .header-actions { display: flex; gap: .45rem; align-items: center; margin-left: auto; }
+
+        .header-btn {
+            display: inline-flex; align-items: center; gap: .35rem;
+            background: rgba(255,255,255,.06); color: rgba(255,255,255,.72);
+            border: 1px solid rgba(255,255,255,.09);
+            padding: .45rem .85rem; border-radius: var(--radius);
+            font-family: inherit; font-size: .8rem; font-weight: 600;
+            cursor: pointer; transition: all .2s; white-space: nowrap;
+        }
+        .header-btn:hover { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.18); }
+
+        .header-divider { width: 1px; height: 26px; background: rgba(255,255,255,.1); margin: 0 .2rem; }
+
+        .user-chip { display: flex; align-items: center; gap: .55rem; }
+        .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #0284c7); display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 800; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(37,99,235,.4); }
+        .user-info strong { display: block; font-size: .78rem; color: #fff; font-weight: 700; }
+        .user-info span { font-size: .68rem; color: rgba(255,255,255,.8); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+        #user-role-label { font-size: .68rem; color: rgba(255,255,255,.8); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+
+        /* ─── CONTAINER ─── */
+        .container { padding: 1.75rem 2rem; max-width: 1500px; margin: 0 auto; }
+
+        /* ─── PRINT HEADER ─── */
+        #print-header { display: none; background: var(--surface2); padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1.5rem; }
+        #print-header h3 { font-size: .95rem; color: var(--navy); margin-bottom: .4rem; }
+        #print-filters-text { font-size: .82rem; color: var(--muted); line-height: 1.6; }
+
+        /* ─── FILTERS ─── */
+        .filters-wrapper {
+            background: var(--surface); border-radius: var(--radius2);
+            padding: 1.1rem 1.5rem; margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .filters-label { font-size: .7rem; font-weight: 800; color: var(--light); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .8rem; }
+        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: .7rem; align-items: end; }
+
+        .filter-item label { display: block; font-size: .72rem; font-weight: 700; color: var(--muted); margin-bottom: .3rem; text-transform: uppercase; letter-spacing: .05em; }
+
+        .multi-select { position: relative; user-select: none; }
+        .select-display {
+            padding: .6rem .85rem; border: 1.5px solid var(--border);
+            border-radius: var(--radius); background: var(--surface2);
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+            font-size: .875rem; color: var(--text); min-height: 40px;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .select-display:hover { border-color: var(--blue2); }
+        .select-display span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .select-display::after { content: '▾'; font-size: .8rem; color: var(--light); margin-left: .5rem; }
+        .select-options {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: var(--surface); border: 1.5px solid var(--border);
+            border-radius: var(--radius); max-height: 260px; overflow-y: auto;
+            z-index: 100; display: none;
+            box-shadow: var(--shadow2);
+        }
+        .select-options.show { display: block; animation: dropIn .15s ease; }
+        @keyframes dropIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+        .select-options label {
+            display: flex; align-items: center; gap: .6rem;
+            padding: .6rem .85rem; cursor: pointer; font-size: .85rem;
+            font-weight: 400; color: var(--text); border-bottom: 1px solid var(--bg);
+            transition: background .15s;
+        }
+        .select-options label:last-child { border-bottom: none; }
+        .select-options label:hover { background: var(--bg); color: var(--blue); }
+        .select-options input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--blue); }
+
+        .btn-clear {
+            background: transparent; border: 1.5px solid var(--border2);
+            color: var(--muted); border-radius: var(--radius);
+            padding: .6rem .85rem; font-family: inherit; font-size: .85rem; font-weight: 600;
+            cursor: pointer; height: 40px; width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: .35rem;
+            transition: all .2s;
+        }
+        .btn-clear:hover { border-color: var(--rose); color: var(--rose); background: rgba(244,63,94,.04); }
+
+        /* ─── ICONS (IMAGES) SETUP ─── */
+        .btn-toggle img, .area-btn img, .tbl-btn img, .header-btn img, h2 img, h3 img, .saresp-panel-title img {
+            height: 1.2em;
+            vertical-align: middle;
+            object-fit: contain;
+            transition: filter .2s;
+        }
+        
+        .btn-toggle img, .area-btn img { filter: opacity(0.7); }
+        .btn-toggle:hover img, .btn-toggle.active img,
+        .area-btn:hover img, .area-btn.active img {
+            filter: brightness(0) invert(1);
+        }
+        .header-btn img { filter: brightness(0) invert(0.8); }
+        .header-btn:hover img { filter: brightness(0) invert(1); }
+        .tbl-btn img { filter: opacity(0.8); }
+        h2 img, h3 img { filter: opacity(0.85); margin-right: .3rem; }
+
+        /* ─── VIEW TABS ─── */
+        .view-tabs {
+            display: flex; gap: .35rem; margin-bottom: 1.25rem;
+            flex-wrap: wrap; align-items: center;
+            background: var(--surface); padding: .4rem .5rem;
+            border-radius: var(--radius2); border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+        .btn-toggle {
+            display: inline-flex; align-items: center; gap: .38rem;
+            padding: .48rem 1rem; border-radius: 99px;
+            font-family: inherit; font-size: .8rem; font-weight: 700;
+            cursor: pointer; border: 1.5px solid transparent;
+            transition: all .18s; letter-spacing: .02em; white-space: nowrap;
+            background: transparent; color: var(--muted);
+        }
+        .btn-toggle:hover { background: var(--bg); color: var(--navy); border-color: var(--border2); }
+        .btn-toggle.active { 
+            background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 2px 10px rgba(12,26,53,.25); 
+        }
+
+        .sub-filter {
+            padding: .6rem .85rem; border-radius: var(--radius);
+            border: 1.5px solid var(--border); font-family: inherit;
+            font-size: .875rem; font-weight: 600; color: var(--blue);
+            display: none; width: 100%; margin-top: .5rem; background: var(--surface);
+        }
+
+        #compare-filters {
+            display: none; background: var(--surface); padding: .85rem 1.25rem;
+            border-radius: var(--radius2); margin-bottom: 1.25rem;
+            align-items: center; gap: .85rem; flex-wrap: wrap;
+            border: 1px solid var(--border); box-shadow: var(--shadow);
+        }
+        #compare-filters label { font-size: .82rem; font-weight: 700; color: var(--navy); }
+        #compare-filters select {
+            padding: .5rem .75rem; border-radius: var(--radius);
+            border: 1.5px solid var(--border); font-family: inherit;
+            font-size: .875rem; background: var(--surface2); color: var(--text);
+        }
+
+        /* ─── CARDS ─── */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .card {
+            background: var(--surface); border-radius: var(--radius2);
+            padding: 1.4rem 1.5rem; box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            position: relative; overflow: hidden;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: var(--shadow2); }
+        .card::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2.5px;
+            background: var(--grad-blue);
+        }
+        .card h3 { font-size: .68rem; font-weight: 800; color: var(--light); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .65rem; }
+        .card .value { font-size: 2.3rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; line-height: 1; letter-spacing: -.03em; }
+        .podium-list { list-style: none; margin-top: .4rem; }
+        .podium-list li { display: flex; justify-content: space-between; align-items: center; padding: .3rem 0; border-bottom: 1px solid var(--bg); font-size: .82rem; }
+        .podium-list li:last-child { border-bottom: none; }
+        .podium-list span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72%; color: var(--text); }
+        .podium-list strong { font-size: .88rem; font-family: 'Geist Mono', monospace; color: var(--navy); }
+
+        /* ─── TABLE CONTAINER ─── */
+        .table-container {
+            background: var(--surface); border-radius: var(--radius2);
+            padding: 1.4rem 1.5rem; box-shadow: var(--shadow);
+            border: 1px solid var(--border); margin-bottom: 1.5rem; overflow-x: auto;
+        }
+        .table-toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.1rem; flex-wrap: wrap; gap: .75rem;
+        }
+        .table-title { font-size: .95rem; font-weight: 800; color: var(--navy); letter-spacing: -.01em; }
+        .table-actions { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
+
+        .legend { display: flex; gap: .85rem; flex-wrap: wrap; align-items: center; }
+        .legend-item { display: flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--muted); font-weight: 600; }
+        .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+        .tbl-btn {
+            display: inline-flex; align-items: center; gap: .3rem;
+            padding: .38rem .85rem; border-radius: 6px;
+            font-family: inherit; font-size: .76rem; font-weight: 700;
+            cursor: pointer; border: none; transition: all .18s; letter-spacing: .01em;
+        }
+        .tbl-btn-green { background: rgba(5,150,105,.1); color: #065f46; }
+        .tbl-btn-green:hover { background: rgba(5,150,105,.18); }
+        .tbl-btn-purple { background: rgba(109,40,217,.1); color: #5b21b6; }
+        .tbl-btn-purple:hover { background: rgba(109,40,217,.18); }
+        .tbl-btn-blue { background: rgba(29,78,216,.1); color: #1e40af; }
+        .tbl-btn-blue:hover { background: rgba(29,78,216,.18); }
+        .tbl-btn-amber { background: rgba(217,119,6,.1); color: #92400e; }
+        .tbl-btn-amber:hover { background: rgba(217,119,6,.18); }
+
+        /* ─── HEATMAP TABLE (LARGURA FIXA E COMPRESSÃO) ─── */
+        table.heatmap { width: 100%; border-collapse: collapse; font-size: .8rem; table-layout: fixed; }
+        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: .45rem .28rem; text-align: center; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        table.heatmap th {
+            background: var(--navy); color: rgba(255,255,255,.8);
+            font-size: .72rem; font-weight: 700; letter-spacing: .05em;
+            cursor: pointer; user-select: none;
+            white-space: normal;
+            line-height: 1.25;
+        }
+        table.heatmap th:hover { background: var(--navy2); }
+        table.heatmap .row-header {
+            text-align: left; background: var(--surface2); color: var(--text);
+            font-weight: 600; cursor: pointer;
+            transition: background .12s; font-size: .8rem;
+            
+            /* Propriedades alteradas para evitar o corte do texto */
+            white-space: normal; 
+            word-break: break-word; 
+        }
+        table.heatmap .row-header:hover { background: #e0e7ff; color: var(--blue); }
+        table.heatmap tr.selected-row .row-header { background: #dbeafe !important; color: var(--blue) !important; border-left: 3px solid var(--blue); }
+        table.heatmap tr.selected-row td { filter: brightness(1.05); }
+
+        /* Heatmap cell colors */
+        .bg-dark-red { background: var(--crimson) !important; color: #fff !important; font-weight: 700; }
+        .bg-red       { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
+        .bg-orange    { background: var(--orange) !important; color: #fff !important; font-weight: 700; }
+        .bg-yellow    { background: #fef08a !important; color: #78350f !important; font-weight: 700; }
+        .bg-green     { background: var(--emerald) !important; color: #fff !important; font-weight: 700; }
+        .bg-blue-ipp  { background: var(--sky) !important; color: #fff !important; font-weight: 700; }
+        .bg-empty     { background: var(--bg) !important; color: var(--light) !important; }
+
+        table.heatmap td.bg-dark-red:hover, table.heatmap td.bg-red:hover,
+        table.heatmap td.bg-orange:hover, table.heatmap td.bg-yellow:hover,
+        table.heatmap td.bg-green:hover, table.heatmap td.bg-blue-ipp:hover {
+            opacity: .85; transform: scale(1.04); cursor: pointer; position: relative; z-index: 1;
+        }
+
+        /* ─── SELECTED ROW INDICATOR ─── */
+        #selected-row-indicator {
+            display: none; background: #eff6ff; color: var(--blue);
+            padding: .6rem 1rem; border-radius: var(--radius);
+            margin-bottom: 1rem; font-size: .85rem; font-weight: 600;
+            justify-content: space-between; align-items: center;
+            border: 1.5px solid #bfdbfe;
+        }
+
+        /* ─── CHARTS ─── */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+        .chart-container {
+            background: var(--surface); border-radius: var(--radius2);
+            padding: 1.4rem 1.5rem; box-shadow: var(--shadow);
+            border: 1px solid var(--border); height: 340px; position: relative;
+            transition: height .3s;
+        }
+
+        #chart-controls {
+            display: none; justify-content: flex-end; gap: .5rem;
+            margin-bottom: .75rem;
+        }
+
+        /* ─── MODALS ─── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(12,26,53,.65); backdrop-filter: blur(6px);
+            z-index: 10000; justify-content: center; align-items: center;
+            padding: 1rem;
+        }
+        .modal-content {
+            background: var(--surface); padding: 2rem;
+            border-radius: var(--radius2); width: 100%; max-width: 750px;
+            max-height: 90vh; overflow-y: auto; position: relative;
+            box-shadow: 0 40px 80px rgba(0,0,0,.28);
+            animation: scaleIn .18s cubic-bezier(.22,1,.36,1);
+        }
+        @keyframes scaleIn { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:scale(1); } }
+        .modal-close {
+            position: absolute; top: 1rem; right: 1rem;
+            cursor: pointer; width: 28px; height: 28px;
+            background: var(--bg); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .95rem; color: var(--muted); font-weight: 700;
+            transition: all .18s; border: 1px solid var(--border);
+        }
+        .modal-close:hover { background: var(--border); color: var(--text); }
+        .modal-content h2 { margin-bottom: .5rem; color: var(--navy); font-size: 1.2rem; font-weight: 800; letter-spacing: -.01em; }
+
+        .rank-box {
+            background: var(--bg); border: 1px solid var(--border);
+            padding: 1rem 1.25rem; border-radius: var(--radius);
+            margin-bottom: 1rem; display: flex; flex-direction: column; gap: .35rem;
+        }
+        .rank-box p { margin: 0; font-size: .92rem; }
+        .rank-box strong { color: var(--blue); }
+
+        .modal-table { width: 100%; border-collapse: collapse; margin-top: .75rem; font-size: .82rem; }
+        .modal-table th, .modal-table td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: center; }
+        .modal-table th { background: var(--navy); color: rgba(255,255,255,.85); }
+
+        #modal-filter-info { font-size: .82rem; background: var(--bg); padding: .6rem .85rem; border-radius: var(--radius); margin-bottom: 1rem; color: var(--muted); border: 1px solid var(--border); }
+
+        /* ─── DISCLAIMER MODAL ─── */
+        #disclaimer-modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(15,31,61,.8); backdrop-filter: blur(8px);
+            z-index: 10001; justify-content: center; align-items: center; padding: 1rem;
+        }
+        #disclaimer-modal .modal-content {
+            max-width: 520px; border-top: 4px solid var(--amber);
+            text-align: center; padding: 2.5rem;
+        }
+        #disclaimer-modal h2 { margin-bottom: 1rem; font-size: 1.35rem; display: flex; align-items: center; justify-content: center; gap: .5rem; }
+        #disclaimer-modal p { font-size: .9rem; color: var(--muted); line-height: 1.65; margin-bottom: 1rem; text-align: left; }
+
+        /* ─── SARESP AUDIT MODAL ─── */
+        #saresp-audit-modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(15,31,61,.7); backdrop-filter: blur(4px);
+            z-index: 10002; justify-content: center; align-items: center; padding: 1rem;
+        }
+        #saresp-audit-modal .modal-content { max-width: 820px; border-top: 4px solid var(--purple); }
+
+        /* ─── METODOLOGIA MODAL ─── */
+        #metodologia-modal .modal-content { max-width: 650px; }
+        .formula-box {
+            background: var(--navy); padding: 1rem 1.25rem;
+            border-radius: var(--radius); text-align: center;
+            font-family: 'Geist Mono', monospace; font-size: .95rem;
+            color: var(--sky); margin: 1rem 0;
+        }
+
+        /* ─── SARESP AREA FILTER ─── */
+        .saresp-panel {
+            background: var(--surface); border-radius: var(--radius2);
+            border: 1px solid var(--border); box-shadow: var(--shadow);
+            margin-bottom: 1.5rem; overflow: hidden;
+        }
+        .saresp-panel-header {
+            background: var(--grad-header);
+            padding: 1.15rem 1.75rem;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+        }
+        .saresp-panel-header-left { display: flex; flex-direction: column; gap: .25rem; }
+        .saresp-panel-title { font-size: 1.05rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: .5rem; }
+        .saresp-panel-sub { font-size: .78rem; color: rgba(255,255,255,.55); font-weight: 400; }
+        .saresp-panel-body { padding: 1.25rem 1.75rem; }
+
+        .area-filter-label { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .65rem; }
+        .area-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
+        .area-btn {
+            display: inline-flex; align-items: center; gap: .4rem;
+            padding: .55rem 1.1rem; border-radius: 99px;
+            font-family: inherit; font-size: .82rem; font-weight: 700;
+            cursor: pointer; border: 2px solid transparent;
+            transition: all .2s; letter-spacing: .02em;
+        }
+        .area-btn .area-tag { font-size: .68rem; font-weight: 800; opacity: .7; }
+
+        .area-btn-all  { background: rgba(15,31,61,.07); color: var(--navy); border-color: rgba(15,31,61,.2); }
+        .area-btn-all:hover, .area-btn-all.active  { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 4px 12px rgba(15,31,61,.3); }
+
+        .area-btn-cnt  { background: rgba(14,165,233,.1);  color: #0369a1; border-color: rgba(14,165,233,.25); }
+        .area-btn-cnt:hover, .area-btn-cnt.active  { background: #0ea5e9; color: #fff; border-color: #0ea5e9; box-shadow: 0 4px 12px rgba(14,165,233,.35); }
+
+        .area-btn-chs  { background: rgba(124,58,237,.1); color: #6d28d9; border-color: rgba(124,58,237,.25); }
+        .area-btn-chs:hover, .area-btn-chs.active  { background: #7c3aed; color: #fff; border-color: #7c3aed; box-shadow: 0 4px 12px rgba(124,58,237,.35); }
+
+        .area-btn-lgg  { background: rgba(16,185,129,.1); color: #065f46; border-color: rgba(16,185,129,.25); }
+        .area-btn-lgg:hover, .area-btn-lgg.active  { background: #10b981; color: #fff; border-color: #10b981; box-shadow: 0 4px 12px rgba(16,185,129,.35); }
+
+        .area-btn-mat  { background: rgba(245,158,11,.1); color: #92400e; border-color: rgba(245,158,11,.25); }
+        .area-btn-mat:hover, .area-btn-mat.active  { background: #f59e0b; color: #fff; border-color: #f59e0b; box-shadow: 0 4px 12px rgba(245,158,11,.35); }
+
+        .area-btn-lpt  { background: rgba(244,63,94,.1); color: #9f1239; border-color: rgba(244,63,94,.25); }
+        .area-btn-lpt:hover, .area-btn-lpt.active  { background: #f43f5e; color: #fff; border-color: #f43f5e; box-shadow: 0 4px 12px rgba(244,63,94,.35); }
+
+        /* Estilos dos Botões de Tipo de Ensino (TE) */
+        .te-btn-all  { background: rgba(15,31,61,.07); color: var(--navy); border-color: rgba(15,31,61,.2); }
+        .te-btn-all:hover, .te-btn-all.active  { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 4px 12px rgba(15,31,61,.3); }
+
+        .te-btn-ef  { background: rgba(14,165,233,.1);  color: #0369a1; border-color: rgba(14,165,233,.25); }
+        .te-btn-ef:hover, .te-btn-ef.active  { background: #0ea5e9; color: #fff; border-color: #0ea5e9; box-shadow: 0 4px 12px rgba(14,165,233,.35); }
+
+        .te-btn-em  { background: rgba(124,58,237,.1); color: #6d28d9; border-color: rgba(124,58,237,.25); }
+        .te-btn-em:hover, .te-btn-em.active  { background: #7c3aed; color: #fff; border-color: #7c3aed; box-shadow: 0 4px 12px rgba(124,58,237,.35); }
+
+        .area-comps-hint { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .65rem; }
+        .comp-chip { padding: .25rem .65rem; border-radius: 99px; font-size: .72rem; font-weight: 700; background: var(--bg); border: 1px solid var(--border); color: var(--muted); transition: all .2s; }
+        .comp-chip.active-chip { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+        /* ─── FOOTER ─── */
+        .dashboard-footer {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            margin-top: 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--light);
+            font-size: .76rem;
+            line-height: 1.7;
+            letter-spacing: .01em;
+        }
+        .dashboard-footer strong { color: var(--muted); font-weight: 700; }
+        .dashboard-footer a { color: var(--blue); text-decoration: none; font-weight: 600; }
+        .dashboard-footer a:hover { text-decoration: underline; }
+
+        /* ENTENDA A MATRIZ MODAL */
+        #entenda-matriz-modal { display: none; position: fixed; inset: 0; background: rgba(15,31,61,.7); backdrop-filter: blur(4px); z-index: 10003; justify-content: center; align-items: center; padding: 1rem; }
+        #entenda-matriz-modal .modal-content { max-width: 680px; border-top: 4px solid var(--emerald); }
+        .entenda-step { display: flex; gap: 1rem; margin-bottom: 1.25rem; align-items: flex-start; }
+        .entenda-step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--navy); color: #fff; font-size: .82rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: .1rem; }
+        .entenda-step-body h4 { font-size: .9rem; font-weight: 700; color: var(--navy); margin-bottom: .3rem; }
+        .entenda-step-body p { font-size: .85rem; color: var(--muted); line-height: 1.6; }
+        .entenda-example { background: #fef9c3; border: 1px solid #fde047; border-radius: var(--radius); padding: .85rem 1rem; margin-top: 1rem; font-size: .85rem; color: #713f12; line-height: 1.6; }
+
+        /* ─── PRINT ─── */
+        @media print {
+            @page { size: landscape; margin: 10mm; }
+            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #login-section, header, .filters-wrapper, .table-actions, .view-tabs,
+            #compare-filters, #selected-row-indicator, .modal-overlay, #disclaimer-modal,
+            #saresp-audit-modal, #chart-controls, .tbl-btn, .legend { display: none !important; }
+            .dashboard-footer { display: none !important; }
+            #dashboard-section { display: block !important; }
+            .container { padding: 0 !important; max-width: 100% !important; }
+            #print-header { display: block !important; margin-bottom: 1rem; }
+            .cards-grid { gap: .5rem; margin-bottom: 1rem; }
+            .card { padding: .5rem 1rem; box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+            .card .value { font-size: 1.5rem; }
+            .charts-grid { display: flex; gap: .5rem; margin-bottom: 1rem; }
+            .chart-container { flex: 1; height: 220px !important; padding: .5rem; box-shadow: none; border: 1px solid #ccc; }
+            .table-container { padding: 0; box-shadow: none; border: none; }
+            table.heatmap { font-size: 10px !important; }
+            table.heatmap th, table.heatmap td { padding: .2rem .3rem !important; }
+            table.heatmap th { background: #d1d5db !important; color: black !important; }
+            .bg-dark-red { background: #7f1d1d !important; color: white !important; }
+            .bg-orange { background: #ea580c !important; color: white !important; }
+            .bg-red { background: #f43f5e !important; color: white !important; }
+            .bg-yellow { background: #fef08a !important; color: black !important; }
+            .bg-green { background: #10b981 !important; color: white !important; }
+            .bg-blue-ipp { background: #0ea5e9 !important; color: white !important; }
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 900px) {
+            header { flex-wrap: wrap; gap: .75rem; padding: .75rem 1rem; }
+            .header-actions { flex-wrap: wrap; gap: .35rem; }
+            .container { padding: 1.25rem 1rem; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .cards-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+            .header-divider { display: none; }
+        }
+        @media (max-width: 600px) {
+            header { flex-direction: column; align-items: flex-start; }
+            .header-actions { width: 100%; justify-content: flex-end; }
+            .view-tabs { gap: .25rem; }
+            .btn-toggle { font-size: .78rem; padding: .45rem .7rem; }
+            .table-toolbar { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Carregando...</div>
+    </div>
+
+    <div id="metodologia-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="window.closeMetodologia()">&times;</span>
+            <h2><img src="./imagens/calculator-simple.png" alt=""> Entenda o Cálculo do Painel</h2>
+            <h3 style="font-size:.98rem;color:var(--text);margin:.75rem 0 .4rem;">Média Ponderada Real Bidimensional</h3>
+            <p style="font-size:.88rem;color:var(--muted);line-height:1.6;margin-bottom:.75rem;text-align:justify;">
+                Este sistema <strong>não</strong> utiliza médias aritméticas simples. O impacto de cada nota é calculado levando em consideração dois fatores simultâneos:
+            </p>
+            <ul style="font-size:.88rem;color:var(--muted);margin-left:1.25rem;line-height:1.7;">
+                <li><strong>Tamanho da Turma (Avaliados):</strong> Turmas maiores têm maior impacto no resultado global.</li>
+                <li><strong>Relevância da Prova (Peso):</strong> Disciplinas com maior peso impactam mais o resultado final.</li>
+            </ul>
+            <div class="formula-box">Média = &Sigma; (Nota × Avaliados × Peso) / &Sigma; (Avaliados × Peso)</div>
+            <h3 style="font-size:.98rem;color:var(--text);margin-bottom:.4rem;">Cálculo de Participação (%)</h3>
+            <p style="font-size:.88rem;color:var(--muted);line-height:1.6;text-align:justify;">
+                O painel elimina duplicidades: um aluno que realizou múltiplas provas é contabilizado uma única vez, evitando inflacionar artificialmente as taxas de engajamento.
+            </p>
+        </div>
+    </div>
+
+    <div id="disclaimer-modal">
+        <div class="modal-content">
+            <h2><img src="./imagens/thumbtack.png" alt=""> Versão Beta</h2>
+            <p>Este painel encontra-se em fase de <strong>testes (Versão Beta)</strong> e seu caráter é estritamente analítico.</p>
+            <p>As notas apresentadas podem diferir dos painéis disponibilizados no BI do <strong>Escola Total</strong> e nas tabelas oficiais publicadas pela URE. Isso ocorre porque o método de cálculo aplicado aqui difere intencionalmente para padronizar e aprofundar as análises.</p>
+            <p>Utilizamos o <strong>Índice de Prioridade Pedagógica (IPP)</strong> para estimar a proficiência e definir focos de intervenção. O IPP não é uma nota oficial nem uma prévia exata do SARESP, mas sim um cálculo de referência focado na gestão analítica sem ruídos.</p>
+            <p>Portanto, considere este ambiente <strong>apenas como uma ferramenta de visualização para apoio pedagógico</strong>.</p>
+            <button class="btn" style="width:100%;margin-top:1rem;" onclick="window.closeDisclaimer()">Ciente, acessar painel</button>
+        </div>
+    </div>
+
+    <div id="ranking-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="window.closeModal()">&times;</span>
+            <h2 id="modal-title">Mini Relatório de Desempenho</h2>
+            <p id="modal-desc" style="font-size:.9rem;color:var(--muted);margin-bottom:.5rem;font-weight:500;"></p>
+            <div id="modal-filter-info"></div>
+            <div class="rank-box">
+                <p>Nota Ponderada Real: <strong id="modal-nota" style="font-size:1.2rem;"></strong></p>
+                <p>Metas Pactuadas: <strong id="modal-metas" style="color:var(--text);">...</strong></p>
+                <p>Classificação (No Contexto Atual): <strong id="modal-rank-context">Calculando...</strong></p>
+            </div>
+            <h3 style="font-size:1rem;color:var(--navy);margin-top:1.5rem;margin-bottom:.5rem;"><img src="./imagens/stats.png" alt=""> Comparativo Histórico Transversal</h3>
+            <div id="modal-comparativo-container"></div>
+        </div>
+    </div>
+
+    <div id="saresp-audit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="window.closeSarespAuditModal()">&times;</span>
+            <h2 id="saresp-audit-title" style="color:var(--purple);margin-bottom:1.5rem;display:flex;align-items:center;gap:.5rem;"><img src="./imagens/microscope-bacteria.png" alt=""> Detalhamento do Cálculo (Prioridade Pedagógica)</h2>
+            <div id="saresp-audit-content"></div>
+        </div>
+    </div>
+
+    <div id="entenda-matriz-modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('entenda-matriz-modal').style.display='none'">&times;</span>
+            <h2 style="display:flex;align-items:center;gap:.5rem;"><img src="./imagens/scale-comparison.png" alt=""> Entenda a Matriz de Prioridade (IPP)</h2>
+            <p style="font-size:.88rem;color:var(--muted);margin:.5rem 0 1.25rem;line-height:1.6;">A classificação de prioridade pedagógica <strong>não</strong> é simplesmente "quem tem a menor nota". Ela utiliza o <strong>Índice de Prioridade Pedagógica (IPP)</strong>, que combina três dimensões simultaneamente para identificar onde a intervenção terá maior impacto real.</p>
+
+            <div class="entenda-step">
+                <div class="entenda-step-num">1</div>
+                <div class="entenda-step-body">
+                    <h4>Defasagem em relação à rede (IPP)</h4>
+                    <p>A nota bruta de cada escola/turma é padronizada estatisticamente (z-score) para a escala do IPP, <strong>centrada exatamente em 100 pontos</strong>. O valor 100 representa a média exata da rede. Valores abaixo de 100 indicam defasagem em relação à média, e valores acima de 100 indicam desempenho superior. Isso permite equiparar o desempenho de forma justa, independente da dificuldade de cada avaliação.</p>
+                </div>
+            </div>
+            <div class="entenda-step">
+                <div class="entenda-step-num">2</div>
+                <div class="entenda-step-body">
+                    <h4>Peso do componente no SARESP</h4>
+                    <p>Matemática e Português têm pesos maiores na matriz do SARESP (20–24 pontos) do que, por exemplo, Filosofia ou Sociologia (3 pontos). Uma defasagem em Matemática tem impacto proporcionalmente muito maior no resultado final da escola do que a mesma defasagem em um componente de menor peso.</p>
+                </div>
+            </div>
+            <div class="entenda-step">
+                <div class="entenda-step-num">3</div>
+                <div class="entenda-step-body">
+                    <h4>Número de alunos avaliados</h4>
+                    <p>Uma defasagem que afeta 120 alunos é mais urgente do que a mesma defasagem afetando 15 alunos. O índice multiplica peso × alunos para calcular o <strong>impacto bruto</strong> de cada componente.</p>
+                </div>
+            </div>
+            <div class="entenda-step">
+                <div class="entenda-step-num">4</div>
+                <div class="entenda-step-body">
+                    <h4>Cálculo de Impacto e Prioridade Final</h4>
+                    <p>O índice final de prioridade combina os três fatores: <code style="background:var(--bg);padding:.1rem .4rem;border-radius:4px;font-size:.8rem;">prioridade = (peso × alunos / máximo) × (IPP_rede − IPP_escola)</code>. Quanto maior o índice, mais urgente é a necessidade de intervenção.</p>
+                </div>
+            </div>
+
+            <div class="entenda-example">
+                <img src="./imagens/star.png" alt="" style="height:1em; vertical-align:middle; filter:opacity(0.8);"> <strong>Por que uma escola com nota menor pode ter prioridade mais baixa?</strong><br>
+                Exemplo: Escola A tem IPP 85 em Filosofia (nota baixa), com 20 alunos e peso 3 no SARESP. Escola B tem IPP 95 em Matemática, com 150 alunos e peso 24. O índice de impacto da Escola B supera o da Escola A, mesmo a Escola A tendo nota absoluta menor. A matriz responde à pergunta: <em>"Onde eu consigo mover mais o resultado da escola com a mesma intervenção?"</em>
+            </div>
+
+            <div style="margin-top:1.25rem;padding:.85rem 1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius);">
+                <p style="font-size:.82rem;color:#166534;"><strong>Atenção:</strong> O IPP é um índice de gestão interna para priorização analítica. Ele não equivale à nota final oficial do SARESP. <br><br><strong>Escala de Prioridade:</strong> Altíssima (≥6) → Muito Alta (≥4) → Alta (≥2) → Moderada (&gt;0) → Baixa (≤0).</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="simulator-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 850px;">
+            <span class="modal-close" onclick="document.getElementById('simulator-modal').style.display='none'">&times;</span>
+            
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+                <div style="flex:1; min-width:300px;">
+                    <h2 style="display:flex;align-items:center;gap:.5rem;color:var(--navy);margin-bottom:.4rem;"><img src="./imagens/rocket-lunch.png" alt=""> Simulador de Impactos</h2>
+                    <p style="font-size:.88rem;color:var(--muted);margin-bottom:0;line-height:1.5;">
+                        Clique em uma barra para simular como a variação da nota daquela entidade altera a média global.
+                    </p>
+                </div>
+                
+                <div style="display:flex; flex-direction:column; gap:.5rem; align-items:flex-end;">
+                    <button class="tbl-btn" style="background:var(--surface2); color:var(--text); border:1px solid var(--border); font-weight:700;" onclick="window.resetAllSimValues()"><span style="font-size:1.1em;">↺</span> Resetar Tudo</button>
+                    <div style="display:flex; gap:.75rem; font-size:.72rem; font-weight:700; background:var(--bg); padding:.35rem .65rem; border-radius:var(--radius); border:1px solid var(--border);">
+                        <div style="display:flex; align-items:center; gap:.25rem; color:var(--muted);"><div style="width:12px;height:0;border-bottom:2px dashed #0f172a;"></div> Média Original</div>
+                        <div style="display:flex; align-items:center; gap:.25rem; color:var(--emerald);"><div style="width:12px;height:2.5px;background:#059669;"></div> Média Simulada</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container" style="height: 360px; margin-top: 1.2rem; margin-bottom: 1.5rem; padding: 1rem; box-shadow: none; border: 1px solid var(--border); background: var(--surface2);">
+                <canvas id="simulatorChart"></canvas>
+            </div>
+
+            <div id="simulator-controls" style="display:none; background:var(--surface); padding:1.25rem; border-radius:var(--radius); border:1px solid var(--border); box-shadow:var(--shadow);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;">
+                    <h4 id="sim-entity-name" style="color:var(--navy); font-size:1.05rem; margin:0;">Nome da Entidade</h4>
+                    <div style="text-align:right; background:var(--bg); padding:.5rem 1rem; border-radius:var(--radius); border:1px solid var(--border);">
+                        <span style="font-size:.75rem; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.05em;">Nova Média Global</span><br>
+                        <strong id="sim-global-avg" style="font-size:1.35rem; color:var(--blue);">0.00</strong>
+                        <span id="sim-global-diff" style="font-size:.9rem; font-weight:800; margin-left:.4rem;"></span>
+                    </div>
+                </div>
+                
+                <div style="display:flex; align-items:center; gap:1.25rem; margin-bottom:.5rem;">
+                    <button class="tbl-btn" style="background:rgba(225,29,72,.1); color:var(--rose); font-size:1.1rem; padding:.2rem .8rem;" onclick="window.adjustSimValue(-0.1)">-</button>
+                    <input type="range" id="sim-slider" min="0" max="10" step="0.1" style="flex:1; accent-color:var(--blue); cursor:pointer;" oninput="window.updateSimChart()">
+                    <button class="tbl-btn" style="background:rgba(5,150,105,.1); color:var(--emerald); font-size:1.1rem; padding:.2rem .8rem;" onclick="window.adjustSimValue(0.1)">+</button>
+                </div>
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:.5rem;">
+                    <div style="font-size:.85rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">
+                        Nota Simulada: <span id="sim-entity-val" style="color:var(--text); font-size:1rem; font-family:'Geist Mono', monospace;">0.00</span>
+                    </div>
+                    <button class="tbl-btn" style="background:var(--bg); color:var(--muted); font-size:.75rem;" onclick="window.resetSimValue()">↺ Resetar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-section">
+        <div class="login-box">
+            <div class="login-logo-wrap">
+                <img src="./imagens/logo.png" alt="Logo"
+                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iNTAiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlNWU3ZWIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2YjcyODAiIGR5PSIuM2VtIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5MT0dPPC90ZXh0Pjwvc3ZnPg=='">
+            </div>
+            <div class="login-title">Painel de Desempenho</div>
+            <div class="login-sub">Sistema de Gestão Educacional — URE Avaré</div>
+            <div class="input-group">
+                <label>Nome de usuário</label>
+                <input type="email" id="email" placeholder="seu@email.com" onkeypress="if(event.key==='Enter')window.handleLogin()">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key==='Enter')window.handleLogin()">
+            </div>
+            <button class="login-btn" onclick="window.handleLogin()">Entrar no Painel</button>
+            <div id="login-error">Credenciais inválidas. Tente novamente.</div>
+        </div>
+    </div>
+
+    <div id="dashboard-section">
+        <header>
+            <div class="header-brand">
+                <img src="./imagens/logo.png" alt="Logo"
+                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iNTAiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlNWU3ZWIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2YjcyODAiIGR5PSIuM2VtIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5MT0dPPC90ZXh0Pjwvc3ZnPg=='">
+                <div class="header-brand-text">
+                    <h1 id="dash-title">Painel de Desempenho</h1>
+                    <span id="user-role-label">Carregando perfil...</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="header-btn" onclick="window.openMetodologia()"><img src="./imagens/calculator-simple.png" alt=""> Metodologia</button>
+                <button class="header-btn" onclick="window.print()"><img src="./imagens/memo-pad.png" alt=""> Imprimir</button>
+                <div class="header-divider"></div>
+                <div class="user-chip">
+                    <div class="user-avatar" id="user-avatar-initials">U</div>
+                    <div class="user-info">
+                        <strong id="user-email">—</strong>
+                        <span id="user-role-label-dup"></span>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="window.handleLogout()">Sair</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <div id="print-header">
+                <h3>Parâmetros do Relatório</h3>
+                <p id="print-filters-text"></p>
+            </div>
+
+            <div class="filters-wrapper">
+                <div class="filters-label">Filtros globais principais</div>
+                <div class="filters-grid">
+                    <div class="filter-item" id="filter-escola-container">
+                        <label>Escola</label>
+                        <div class="multi-select" data-filter="escola">
+                            <div class="select-display" onclick="window.toggleDropdown(this)"><span>Todas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Componente Curricular</label>
+                        <div class="multi-select" data-filter="componente">
+                            <div class="select-display" onclick="window.toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Tipo de Classe</label>
+                        <div class="multi-select" data-filter="tipo_classe">
+                            <div class="select-display" onclick="window.toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Tipo de Ensino</label>
+                        <div class="multi-select" data-filter="tipo_ensino">
+                            <div class="select-display" onclick="window.toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item" style="display:flex;align-items:flex-end;">
+                        <button class="btn-clear" onclick="window.clearFilters()">✕ Limpar Filtros</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-tabs">
+                <button class="btn-toggle active" id="btn-view-eval"            onclick="window.setViewMode('eval')"><img src="./imagens/memo-pad.png" alt=""> Histórico</button>
+                <button class="btn-toggle"         id="btn-view-comp"            onclick="window.setViewMode('component')"><img src="./imagens/stats.png" alt=""> Componentes</button>
+                <button class="btn-toggle"         id="btn-view-single"          onclick="window.setViewMode('single_component')"><img src="./imagens/bullseye.png" alt=""> Único Componente</button>
+                <button class="btn-toggle"         id="btn-view-single-aval"     onclick="window.setViewMode('single_eval')"><img src="./imagens/bullseye.png" alt=""> Única Avaliação</button>
+                <button class="btn-toggle"         id="btn-view-compare"         onclick="window.setViewMode('compare')"><img src="./imagens/scale-comparison.png" alt=""> Comparativo</button>
+                <button class="btn-toggle"         id="btn-view-general-compare" onclick="window.setViewMode('general_compare')"><img src="./imagens/chart-line-up.png" alt=""> Comparativo Geral</button>
+                <button class="btn-toggle"         id="btn-view-saresp"          onclick="window.setViewMode('saresp')"><img src="./imagens/bullseye-arrow.png" alt=""> Prioridades SARESP</button>
+
+                <select id="sub-filter-comp" class="sub-filter" onchange="window.processViewAndRender()"></select>
+                <select id="sub-filter-aval" class="sub-filter" onchange="window.processViewAndRender()"></select>
+
+                <div id="saresp-aval-filter-container" class="multi-select" data-filter="saresp_aval" style="display:none;margin-top:.5rem;width:100%;">
+                    <div class="select-display" onclick="window.toggleDropdown(this)"><span>Filtrar Avaliações SARESP</span></div>
+                    <div class="select-options"></div>
+                </div>
+            </div>
+
+            <div id="compare-filters">
+                <label>Analisar Evolução:</label>
+                <select id="comp-aval-1" onchange="window.processViewAndRender()"></select>
+                <span style="font-weight:700;color:var(--muted);">frente a</span>
+                <select id="comp-aval-2" onchange="window.processViewAndRender()"></select>
+                <label style="margin-left:.75rem;">Filtrar Componente:</label>
+                <select id="compare-filter-componente" onchange="window.processViewAndRender()"></select>
+            </div>
+
+            <div id="selected-row-indicator">
+                <span id="selected-row-text">Filtro ativo</span>
+                <button class="tbl-btn" style="background:rgba(244,63,94,.1);color:var(--rose);font-size:.78rem;" onclick="window.resetRowSelection()">✕ Remover Filtro</button>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h3>Média Ponderada Real</h3>
+                    <div class="value" id="card-media-geral">—</div>
+                </div>
+                <div class="card">
+                    <h3>Destaques — Componentes</h3>
+                    <div id="card-melhor-disc">—</div>
+                </div>
+                <div class="card">
+                    <h3>Oportunidades de Melhoria</h3>
+                    <div id="card-pior-disc">—</div>
+                </div>
+                <div class="card">
+                    <h3>Destaques — <span id="label-destaque-ent">Entidades</span></h3>
+                    <div id="card-melhor-entidade">—</div>
+                </div>
+                <div class="card">
+                    <h3>Oportunidades — <span id="label-pior-ent">Entidades</span></h3>
+                    <div id="card-pior-entidade">—</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-toolbar">
+                    <div>
+                        <div class="table-title" id="table-title-context">Mapa Dinâmico de Notas</div>
+                        <div class="legend" style="margin-top:.4rem;">
+                            <div class="legend-item"><div class="dot" style="background:var(--rose)"></div> Abaixo de 3</div>
+                            <div class="legend-item"><div class="dot" style="background:#fef08a;border:1px solid #d97706;"></div> 3 a 5</div>
+                            <div class="legend-item"><div class="dot" style="background:var(--emerald)"></div> Acima de 5</div>
+                        </div>
+                    </div>
+                    <div class="table-actions">
+                        <button class="tbl-btn tbl-btn-green" onclick="window.copyTableAsImage(event)"><img src="./imagens/camera.png" alt=""> Copiar imagem</button>
+                        <button class="tbl-btn tbl-btn-purple" style="display:none;" id="btn-toggle-ranking" onclick="window.toggleRankingView()"><img src="./imagens/troph-cap.png" alt=""> Exibir Ranking</button>
+                        <button class="tbl-btn tbl-btn-blue" id="btn-toggle-2026" onclick="window.toggleOnly2026()"><img src="./imagens/calendar-lines.png" alt=""> Somente 2026</button>
+                        <button class="tbl-btn tbl-btn-amber" id="btn-toggle-metas" onclick="window.toggleMetas()"><img src="./imagens/bullseye.png" alt=""> Exibir Metas</button>
+                    </div>
+                </div>
+                <div id="heatmap-container"></div>
+            </div>
+
+            <div id="chart-controls">
+                <button class="tbl-btn tbl-btn-blue" onclick="window.toggleChartDatasets(true)"><img src="./imagens/map-marker-check.png" alt=""> Marcar Todas</button>
+                <button class="tbl-btn" style="background:var(--bg);color:var(--muted);" onclick="window.toggleChartDatasets(false)">☐ Desmarcar Todas</button>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-container"><canvas id="chartComponentes"></canvas></div>
+                <div class="chart-container"><canvas id="chartEvolucao"></canvas></div>
+            </div>
+            
+            <div class="dashboard-footer" data-html2canvas-ignore="true">
+                Desenvolvido por <strong>Juliano Curto</strong>. <br>
+                Ícones utilizados com atribuição ao <a href="https://www.flaticon.com/" target="_blank" rel="noopener noreferrer">Flaticon</a>.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kmplasayzhtjoelxnvif.supabase.co';
+        const supabaseKey = 'sb_publishable_24GErsvesucjCS2GKZkBUQ_8xMMXuoh';
+
+        let supabaseClient = null;
+        if (window.supabase) {
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            window.supabaseClient = supabaseClient;
+        }
+
+        let currentUser = null, userProfile = null;
+        let globalData = [], filteredData = [], activeData = [];
+        let escolasMap = new Map(), chartsInstance = {};
+        let currentViewMode = 'eval', selectedRowEntity = null;
+        let sortColumn = 'media_geral', sortDirection = 'desc';
+        let isMetasVisible = false, isOnly2026 = false, isRankingView = false;
+        
+        let sarespAreaFilter = 'all'; // 'all' | 'cnt' | 'chs' | 'lgg' | 'mat' | 'lpt'
+        window.sarespTEFilter = 'all'; // 'all' | 'ef' | 'em'
+        window.sarespAuditMap = {};
+        window.sarespOverallMap = {};
+
+        const baseMetas = [
+            { key: "ZUMBI DOS PALMARES", o: 3.4, d: 3.6 }, { key: "AVELINO APARECIDO", o: 3.4, d: 3.6 },
+            { key: "BENE ANDRADE", o: 4.4, d: 4.8 }, { key: "EE JOAO CRUZ", o: 4.6, d: 4.9 },
+            { key: "CEL JTO A EE JOAO CRUZ", o: 4.6, d: 4.9 }, { key: "SANDRA APARECIDA DE ARAUJO", o: 4.7, d: 4.9 },
+            { key: "SANDRA APARECIDA DE ARAÚJO", o: 4.7, d: 4.9 }, { key: "CELSO FERREIRA", o: 5.4, d: 5.8 },
+            { key: "CERQUEIRA CESAR II", o: 4.9, d: 5.2 }, { key: "CERQUEIRA CESAR III", o: 4.9, d: 5.2 },
+            { key: "JOAO PAULO II", o: 4.9, d: 5.2 }, { key: "TRES RIOS", o: 3.4, d: 3.6 },
+            { key: "ANITA GARIBALDI", o: 4.9, d: 5.2 }, { key: "PROVISORIA DE CERQUEIRA CESAR", o: 5.1, d: 5.4 },
+            { key: "MAURO DE MACEDO", o: 4.6, d: 4.9 }, { key: "COTA LEONEL", o: 5.0, d: 5.3 },
+            { key: "DIMAS MOZART", o: 5.0, d: 5.2 }, { key: "EMILIO IMMOOS", o: 5.3, d: 5.6 },
+            { key: "MARIANA APARECIDA TODESCATO", o: 5.1, d: 5.4 }, { key: "ERUCE PAULUCCI", o: 4.6, d: 4.9 },
+            { key: "GUIDO DIAS", o: 4.2, d: 4.5 }, { key: "JOAO CRUZ CORONEL", o: 4.6, d: 4.9 },
+            { key: "JOAO MICHELIN", o: 5.1, d: 5.4 }, { key: "JOAO TEIXEIRA", o: 4.5, d: 4.9 },
+            { key: "JOSE APARECIDO CASTELUCCI", o: 5.4, d: 5.7 }, { key: "JOSE LEITE PINHEIRO", o: 4.9, d: 5.2 },
+            { key: "JOSE PENNA", o: 5.1, d: 5.4 }, { key: "JOSE PIRES", o: 6.5, d: 6.8 },
+            { key: "MARIA IZABEL", o: 4.4, d: 4.7 }, { key: "MATILDE VIEIRA", o: 4.7, d: 5.0 },
+            { key: "PAULO ARAUJO NOVAES", o: 4.9, d: 5.2 }, { key: "PAULO DELICIO", o: 4.9, d: 5.2 },
+            { key: "PEDRO BENTO ALVES", o: 4.5, d: 4.9 }, { key: "MARCELO PIRES DA SILVA", o: 4.7, d: 4.9 },
+            { key: "TAQUARITUBA", o: 4.2, d: 4.5 }, { key: "MASCULINA DE CERQUEIRA CESAR", o: 5.1, d: 5.4 },
+            { key: "NELSON MARCONDES", o: 5.4, d: 5.8 }, { key: "ORLANDO BRANDO", o: 3.4, d: 3.6 },
+            { key: "ABILIO RAPOSO", o: 4.3, d: 4.5 }
+        ];
+
+        const getMetasEscola = (n) => {
+            if (!n) return { o: '-', d: '-' };
+            const u = n.toUpperCase();
+            for (let m of baseMetas) { if (u.includes(m.key)) return m; }
+            return { o: '-', d: '-' };
+        };
+
+        /* ── MODALS ── */
+        window.closeSarespAuditModal = () => { document.getElementById('saresp-audit-modal').style.display = 'none'; };
+        window.openSarespAuditEmpty = () => {
+            document.getElementById('saresp-audit-title').innerHTML = `<img src="./imagens/microscope-bacteria.png" alt=""> Detalhamento do Cálculo (Prioridade Pedagógica)`;
+            document.getElementById('saresp-audit-content').innerHTML = `<div style="padding:2rem;text-align:center;color:var(--muted);"><h3 style="color:var(--rose);margin-bottom:.75rem;"><img src="./imagens/thumbtack.png" alt=""> Sem dados suficientes</h3><p>Não há dados suficientes para análise dessa avaliação/componente.</p></div>`;
+            document.getElementById('saresp-audit-modal').style.display = 'flex';
+        };
+        window.closeDisclaimer = () => document.getElementById('disclaimer-modal').style.display = 'none';
+
+        // Area filter groups
+        const AREA_COMPS = {
+            cnt:  ['BIO','QUI','FIS','CIE'],
+            chs:  ['HIS','GEO','FIL','SOC'],
+            lgg:  ['LPT','ING','LNG','LP','PORT'],
+            mat:  ['MAT'],
+            lpt:  ['LPT','LP','PORT','MAT']
+        };
+        const AREA_LABELS = {
+            cnt: { name:'CNT', full:'Ciências da Natureza', color:'#0ea5e9' },
+            chs: { name:'CHS', full:'Ciências Humanas', color:'#7c3aed' },
+            lgg: { name:'LGG', full:'Linguagens', color:'#10b981' },
+            mat: { name:'MAT', full:'Matemática', color:'#f59e0b' },
+            lpt: { name:'LPT/MAT', full:'Língua Port. + Matemática', color:'#f43f5e' },
+            all: { name:'Geral', full:'Todos os componentes', color:'#0f1f3d' }
+        };
+
+        window.setSarespArea = (area) => {
+            sarespAreaFilter = area;
+            document.querySelectorAll('.area-btn').forEach(b => {
+                if(!b.id.includes('saresp-te-')) b.classList.remove('active');
+            });
+            const btn = document.getElementById(`area-btn-${area}`);
+            if (btn) btn.classList.add('active');
+            updateAreaChips(area);
+            window.renderHeatmapTable();
+        };
+
+        window.setSarespTE = (te) => {
+            window.sarespTEFilter = te;
+            window.renderHeatmapTable();
+        };
+
+        function updateAreaChips(area) {
+            const wrap = document.getElementById('area-comps-hint');
+            if (!wrap) return;
+            wrap.innerHTML = '';
+            const comps = area === 'all' ? [] : AREA_COMPS[area] || [];
+            if (comps.length === 0) {
+                wrap.innerHTML = '<span class="comp-chip active-chip">Todos os componentes da área</span>';
+                return;
+            }
+            comps.forEach(c => {
+                const chip = document.createElement('span');
+                chip.className = 'comp-chip active-chip';
+                chip.textContent = c;
+                chip.style.background = AREA_LABELS[area].color;
+                chip.style.borderColor = AREA_LABELS[area].color;
+                wrap.appendChild(chip);
+            });
+        }
+
+        function compMatchesArea(compName, area) {
+            if (area === 'all') return true;
+            const c = String(compName).toUpperCase();
+            const keys = AREA_COMPS[area] || [];
+            return keys.some(k => c.includes(k));
+        }
+        window.showDisclaimer = () => { if (!sessionStorage.getItem('disclaimerAccepted')) { document.getElementById('disclaimer-modal').style.display = 'flex'; sessionStorage.setItem('disclaimerAccepted', 'true'); } };
+        window.openMetodologia = () => document.getElementById('metodologia-modal').style.display = 'flex';
+        window.closeMetodologia = () => document.getElementById('metodologia-modal').style.display = 'none';
+        window.openModal = () => document.getElementById('ranking-modal').style.display = 'flex';
+        window.closeModal = () => document.getElementById('ranking-modal').style.display = 'none';
+
+        /* ── SARESP AUDIT (Componente Específico) ── */
+        window.openSarespAudit = function(ent, comp) {
+            document.getElementById('saresp-audit-title').innerHTML = `<img src="./imagens/microscope-bacteria.png" alt=""> Detalhamento do Cálculo (Prioridade Pedagógica)`;
+            const auditData = window.sarespAuditMap[ent]?.[comp];
+            if (!auditData) return;
+            const selSarespAvals = getSelectedCheckboxes('saresp_aval');
+            const avalsStr = selSarespAvals.length === 0 ? 'Todas do Filtro Principal' : selSarespAvals.join(', ');
+            let msgInterpretacao = "";
+            const classL = (auditData.classificacao || "").toLowerCase();
+            if (classL === 'altíssima') msgInterpretacao = "A disciplina apresenta desempenho extremamente baixo e afeta um grande número de alunos, exigindo intervenção pedagógica urgente.";
+            else if (classL === 'muito alta') msgInterpretacao = "O desempenho está aquém do esperado num componente de forte impacto no SARESP. Ações de recuperação devem ser priorizadas.";
+            else if (classL === 'alta') msgInterpretacao = "Há defasagem considerável em relação à rede. Recomenda-se acompanhamento focado nas habilidades em defasagem.";
+            else if (classL === 'moderada') msgInterpretacao = "Impacto moderado. O desempenho apresenta ligeira defasagem, mas o cenário geral está dentro do previsto.";
+            else msgInterpretacao = "A escola apresenta proficiência adequada ou superior à média da rede neste componente.";
+
+            const isUreView = (userProfile.tipo_usuario !== 'ESCOLA' && getSelectedCheckboxes('escola').length === 0);
+            let htmlTurmas = '';
+            
+            if (isUreView) {
+                let cData = activeData.filter(d => (selSarespAvals.length === 0 || selSarespAvals.includes(d.aval_nome)) && d.nota > 0 && d.escola === ent && d.componente === comp);
+                
+                if (window.sarespTEFilter === 'ef') {
+                    cData = cData.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
+                } else if (window.sarespTEFilter === 'em') {
+                    cData = cData.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
+                }
+                
+                let turmasMap = {};
+                cData.forEach(d => { if (!turmasMap[d.turma_nome]) turmasMap[d.turma_nome] = []; turmasMap[d.turma_nome].push(d); });
+                
+                let turmasRaw = [];
+                let schoolAllAvg = [];
+                Object.keys(turmasMap).forEach(tName => {
+                    let tRows = turmasMap[tName]; 
+                    let sP = 0, tW = 0, al = 0;
+                    tRows.forEach(d => { let ps = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino); sP += d.nota*ps*d.avaliados; tW += ps*d.avaliados; al += d.avaliados; });
+                    if (tW > 0) {
+                        let m = sP/tW;
+                        schoolAllAvg.push(m);
+                        turmasRaw.push({ sala: tName, alunos: al, m: m });
+                    }
+                });
+
+                if (turmasRaw.length > 0) {
+                    let eMean = schoolAllAvg.length ? schoolAllAvg.reduce((a,b)=>a+b,0)/schoolAllAvg.length : 0;
+                    let eStdDev = Math.sqrt(schoolAllAvg.reduce((a,b)=>a+Math.pow(b-eMean,2),0)/(schoolAllAvg.length||1))||1;
+
+                    const buildTable = (contextType) => {
+                        let meanToUse = contextType === 'URE' ? auditData.contextMean : eMean;
+                        let stdDevToUse = contextType === 'URE' ? auditData.contextStdDev : eStdDev;
+                        let baseIpp = contextType === 'URE' ? auditData.ippEscola : 100;
+
+                        let tRes = turmasRaw.map(t => {
+                            let z = (t.m - meanToUse) / stdDevToUse;
+                            let ipp = Math.max(0, Math.min(200, 100 + z*20));
+                            let dev = ipp - baseIpp;
+                            let crit = '', bg = '';
+                            if (dev < -15) { crit='Altíssima'; bg='bg-dark-red'; } else if (dev < -10) { crit='Muito Alta'; bg='bg-red'; }
+                            else if (dev < -5) { crit='Alta'; bg='bg-orange'; } else if (dev < -2) { crit='Moderada'; bg='bg-yellow'; } else { crit='Baixa'; bg='bg-green'; }
+                            return { ...t, ipp, dev, crit, bg };
+                        });
+                        tRes.sort((a,b) => a.dev - b.dev);
+
+                        let criticas = [];
+                        let tbody = '';
+                        tRes.forEach(t => {
+                            tbody += `<tr><td style="text-align:left;font-weight:600;">${t.sala}</td><td>${t.alunos}</td><td style="font-weight:bold;">${t.ipp.toFixed(1)}</td><td style="color:${t.dev>0?'var(--emerald)':'var(--rose)'};font-weight:bold;">${t.dev>0?'+':''}${t.dev.toFixed(1)}</td><td class="${t.bg}">${t.crit}</td></tr>`;
+                            if (t.dev <= -5) criticas.push(t.sala);
+                        });
+                        
+                        let critMsg = criticas.length > 0 ? `<p style="font-style:italic;color:#1e40af;margin-top:.5rem;padding:.5rem;background:#eff6ff;border-radius:4px;font-size:.85rem;">${criticas.join(', ')} apresenta(m) desempenho significativamente abaixo da média ${contextType==='URE'?'da rede':'da escola'} neste componente.</p>` : '';
+
+                        return `<table class="modal-table"><thead><tr><th>Sala</th><th>Alunos</th><th>IPP Est.</th><th>Desvio</th><th>Prioridade</th></tr></thead><tbody>${tbody}</tbody></table>${critMsg}`;
+                    };
+
+                    let tblURE = buildTable('URE');
+                    let tblUE = buildTable('UE');
+
+                    htmlTurmas = `
+                    <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:.75rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+                            <h4 style="color:var(--navy);font-size:.9rem;margin:0;">2. DETALHAMENTO POR SALA</h4>
+                            <div style="display:flex;gap:.25rem;background:var(--surface2);padding:.25rem;border-radius:6px;border:1px solid var(--border);">
+                                <button id="btn-context-ure" style="border:none;padding:.3rem .6rem;border-radius:4px;font-size:.75rem;font-weight:700;cursor:pointer;background:var(--navy);color:#fff;" onclick="document.getElementById('tbl-context-ure').style.display='block';document.getElementById('tbl-context-ue').style.display='none';this.style.background='var(--navy)';this.style.color='#fff';document.getElementById('btn-context-ue').style.background='transparent';document.getElementById('btn-context-ue').style.color='var(--muted)';">Comparar com URE</button>
+                                <button id="btn-context-ue" style="border:none;padding:.3rem .6rem;border-radius:4px;font-size:.75rem;font-weight:700;cursor:pointer;background:transparent;color:var(--muted);" onclick="document.getElementById('tbl-context-ue').style.display='block';document.getElementById('tbl-context-ure').style.display='none';this.style.background='var(--navy)';this.style.color='#fff';document.getElementById('btn-context-ure').style.background='transparent';document.getElementById('btn-context-ure').style.color='var(--muted)';">Comparar com UE</button>
+                            </div>
+                        </div>
+                        <div id="tbl-context-ure" style="display:block;">${tblURE}</div>
+                        <div id="tbl-context-ue" style="display:none;">${tblUE}</div>
+                    </div>`;
+                }
+            } else {
+                // School view logic
+                let cData = activeData.filter(d => (selSarespAvals.length === 0 || selSarespAvals.includes(d.aval_nome)) && d.nota > 0 && d.escola === ent && d.componente === comp);
+                
+                if (window.sarespTEFilter === 'ef') {
+                    cData = cData.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
+                } else if (window.sarespTEFilter === 'em') {
+                    cData = cData.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
+                }
+
+                let turmasMap = {};
+                cData.forEach(d => { if (!turmasMap[d.turma_nome]) turmasMap[d.turma_nome] = []; turmasMap[d.turma_nome].push(d); });
+                let turmasResult = [];
+                Object.keys(turmasMap).forEach(tName => {
+                    let tRows = turmasMap[tName];
+                    let sP = 0, tW = 0, al = 0;
+                    tRows.forEach(d => { let ps = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino); sP += d.nota*ps*d.avaliados; tW += ps*d.avaliados; al += d.avaliados; });
+                    if (tW > 0) {
+                        let m = sP/tW; let z = (m - auditData.contextMean) / auditData.contextStdDev;
+                        let ipp = Math.max(0, Math.min(200, 100 + z*20)); let dev = ipp - auditData.ippEscola;
+                        let crit = '', bg = '';
+                        if (dev < -15) { crit='Altíssima'; bg='bg-dark-red'; } else if (dev < -10) { crit='Muito Alta'; bg='bg-red'; }
+                        else if (dev < -5) { crit='Alta'; bg='bg-orange'; } else if (dev < -2) { crit='Moderada'; bg='bg-yellow'; } else { crit='Baixa'; bg='bg-green'; }
+                        turmasResult.push({ sala: tName, alunos: al, ipp, desvio: dev, criticidade: crit, bgClass: bg });
+                    }
+                });
+                if (turmasResult.length > 0) {
+                    turmasResult.sort((a,b) => a.desvio - b.desvio);
+                    htmlTurmas = `<div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:.75rem;"><h4 style="margin-bottom:.5rem;color:var(--navy);font-size:.9rem;">2. DETALHAMENTO POR SALA</h4><table class="modal-table"><thead><tr><th>Sala</th><th>Alunos</th><th>IPP Est.</th><th>Desvio</th><th>Prioridade</th></tr></thead><tbody>`;
+                    let criticas = [];
+                    turmasResult.forEach(t => {
+                        htmlTurmas += `<tr><td style="text-align:left;font-weight:600;">${t.sala}</td><td>${t.alunos}</td><td style="font-weight:bold;">${t.ipp.toFixed(1)}</td><td style="color:${t.desvio>0?'var(--emerald)':'var(--rose)'};font-weight:bold;">${t.desvio>0?'+':''}${t.desvio.toFixed(1)}</td><td class="${t.bgClass}">${t.criticidade}</td></tr>`;
+                        if (t.desvio <= -5) criticas.push(t.sala);
+                    });
+                    htmlTurmas += `</tbody></table>`;
+                    if (criticas.length > 0) htmlTurmas += `<p style="font-style:italic;color:#1e40af;margin-top:.5rem;padding:.5rem;background:#eff6ff;border-radius:4px;font-size:.85rem;">${criticas.join(', ')} apresenta(m) desempenho significativamente abaixo da média da escola neste componente.</p>`;
+                    htmlTurmas += `</div>`;
+                }
+            }
+
+            const f = (v, dec=2) => v !== undefined ? v.toFixed(dec).replace('.',',') : '-';
+            const html = `<div style="display:grid;gap:.75rem;font-size:.88rem;">
+                <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">1. Identificação</h4>
+                    <p><strong>Entidade:</strong> ${auditData.entidade}</p>
+                    <p><strong>Componente:</strong> ${auditData.componente}</p>
+                    <p><strong>Avaliações:</strong> ${avalsStr}</p>
+                </div>
+                ${htmlTurmas}
+                <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">3. Base de Dados</h4>
+                    <p><strong>Alunos considerados:</strong> ${auditData.alunosConsiderados}</p>
+                    <p><strong>Registros Analisados:</strong> O cálculo inclui 100% da base filtrada sem remoção de extremos estatísticos.</p>
+                </div>
+                <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">4. Cálculo da Média Agregada</h4>
+                    <div style="background:var(--navy);padding:.65rem 1rem;border-radius:6px;font-family:'Geist Mono',monospace;font-size:.82rem;color:var(--sky);text-align:center;margin:.5rem 0;">
+                        media_turmas = ${f(auditData.sumProductOriginal)} ÷ ${f(auditData.sumWeightOriginal)} = <strong style="color:#fff;">${f(auditData.mediaOriginal)}</strong>
+                    </div>
+                </div>
+                <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">5. Conversão do IPP</h4>
+                    <div style="background:var(--navy);padding:.65rem 1rem;border-radius:6px;font-family:'Geist Mono',monospace;font-size:.82rem;color:var(--sky);text-align:center;margin:.5rem 0;">
+                        z = (${f(auditData.mediaOriginal)} − ${f(auditData.contextMean)}) / ${f(auditData.contextStdDev)} = ${f(auditData.zScore,3)}<br>
+                        IPP = 100 + (${f(auditData.zScore,3)} × 20) = <strong style="color:#fff;">${f(auditData.ippEscola,1)}</strong>
+                    </div>
+                </div>
+                <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">6–10. Índice de Prioridade Final</h4>
+                    <p><strong>IPP Escola:</strong> ${f(auditData.ippEscola,1)} &nbsp;|&nbsp; <strong>IPP Rede:</strong> ${auditData.ippRede!==undefined?f(auditData.ippRede,1):'-'} &nbsp;|&nbsp; <strong>Desvio:</strong> ${auditData.ippRede!==undefined?f(auditData.ippEscola-auditData.ippRede):'-'}</p>
+                    <p><strong>Peso SARESP:</strong> ${auditData.pesoSaresp!==undefined?f(auditData.pesoSaresp,1):'-'} &nbsp;|&nbsp; <strong>Alunos:</strong> ${auditData.totalAlunosImpacto??'-'}</p>
+                    <p><strong>Índice Final:</strong> ${auditData.indice!==undefined?f(auditData.indice,3):'-'}</p>
+                </div>
+                <div style="background:#fff0f3;padding:1rem;border-radius:var(--radius);border:1px solid #fecdd3;">
+                    <h4 style="font-size:.85rem;color:var(--rose);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">11. Classificação Final</h4>
+                    <p style="font-size:1rem;font-weight:700;">PRIORIDADE ${(auditData.classificacao||'NÃO AVALIADO').toUpperCase()}</p>
+                </div>
+                <div style="background:#eff6ff;padding:1rem;border-radius:var(--radius);border:1px solid #bfdbfe;">
+                    <h4 style="font-size:.85rem;color:var(--blue);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">12. Interpretação Pedagógica</h4>
+                    <p style="font-style:italic;color:#1e40af;font-size:.88rem;">${msgInterpretacao}</p>
+                </div>
+            </div>`;
+            document.getElementById('saresp-audit-content').innerHTML = html;
+            document.getElementById('saresp-audit-modal').style.display = 'flex';
+        };
+
+        /* ── SARESP AUDIT (Prioridade Geral da Entidade) ── */
+        window.openOverallPriorityAudit = function(ent) {
+            document.getElementById('saresp-audit-title').innerHTML = `<img src="./imagens/microscope-bacteria.png" alt=""> Detalhamento da Prioridade da Entidade`;
+            
+            const isUre = userProfile.tipo_usuario !== 'ESCOLA' && getSelectedCheckboxes('escola').length === 0;
+            const rowKey = isUre ? 'escola' : 'turma_nome';
+            
+            const selSA = getSelectedCheckboxes('saresp_aval');
+            let df = activeData.filter(d => (selSA.length === 0 || selSA.includes(d.aval_nome)) && d.nota > 0);
+            
+            if (window.sarespTEFilter === 'ef') {
+                df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
+                df = df.filter(d => !['FIS','QUI','BIO','FIL','SOC'].includes(d.componente.toUpperCase()));
+            } else if (window.sarespTEFilter === 'em') {
+                df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
+                df = df.filter(d => d.componente.toUpperCase() !== 'CIE');
+            }
+
+            let dfFiltered = sarespAreaFilter === 'all' ? df : df.filter(d => compMatchesArea(d.componente, sarespAreaFilter));
+            
+            let totalAlunosContext = 0;
+            let entAlunos = 0;
+            
+            let mapAll = new Map();
+            dfFiltered.forEach(d => { if (d.id_turma) mapAll.set(d.id_turma, {aval: d.avaliados, ent: d[rowKey]}); });
+            
+            mapAll.forEach((v, k) => {
+                totalAlunosContext += v.aval;
+                if (v.ent === ent) entAlunos += v.aval;
+            });
+            
+            let perc = totalAlunosContext > 0 ? (entAlunos / totalAlunosContext) * 100 : 0;
+            
+            let iM_data = window.sarespOverallMap[ent];
+            if (!iM_data) return;
+            
+            let classL = window.getIPC(iM_data.indiceGeral).label;
+            
+            let html = `
+            <div style="display:grid;gap:.75rem;font-size:.88rem;">
+                <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Resumo da Entidade</h4>
+                    <p><strong>${isUre?'Escola':'Turma'}:</strong> ${ent}</p>
+                    <p><strong>Alunos Avaliados (no filtro atual):</strong> ${entAlunos}</p>
+                    <p><strong>Representatividade:</strong> ${perc.toFixed(1).replace('.',',')}% do total de alunos (${totalAlunosContext}) na análise atual.</p>
+                </div>
+                <div style="background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);">
+                    <h4 style="font-size:.85rem;color:var(--navy);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Por que esta prioridade foi definida?</h4>
+                    <p style="margin-bottom:.5rem;color:var(--muted);line-height:1.5;">A prioridade geral é a média ponderada do impacto de todos os componentes filtrados. Componentes com maior peso do SARESP e maior número de alunos "puxam" a prioridade geral da entidade para cima ou para baixo.</p>
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-top:.75rem;">
+                        <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+                            <thead style="background:var(--surface2);">
+                                <tr><th style="padding:.6rem;text-align:left;border-bottom:1px solid var(--border);color:var(--navy);">Componente</th><th style="padding:.6rem;text-align:center;border-bottom:1px solid var(--border);color:var(--navy);">IPP Estimado</th><th style="padding:.6rem;text-align:center;border-bottom:1px solid var(--border);color:var(--navy);">Índice (Impacto)</th></tr>
+                            </thead>
+                            <tbody>`;
+                            
+            let comps = Object.keys(iM_data.componentes).filter(c => iM_data.componentes[c] !== null);
+            comps.sort((a,b) => iM_data.componentes[b].indice - iM_data.componentes[a].indice);
+            
+            comps.forEach(c => {
+                let cd = iM_data.componentes[c];
+                html += `<tr><td style="padding:.6rem;border-bottom:1px solid var(--bg);font-weight:600;color:var(--text);">${c}</td><td style="padding:.6rem;text-align:center;border-bottom:1px solid var(--bg);">${cd.ipp.toFixed(1)}</td><td style="padding:.6rem;text-align:center;border-bottom:1px solid var(--bg);font-weight:700;color:var(--blue);">${cd.indice.toFixed(2)}</td></tr>`;
+            });
+            
+            html += `       </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div style="background:#fff0f3;padding:1rem;border-radius:var(--radius);border:1px solid #fecdd3;">
+                    <h4 style="font-size:.85rem;color:var(--rose);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Classificação Final</h4>
+                    <p style="font-size:1.1rem;font-weight:700;color:var(--rose);">PRIORIDADE GERAL: ${classL.toUpperCase()}</p>
+                    <p style="font-size:.85rem;color:var(--rose);margin-top:.25rem;">Índice Consolidado: ${iM_data.indiceGeral.toFixed(2)}</p>
+                </div>
+            </div>
+            `;
+            
+            document.getElementById('saresp-audit-content').innerHTML = html;
+            document.getElementById('saresp-audit-modal').style.display = 'flex';
+        };
+
+        /* ── UI HELPERS ── */
+        window.toggleMetas = () => {
+            isMetasVisible = !isMetasVisible;
+            document.querySelectorAll('[id^="btn-toggle-metas"]').forEach(btn => {
+                btn.innerHTML = isMetasVisible ? '<img src="./imagens/bullseye.png" alt=""> Ocultar Metas' : '<img src="./imagens/bullseye.png" alt=""> Exibir Metas';
+            });
+            window.renderHeatmapTable();
+        };
+        window.toggleRankingView = () => {
+            isRankingView = !isRankingView;
+            document.getElementById('btn-toggle-ranking').innerHTML = isRankingView ? '<img src="./imagens/stats.png" alt=""> Exibir Notas' : '<img src="./imagens/troph-cap.png" alt=""> Exibir Ranking';
+            window.renderHeatmapTable();
+        };
+        window.toggleOnly2026 = () => {
+            isOnly2026 = !isOnly2026;
+            document.querySelectorAll('[id^="btn-toggle-2026"]').forEach(btn => {
+                btn.innerHTML = isOnly2026 ? '<img src="./imagens/calendar-lines.png" alt=""> Incluir Anteriores' : '<img src="./imagens/calendar-lines.png" alt=""> Somente 2026';
+                btn.className = isOnly2026 ? 'tbl-btn tbl-btn-green' : 'tbl-btn tbl-btn-blue';
+            });
+            window.applyFilters();
+        };
+        window.toggleDropdown = (el) => {
+            const opts = el.nextElementSibling;
+            const showing = opts.classList.contains('show');
+            document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            if (!showing) opts.classList.add('show');
+        };
+        document.addEventListener('click', e => { if (!e.target.closest('.multi-select')) document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show')); });
+
+        window.updateMultiSelectDisplay = (k) => {
+            const c = document.querySelector(`.multi-select[data-filter="${k}"]`); if (!c) return;
+            const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
+            const span = c.querySelector('.select-display span');
+            span.textContent = cbs.length === 0 ? (k==='saresp_aval'?'Filtrar Avaliações SARESP':'Todos') : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionados`;
+        };
+        window.clearFilters = () => {
+            document.querySelectorAll('.multi-select input[type="checkbox"]').forEach(cb => cb.checked = false);
+            ['escola','componente','tipo_classe','tipo_ensino','saresp_aval'].forEach(k => window.updateMultiSelectDisplay(k));
+            window.resetRowSelection(); window.applyFilters();
+        };
+        window.copyTableAsImage = async (event) => {
+            const btn = event.currentTarget; 
+            const orig = btn.innerHTML; 
+            btn.innerHTML = '<img src="./imagens/camera.png" alt=""> Copiando...';
+            try {
+                const originalContainer = document.getElementById('heatmap-container');
+                const wrap = document.createElement('div');
+                
+                // Captura a largura real do contêiner para o canvas não "espremer" a imagem
+                const realWidth = originalContainer.scrollWidth + 40;
+                
+                wrap.style.cssText = `background:white;padding:20px;width:${realWidth}px;color:#0f172a;font-family:DM Sans,sans-serif;position:absolute;left:-9999px;top:0;`;
+                
+                let titleText = document.getElementById('table-title-context').textContent;
+                if(currentViewMode === 'saresp') titleText = 'Prioridades SARESP';
+                
+                const t = document.createElement('h2'); t.textContent = titleText; t.style.cssText = 'color:#0f1f3d;margin-bottom:10px;';
+                const f = document.createElement('div'); f.innerHTML = document.getElementById('print-filters-text').innerHTML; f.style.cssText = 'margin-bottom:20px;font-size:.88rem;line-height:1.5;';
+                wrap.appendChild(t); wrap.appendChild(f); 
+                
+                // Clona a tabela e ajusta o layout exclusivamente para a foto
+                const clone = originalContainer.cloneNode(true);
+                const cloneTable = clone.querySelector('table');
+                if (cloneTable) {
+                    cloneTable.style.tableLayout = 'auto'; // Remove o fixed para a foto
+                    cloneTable.style.width = 'max-content'; // Permite que a tabela expanda o necessário
+                }
+                
+                wrap.appendChild(clone);
+                document.body.appendChild(wrap);
+                
+                const canvas = await html2canvas(wrap, { scale: 2, backgroundColor: '#ffffff' });
+                canvas.toBlob(async (blob) => {
+                    try { 
+                        await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); 
+                        alert('Imagem copiada com sucesso!'); 
+                    }
+                    catch (e) { 
+                        alert('Erro ao copiar. Seu navegador pode não suportar esta ação.'); 
+                    }
+                    finally { 
+                        document.body.removeChild(wrap); 
+                        btn.innerHTML = orig; 
+                    }
+                });
+            } catch(e) { 
+                alert('Erro ao gerar imagem.'); 
+                btn.innerHTML = orig; 
+            }
+        };
+        function getSelectedCheckboxes(k) { return Array.from(document.querySelectorAll(`.multi-select[data-filter="${k}"] input[type="checkbox"]:checked`)).map(cb => cb.value); }
+        window.toggleChartDatasets = (v) => {
+            ['comp','evol'].forEach(k => { if(chartsInstance[k]) { chartsInstance[k].data.datasets.forEach((_,i) => chartsInstance[k].setDatasetVisibility(i,v)); chartsInstance[k].update(); } });
+        };
+
+        function getSarespWeight(comp, turma, tipo) {
+            const t = String(turma).toUpperCase(), e = String(tipo).toUpperCase(), c = String(comp).toUpperCase();
+            
+            let isEM = e.includes('MEDIO') || t.includes('EM') || t.includes('MEDIO') || /^[123].*(EM|SÉRIE|SERIE)/.test(t);
+            let seg = '9'; // padrão
+            
+            if (isEM) {
+                if (t.includes('1')) seg = 'EM1';
+                else if (t.includes('2')) seg = 'EM2';
+                else if (t.includes('3')) seg = 'EM3';
+                else seg = 'EM1'; 
+            } else {
+                if (t.includes('6')) seg = '6';
+                else if (t.includes('7')) seg = '7';
+                else if (t.includes('8')) seg = '8';
+                else if (t.includes('9')) seg = '9';
+            }
+
+            const P = {
+                '6': { PORT:20, LP:20, LPT:20, MAT:20, CIE:15, GEO:10, HIS:10, ING:5 },
+                '7': { PORT:20, LP:20, LPT:20, MAT:15, CIE:10, GEO:10, HIS:10, ING:5, FIN:5, TEC:5 },
+                '8': { PORT:20, LP:20, LPT:20, MAT:15, CIE:10, GEO:10, HIS:10, ING:5 },
+                '9': { PORT:20, LP:20, LPT:20, MAT:20, CIE:15, GEO:10, HIS:10, ING:5 },
+                'EM1': { PORT:15, LP:15, LPT:15, MAT:15, GEO:8, HIS:8, FIL:8, ING:6, BIO:8, FIS:8, QUI:8 },
+                'EM2': { PORT:15, LP:15, LPT:15, MAT:15, ING:5, GEO:5, HIS:5, SOC:5, BIO:5, FIS:5, QUI:5 },
+                'EM3': { PORT:18, LP:18, LPT:18, MAT:18, ING:7, HIS:10, FIS:7 }
+            };
+            
+            const keys = P[seg] || P['9'];
+            for (const [k,v] of Object.entries(keys)) { 
+                if (c.includes(k)) return v; 
+            }
+            return 10;
+        }
+
+        window.highlightSelectedRow = () => {
+            document.querySelectorAll('table.heatmap tbody tr').forEach(tr => {
+                const h = tr.querySelector('.row-header');
+                if (h && selectedRowEntity && h.textContent.trim() === selectedRowEntity) tr.classList.add('selected-row');
+                else tr.classList.remove('selected-row');
+            });
+        };
+        
+        window.toggleSort = (col) => {
+            if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            else { sortColumn = col; sortDirection = 'desc'; }
+            window.renderHeatmapTable();
+        };
+        
+        window.setViewMode = (mode) => {
+            currentViewMode = mode;
+            ['eval','comp','single','single-aval','compare','general-compare','saresp'].forEach((k,i) => {
+                const modes = ['eval','component','single_component','single_eval','compare','general_compare','saresp'];
+                document.getElementById(`btn-view-${k}`)?.classList.toggle('active', modes[i] === mode);
+            });
+            document.getElementById('sub-filter-comp').style.display = mode === 'single_component' ? 'block' : 'none';
+            document.getElementById('sub-filter-aval').style.display = mode === 'single_eval' ? 'block' : 'none';
+            document.getElementById('compare-filters').style.display = mode === 'compare' ? 'flex' : 'none';
+            document.getElementById('saresp-aval-filter-container').style.display = mode === 'saresp' ? 'block' : 'none';
+            const validRank = ['eval','component','single_component','single_eval'];
+            document.getElementById('btn-toggle-ranking').style.display = validRank.includes(mode) ? 'inline-flex' : 'none';
+            
+            if (mode === 'saresp') {
+                sortColumn = 'indice_geral';
+                sortDirection = 'desc';
+            } else {
+                sortColumn = 'media_geral';
+                sortDirection = 'desc';
+            }
+            window.processViewAndRender();
+        };
+
+        window.getIPC = (idx) => {
+            if(idx===null||idx===undefined||isNaN(idx))return{class:'bg-empty',label:'Sem dados',val:0};
+            if(idx>=6)return{class:'bg-dark-red',label:'Altíssima',val:5};
+            if(idx>=4)return{class:'bg-red',label:'Muito Alta',val:4};
+            if(idx>=2)return{class:'bg-orange',label:'Alta',val:3};
+            if(idx>0)return{class:'bg-yellow',label:'Moderada',val:2};
+            return{class:'bg-green',label:'Baixa',val:1};
+        };
+
+        function showLoading(t='Carregando...') { document.getElementById('loading-text').textContent = t; document.getElementById('loading-overlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+        window.handleLogin = async () => {
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('password').value;
+            const err = document.getElementById('login-error');
+            err.style.display = 'none';
+            if (!window.supabaseClient) { err.style.display='block'; err.textContent='Erro: biblioteca não carregou.'; return; }
+            if (!email || !pass) { err.style.display='block'; err.textContent='Preencha todos os campos.'; return; }
+            try {
+                showLoading('Autenticando...');
+                const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password: pass });
+                if (error) { hideLoading(); err.style.display='block'; err.textContent='Credenciais inválidas: '+error.message; }
+                else { currentUser = data.user; initDashboard(); }
+            } catch(e) { console.error(e); hideLoading(); err.style.display='block'; err.textContent='Falha de conexão: '+e.message; }
+        };
+        window.handleLogout = async () => {
+            showLoading('Saindo...'); await window.supabaseClient.auth.signOut();
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'flex'; hideLoading();
+        };
+
+        async function fetchAllData(table) {
+            let all = [], limit = 1000, start = 0, hasMore = true;
+            while (hasMore) {
+                const { data, error } = await window.supabaseClient.from(table).select('*').range(start, start + limit - 1);
+                if (error) return { error };
+                all.push(...data);
+                if (data.length < limit) hasMore = false; else start += limit;
+            }
+            return { data: all };
+        }
+
+        async function loadAndJoinData() {
+            showLoading('Sincronizando dados...');
+            try {
+                const rAva = await fetchAllData('avaliacoes'); if (rAva.error) throw new Error("Tabela 'avaliacoes': "+rAva.error.message);
+                const rEsc = await fetchAllData('escolas');
+                escolasMap.clear(); (rEsc.data||[]).forEach(e => { if(e.id_escola) escolasMap.set(e.id_escola, e); });
+
+                let resDesempenho, resTurmas;
+                if (userProfile.tipo_usuario === 'ESCOLA') {
+                    document.getElementById('btn-toggle-metas').style.display = 'none';
+                    let allT = [], s = 0, lim = 1000, hm = true;
+                    while(hm) { const {data,error} = await window.supabaseClient.from('turmas').select('*').eq('escola', userProfile.nome_escola).range(s, s+lim-1); if(error) throw error; allT.push(...data); if(data.length<lim) hm=false; else s+=lim; }
+                    resTurmas = {data:allT};
+                    if (!allT.length) { globalData=[]; populateFilters(); window.applyFilters(); hideLoading(); return; }
+                    let allD = []; s=0; hm=true;
+                    while(hm) { const {data,error} = await window.supabaseClient.from('desempenho').select('*').in('id', allT.map(t=>t.id)).range(s, s+lim-1); if(error) throw error; allD.push(...data); if(data.length<lim) hm=false; else s+=lim; }
+                    resDesempenho = {data:allD};
+                } else {
+                    const [rD,rT] = await Promise.all([fetchAllData('desempenho'),fetchAllData('turmas')]);
+                    if(rD.error||rT.error) throw new Error("Erro ao baixar bases.");
+                    resDesempenho=rD; resTurmas=rT;
+                }
+
+                const turmasMap = new Map(); resTurmas.data.forEach(t => { if(t.id) turmasMap.set(t.id,t); });
+                const avalMap = new Map(); rAva.data.forEach(a => { if(a.id) avalMap.set(a.id,a); });
+
+                globalData = resDesempenho.data.map(d => {
+                    const t = turmasMap.get(d.id)||{}, a = avalMap.get(d.id_avaliacao)||{}, eg = escolasMap.get(t.id_escola)||{};
+                    return {
+                        id_turma: d.id, nota: parseFloat(d.nota)||0, avaliados: parseInt(d.avaliados)||0, peso: parseFloat(d.peso)||1,
+                        matriculas: parseInt(t.matriculas)||0, componente: d.componente||'N/A',
+                        turma_nome: d.nome_limpo||t.nome_limpo||'N/A', escola: t.escola||eg.nome_escola||'Desconhecida',
+                        id_escola: t.id_escola||eg.id_escola||null, tipo_classe: t.tipo_classe||'N/A',
+                        tipo_ensino: t.tipo_ensino||'N/A', aval_nome: a.nome||'N/A', aval_tipo: a.tipo||'N/A', aval_bimestre: a.bimestre||'N/A'
+                    };
+                }).filter(d => d.escola!=='Desconhecida' && d.turma_nome!=='Desconhecida');
+
+                populateFilters(); populateSarespFilter(); window.applyFilters(); hideLoading(); window.showDisclaimer();
+            } catch(e) { console.error(e); alert("Erro: "+e.message); hideLoading(); }
+        }
+
+        function populateFilters() {
+            const buildCB = (k, vals) => {
+                const c = document.querySelector(`.multi-select[data-filter="${k}"] .select-options`); if(!c) return; c.innerHTML='';
+                vals.forEach(v => { const l = document.createElement('label'); l.innerHTML=`<input type="checkbox" value="${v.replace(/"/g,'&quot;')}" onchange="window.updateMultiSelectDisplay('${k}');window.applyFilters();"> ${v}`; c.appendChild(l); });
+                window.updateMultiSelectDisplay(k);
+            };
+            buildCB('escola', getUniqueValues(globalData,'escola'));
+            buildCB('componente', getUniqueValues(globalData,'componente'));
+            buildCB('tipo_classe', getUniqueValues(globalData,'tipo_classe'));
+            buildCB('tipo_ensino', getUniqueValues(globalData,'tipo_ensino'));
+
+            const addOpts = (id, vals) => {
+                const s = document.getElementById(id); if(!s) return;
+                s.innerHTML = id==='compare-filter-componente' ? '<option value="GERAL">Geral</option>' : '';
+                vals.forEach(v => s.innerHTML += `<option value="${v}">${v}</option>`);
+            };
+            addOpts('sub-filter-comp', getUniqueValues(globalData,'componente'));
+            addOpts('compare-filter-componente', getUniqueValues(globalData,'componente'));
+
+            let aSet = new Set(); globalData.forEach(d => aSet.add(`${d.aval_bimestre}|||${d.aval_nome}`));
+            let aList = Array.from(aSet).sort();
+            const sA = document.getElementById('sub-filter-aval'); sA.innerHTML='';
+            aList.forEach(v => sA.innerHTML += `<option value="${v}">${v.replace('|||',' - ')}</option>`);
+            const s1 = document.getElementById('comp-aval-1'), s2 = document.getElementById('comp-aval-2');
+            s1.innerHTML=''; s2.innerHTML='';
+            aList.forEach((v,i) => { let lbl=v.replace('|||',' - '); s1.innerHTML+=`<option value="${v}">${lbl}</option>`; s2.innerHTML+=`<option value="${v}" ${i===1?'selected':''}>${lbl}</option>`; });
+        }
+
+        function populateSarespFilter() {
+            const c = document.querySelector(`.multi-select[data-filter="saresp_aval"] .select-options`); if(!c) return; c.innerHTML='';
+            [...new Set(globalData.map(d=>d.aval_nome))].sort().forEach(v => {
+                const l = document.createElement('label'); l.innerHTML=`<input type="checkbox" value="${v.replace(/"/g,'&quot;')}" onchange="window.updateMultiSelectDisplay('saresp_aval');window.processViewAndRender();"> ${v}`; c.appendChild(l);
+            });
+            window.updateMultiSelectDisplay('saresp_aval');
+        }
+
+        function getUniqueValues(data, k) { return [...new Set(data.map(i=>i[k]))].filter(Boolean).sort(); }
+
+        window.applyFilters = () => {
+            const sE=getSelectedCheckboxes('escola'), sC=getSelectedCheckboxes('componente'), sTC=getSelectedCheckboxes('tipo_classe'), sTE=getSelectedCheckboxes('tipo_ensino');
+            filteredData = globalData.filter(d => {
+                const p2026 = !isOnly2026 || ['1','2','3','4'].includes(String(d.aval_bimestre).trim());
+                return (sE.length===0||sE.includes(d.escola)) && (sC.length===0||sC.includes(d.componente)) && (sTC.length===0||sTC.includes(d.tipo_classe)) && (sTE.length===0||sTE.includes(d.tipo_ensino)) && p2026;
+            });
+            window.processViewAndRender();
+        };
+
+        function updatePrintHeader() {
+            const gV = k => { const v=getSelectedCheckboxes(k); return v.length===0?'Todos':v.join(', '); };
+            const gS = id => { const el=document.getElementById(id); return el?.options[el.selectedIndex]?.text||''; };
+            let t = `<strong>Escola(s):</strong> ${gV('escola')} &nbsp;|&nbsp; <strong>Componente(s):</strong> ${gV('componente')} <br> <strong>Classe(s):</strong> ${gV('tipo_classe')} &nbsp;|&nbsp; <strong>Ensino:</strong> ${gV('tipo_ensino')}`;
+            if(currentViewMode==='single_component') t+=`<br><strong>Visão:</strong> Foco no Componente (${gS('sub-filter-comp')})`;
+            if(currentViewMode==='single_eval') t+=`<br><strong>Visão:</strong> Foco na Avaliação (${gS('sub-filter-aval').replace('|||',' - ')})`;
+            if(currentViewMode==='compare') t+=`<br><strong>Visão:</strong> Comparativo (${gS('comp-aval-1').replace('|||',' - ')} vs ${gS('comp-aval-2').replace('|||',' - ')} — ${gS('compare-filter-componente')})`;
+            if(currentViewMode==='saresp') {
+                const teMap = { 'all': 'Todos', 'ef': 'Ensino Fundamental', 'em': 'Ensino Médio' };
+                const arMap = { 'all': 'Geral', 'cnt': 'CNT', 'chs': 'CHS', 'lgg': 'LGG', 'mat': 'MAT', 'lpt': 'LPT/MAT' };
+                t += `<br><strong>Visão:</strong> Prioridades SARESP &nbsp;|&nbsp; <strong>Filtro Área SARESP:</strong> Tipo de Ensino: ${teMap[window.sarespTEFilter]} | Área: ${arMap[sarespAreaFilter]}`;
+            }
+            document.getElementById('print-filters-text').innerHTML = t;
+        }
+
+        window.processViewAndRender = () => {
+            activeData = [...filteredData];
+            if (currentViewMode==='single_component') { const c=document.getElementById('sub-filter-comp').value; if(c) activeData=activeData.filter(d=>d.componente===c); }
+            else if (currentViewMode==='single_eval') { const a=document.getElementById('sub-filter-aval').value; if(a) activeData=activeData.filter(d=>`${d.aval_bimestre}|||${d.aval_nome}`===a); }
+            else if (currentViewMode==='compare') {
+                const a1=document.getElementById('comp-aval-1').value, a2=document.getElementById('comp-aval-2').value, cs=document.getElementById('compare-filter-componente').value;
+                activeData=activeData.filter(d=>{const id=`${d.aval_bimestre}|||${d.aval_nome}`;return id===a1||id===a2;});
+                if(cs!=='GERAL') activeData=activeData.filter(d=>d.componente===cs);
+            }
+            const tb = document.querySelector('.table-toolbar');
+            if (tb) tb.style.display = currentViewMode === 'saresp' ? 'none' : 'flex';
+            
+            updatePrintHeader(); window.renderHeatmapTable(); window.updateChartsAndCards();
+        };
+
+        window.handleRowClick = (name) => {
+            if(selectedRowEntity===name) window.resetRowSelection();
+            else { selectedRowEntity=name; document.getElementById('selected-row-indicator').style.display='flex'; document.getElementById('selected-row-text').textContent=`Filtro ativo: ${name}`; window.updateChartsAndCards(); window.highlightSelectedRow(); }
+        };
+        window.resetRowSelection = () => { selectedRowEntity=null; document.getElementById('selected-row-indicator').style.display='none'; window.updateChartsAndCards(); window.highlightSelectedRow(); };
+
+        function calculateSarespMetrics() {
+            const sel = getSelectedCheckboxes('saresp_aval');
+            let df = activeData.filter(d=>(sel.length===0||sel.includes(d.aval_nome))&&d.nota>0);
+            
+            if (window.sarespTEFilter === 'ef') {
+                df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
+                df = df.filter(d => !['FIS','QUI','BIO','FIL','SOC'].includes(d.componente.toUpperCase()));
+            } else if (window.sarespTEFilter === 'em') {
+                df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
+                df = df.filter(d => d.componente.toUpperCase() !== 'CIE');
+            }
+
+            let dfFiltered = sarespAreaFilter==='all' ? df : df.filter(d=>compMatchesArea(d.componente, sarespAreaFilter));
+
+            let cg = {}; dfFiltered.forEach(d=>{if(!cg[d.componente])cg[d.componente]=[];cg[d.componente].push(d);});
+            let res = [], all = [];
+            Object.keys(cg).forEach(cName=>{
+                let rows=cg[cName];
+                let sP=0,tW=0; rows.forEach(d=>{let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);sP+=d.nota*p*d.avaliados;tW+=p*d.avaliados;});
+                let m=tW>0?sP/tW:0; if(tW>0) { res.push({label:cName,media:m,totalWeight:tW}); all.push(m); }
+            });
+            let cm=all.length?all.reduce((a,b)=>a+b,0)/all.length:0;
+            let sd=Math.sqrt(all.reduce((a,b)=>a+Math.pow(b-cm,2),0)/(all.length||1))||1;
+            res.forEach(m=>{let z=(m.media-cm)/sd,ipp=100+z*20;m.ipp=Math.max(0,Math.min(200,ipp));m.proficiencia=m.ipp<100?'Muito Baixo':m.ipp<=120?'Básico':m.ipp<=140?'Adequado':'Avançado';});
+            return res;
+        }
+
+        window.updateChartsAndCards = () => {
+            const cardsGrid = document.querySelector('.cards-grid');
+            if (currentViewMode === 'saresp') {
+                if (cardsGrid) cardsGrid.style.display = 'none';
+                renderCharts(activeData); return;
+            }
+            if (cardsGrid) cardsGrid.style.display = '';
+
+            let sub = [...activeData];
+            const isUre = userProfile.tipo_usuario!=='ESCOLA'&&getSelectedCheckboxes('escola').length===0;
+            if(selectedRowEntity) sub = isUre?sub.filter(d=>d.escola===selectedRowEntity):sub.filter(d=>d.turma_nome===selectedRowEntity);
+            if(!sub.length){ ['card-media-geral','card-melhor-disc','card-pior-disc','card-melhor-entidade','card-pior-entidade'].forEach(id=>{document.getElementById(id).innerHTML='—';}); renderCharts(sub); return; }
+            let sP=0,tW=0; sub.forEach(d=>{if(d.nota>0){sP+=d.nota*d.avaliados*d.peso;tW+=d.avaliados*d.peso;}});
+            document.getElementById('card-media-geral').textContent = tW?(sP/tW).toFixed(2).replace('.',','):'—';
+            const compData = calculateAverages(sub,'componente',false).filter(d=>d.label!=='N/A');
+            const renderPodium = (id,data,isWorst) => {
+                if(!data.length){document.getElementById(id).innerHTML='—';return;}
+                let html='<ul class="podium-list">';
+                data.forEach((d,i)=>{let c=i===0?(isWorst?'var(--rose)':'var(--emerald)'):'var(--text)';html+=`<li style="color:${c};"><span>${i+1}º ${d.label}</span><strong>${d.media.replace('.',',')}</strong></li>`;});
+                document.getElementById(id).innerHTML=html+'</ul>';
+            };
+            renderPodium('card-melhor-disc',compData.slice(0,3),false);
+            renderPodium('card-pior-disc',[...compData].reverse().slice(0,3),true);
+            const ef = isUre?'escola':'turma_nome';
+            document.getElementById('label-destaque-ent').textContent=isUre?'Escolas':'Turmas';
+            document.getElementById('label-pior-ent').textContent=isUre?'Escolas':'Turmas';
+            const entData = calculateAverages(sub,ef,false).filter(d=>d.label!=='N/A');
+            renderPodium('card-melhor-entidade',entData.slice(0,3),false);
+            renderPodium('card-pior-entidade',[...entData].reverse().slice(0,3),true);
+            renderCharts(sub);
+        };
+
+        function calculateAverages(data, field, chrono=false) {
+            const g={};
+            data.forEach(d=>{if(d.nota<=0)return;let k=field==='aval_nome'?`${d.aval_bimestre}|||${d.aval_nome}`:d[field];if(!g[k])g[k]={sP:0,tW:0,al:0};g[k].sP+=d.nota*d.avaliados*d.peso;g[k].tW+=d.avaliados*d.peso;g[k].al+=d.avaliados;});
+            let res=Object.keys(g).map(k=>({label:k,media:g[k].tW?(g[k].sP/g[k].tW).toFixed(2):'0',avaliados:g[k].al}));
+            if(chrono){res.sort((a,b)=>{const o=v=>{const b=v.split('|||')[0].toLowerCase();if(b.includes('2025'))return 0;let n=parseInt(b.replace(/\D/g,''));return isNaN(n)?99:n;};return o(a.label)-o(b.label)||a.label.localeCompare(b.label);});res.forEach(r=>r.label=r.label.split('|||')[1]);}
+            else res.sort((a,b)=>b.media-a.media);
+            return res;
+        }
+
+        const calcPart = (mapAval, isUre) => {
+            let hC=0,mat=0; const ue=new Set();
+            mapAval.forEach(v=>{hC+=v.aval;if(isUre){if(v.idEsc&&escolasMap.has(v.idEsc))ue.add(v.idEsc);else mat+=v.mat;}else mat+=v.mat;});
+            if(isUre) ue.forEach(id=>{mat+=parseInt(escolasMap.get(id)?.total_alunos)||0;});
+            return mat>0?(hC/mat)*100:0;
+        };
+
+        window.renderHeatmapTable = function() {
+            const container = document.getElementById('heatmap-container');
+            if(!activeData.length){container.innerHTML='<p style="padding:1rem;color:var(--muted);">Sem dados para o filtro selecionado.</p>';return;}
+            const isUre = userProfile.tipo_usuario!=='ESCOLA'&&getSelectedCheckboxes('escola').length===0;
+            const rowKey = isUre?'escola':'turma_nome';
+            window.sarespAuditMap = {};
+            window.sarespOverallMap = {};
+            const isRankMode = isRankingView&&['eval','component','single_component','single_eval'].includes(currentViewMode);
+
+            /* ── SARESP MODE ── */
+            if(currentViewMode==='saresp'){
+                const selSA=getSelectedCheckboxes('saresp_aval');
+                let df=activeData.filter(d=>(selSA.length===0||selSA.includes(d.aval_nome))&&d.nota>0);
+
+                if (window.sarespTEFilter === 'ef') {
+                    df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('FUNDAMENTAL'));
+                    df = df.filter(d => !['FIS','QUI','BIO','FIL','SOC'].includes(d.componente.toUpperCase()));
+                } else if (window.sarespTEFilter === 'em') {
+                    df = df.filter(d => String(d.tipo_ensino).toUpperCase().includes('MÉDIO') || String(d.tipo_ensino).toUpperCase().includes('MEDIO'));
+                    df = df.filter(d => d.componente.toUpperCase() !== 'CIE');
+                }
+
+                let dfFiltered = sarespAreaFilter==='all' ? df : df.filter(d=>compMatchesArea(d.componente, sarespAreaFilter));
+
+                let gcg={};dfFiltered.forEach(d=>{if(!gcg[d.componente])gcg[d.componente]=[];gcg[d.componente].push(d);});
+                let allAvg=[];
+                Object.keys(gcg).forEach(cN=>{
+                    let rows=gcg[cN];
+                    let sP=0,tW=0;
+                    rows.forEach(d=>{let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);sP+=d.nota*p*d.avaliados;tW+=p*d.avaliados;});
+                    if(tW>0)allAvg.push(sP/tW);
+                });
+                let cm=allAvg.length?allAvg.reduce((a,b)=>a+b,0)/allAvg.length:0;
+                let sd=Math.sqrt(allAvg.reduce((a,b)=>a+Math.pow(b-cm,2),0)/(allAvg.length||1))||1;
+
+                let cols=Array.from(new Set(dfFiltered.map(d=>d.componente))).sort();
+                let ents=Array.from(new Set(dfFiltered.map(d=>d[rowKey]))).sort();
+                let mS={};let mxI=0;
+                ents.forEach(e=>{
+                    if(!window.sarespAuditMap[e])window.sarespAuditMap[e]={};
+                    mS[e]={componentes:{},notaGeralEstimada:null,sumIPPxPeso:0,sumPeso:0};
+                    let ed=dfFiltered.filter(d=>d[rowKey]===e);
+                    cols.forEach(c=>{
+                        let cd=ed.filter(d=>d.componente===c);
+                        if(!cd.length){mS[e].componentes[c]=null;return;}
+                        let N=cd.length;
+                        let sP=0,tW=0,oAl=0,pSC=10;
+                        cd.forEach((d,i)=>{
+                            let p=getSarespWeight(d.componente,d.turma_nome,d.tipo_ensino);
+                            if(i===0)pSC=p;
+                            sP+=d.nota*p*d.avaliados;
+                            tW+=p*d.avaliados;
+                            oAl+=d.avaliados;
+                        });
+                        let mo=tW>0?sP/tW:0;
+                        if(tW>0){
+                            let ma=sP/tW,z=(ma-cm)/sd,ipp=Math.max(0,Math.min(200,100+z*20));
+                            mS[e].componentes[c]=ipp;mS[e].sumIPPxPeso+=ipp*pSC;mS[e].sumPeso+=pSC;
+                            let imp=pSC*oAl;if(imp>mxI)mxI=imp;
+                            window.sarespAuditMap[e][c]={
+                                entidade:e,componente:c,totalRowsOriginal:N,
+                                alunosConsiderados:oAl,sumProductOriginal:sP,sumWeightOriginal:tW,
+                                mediaOriginal:mo,contextMean:cm,contextStdDev:sd,zScore:z,
+                                ippEscola:ipp,pesoSaresp:pSC,impactoBruto:imp
+                            };
+                        }else{mS[e].componentes[c]=null;}
+                    });
+                    if(mS[e].sumPeso>0)mS[e].notaGeralEstimada=mS[e].sumIPPxPeso/mS[e].sumPeso;
+                });
+                
+                let metrics=calculateSarespMetrics();
+                let ippRede={};metrics.forEach(m=>ippRede[m.label]=m.ipp);
+                
+                let iM={};
+                ents.forEach(e=>{
+                    iM[e]={componentes:{},indiceGeral:0,sumImpacto:0};
+                    cols.forEach(c=>{
+                        let te=mS[e].componentes[c];
+                        if(te!==null&&te!==undefined&&ippRede[c]!==undefined&&window.sarespAuditMap[e]?.[c]){
+                            let imp=window.sarespAuditMap[e][c].impactoBruto,iN=mxI>0?imp/mxI:0,dI=ippRede[c]-te,idx=iN*dI*2.5; 
+                            iM[e].componentes[c]={ipp:te,indice:idx,impacto:imp};
+                            iM[e].indiceGeral+=idx*imp;iM[e].sumImpacto+=imp;
+                            window.sarespAuditMap[e][c].impactoNorm=iN;window.sarespAuditMap[e][c].desempenhoInverso=dI;window.sarespAuditMap[e][c].indice=idx;window.sarespAuditMap[e][c].ippRede=ippRede[c];
+                        }else{iM[e].componentes[c]=null;}
+                    });
+                    iM[e].indiceGeral=iM[e].sumImpacto>0?iM[e].indiceGeral/iM[e].sumImpacto:null;
+                });
+
+                window.sarespOverallMap = iM;
+
+                const sortEnts = (arr, useIndice) => arr.sort((a,b)=>{
+                    let vA,vB;
+                    if(sortColumn==='row_header'){vA=a;vB=b;}
+                    else if(sortColumn==='nota_geral'||sortColumn==='media_geral'){vA=mS[a].notaGeralEstimada??-999;vB=mS[b].notaGeralEstimada??-999;}
+                    else if(sortColumn==='indice_geral'){vA=iM[a].indiceGeral??-999;vB=iM[b].indiceGeral??-999;}
+                    else{
+                        vA=useIndice?(iM[a].componentes[sortColumn]?.indice??-999):(mS[a].componentes[sortColumn]??-999);
+                        vB=useIndice?(iM[b].componentes[sortColumn]?.indice??-999):(mS[b].componentes[sortColumn]??-999);
+                    }
+                    return sortColumn==='row_header'?(sortDirection==='asc'?vA.localeCompare(vB):vB.localeCompare(vA)):(sortDirection==='asc'?(vA>vB?1:-1):(vA<vB?1:-1));
+                });
+
+                sortEnts(ents, false);
+                let impEnts=[...ents];sortEnts(impEnts,true);
+
+                const CC = v => v<100?'bg-red':v<120?'bg-yellow':v<=140?'bg-green':'bg-blue-ipp';
+
+                let htmlAreaPanel = `
+                <div class="saresp-panel" data-html2canvas-ignore="true">
+                    <div class="saresp-panel-header">
+                        <div class="saresp-panel-header-left">
+                            <div class="saresp-panel-title"><img src="./imagens/bullseye-arrow.png" alt="" style="filter: brightness(0) invert(1);"> Prioridades SARESP</div>
+                            <div class="saresp-panel-sub">Filtre por área do conhecimento para focar a análise pedagógica</div>
+                        </div>
+                    </div>
+                    <div class="saresp-panel-body">
+                        <div class="area-filter-label" style="margin-top:0;">Tipo de Ensino</div>
+                        <div class="area-btns" style="margin-bottom:1.25rem;">
+                            <button id="saresp-te-all" class="area-btn te-btn-all ${window.sarespTEFilter==='all'?'active':''}" onclick="window.setSarespTE('all')"><img src="./imagens/school.png" alt=""> Ambos</button>
+                            <button id="saresp-te-ef" class="area-btn te-btn-ef ${window.sarespTEFilter==='ef'?'active':''}" onclick="window.setSarespTE('ef')"><img src="./imagens/apple-books.png" alt=""> Ensino Fundamental</button>
+                            <button id="saresp-te-em" class="area-btn te-btn-em ${window.sarespTEFilter==='em'?'active':''}" onclick="window.setSarespTE('em')"><img src="./imagens/graduation-cap.png" alt=""> Ensino Médio</button>
+                        </div>
+                        <div class="area-filter-label">Área do Conhecimento</div>
+                        <div class="area-btns">
+                            <button id="area-btn-all" class="area-btn area-btn-all ${sarespAreaFilter==='all'?'active':''}" onclick="window.setSarespArea('all')"><img src="./imagens/earth-americas.png" alt=""> Geral</button>
+                            <button id="area-btn-cnt" class="area-btn area-btn-cnt ${sarespAreaFilter==='cnt'?'active':''}" onclick="window.setSarespArea('cnt')"><img src="./imagens/microscope-bacteria.png" alt=""> CNT <span class="area-tag">BIO · QUI · FIS · CIE</span></button>
+                            <button id="area-btn-chs" class="area-btn area-btn-chs ${sarespAreaFilter==='chs'?'active':''}" onclick="window.setSarespArea('chs')"><img src="./imagens/pillar.png" alt=""> CHS <span class="area-tag">HIS · GEO · FIL · SOC</span></button>
+                            <button id="area-btn-lgg" class="area-btn area-btn-lgg ${sarespAreaFilter==='lgg'?'active':''}" onclick="window.setSarespArea('lgg')"><img src="./imagens/english.png" alt=""> LGG <span class="area-tag">LPT · ING</span></button>
+                            <button id="area-btn-mat" class="area-btn area-btn-mat ${sarespAreaFilter==='mat'?'active':''}" onclick="window.setSarespArea('mat')"><img src="./imagens/square-root.png" alt=""> MAT <span class="area-tag">Matemática</span></button>
+                            <button id="area-btn-lpt" class="area-btn area-btn-lpt ${sarespAreaFilter==='lpt'?'active':''}" onclick="window.setSarespArea('lpt')"><img src="./imagens/star.png" alt=""> LPT/MAT <span class="area-tag">Port. + Mat.</span></button>
+                        </div>
+                        <div class="area-comps-hint" id="area-comps-hint"></div>
+                    </div>
+                </div>`;
+
+                let btn2026Class = isOnly2026 ? 'tbl-btn-green' : 'tbl-btn-blue';
+                let btn2026Text = isOnly2026 ? '<img src="./imagens/calendar-lines.png" alt=""> Incluir Anteriores' : '<img src="./imagens/calendar-lines.png" alt=""> Somente 2026';
+
+                let htmlImpact = `
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:.75rem;">
+                    <div>
+                        <h3 style="color:var(--navy);font-size:.95rem;font-weight:700;margin-bottom:.2rem;display:flex;align-items:center;gap:.3rem;"><img src="./imagens/thumbtack.png" alt=""> Matriz de Prioridade Pedagógica</h3>
+                        <p style="font-size:.78rem;color:var(--muted);">Impacto real combinando defasagem IPP × peso SARESP × número de alunos</p>
+                    </div>
+                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-start;">
+                        <button class="tbl-btn tbl-btn-green" onclick="window.copyTableAsImage(event)"><img src="./imagens/camera.png" alt=""> Copiar imagem</button>
+                        <button class="tbl-btn ${btn2026Class}" id="btn-toggle-2026-saresp" onclick="window.toggleOnly2026()">${btn2026Text}</button>
+                        <button class="tbl-btn" style="background:rgba(14,165,233,.1);color:var(--sky);font-weight:700;" onclick="window.openSimulator()"><img src="./imagens/rocket-lunch.png" alt=""> Simulando Impactos</button>
+                        <button class="tbl-btn" style="background:rgba(16,185,129,.1);color:var(--teal);font-weight:700;" onclick="document.getElementById('entenda-matriz-modal').style.display='flex'"><img src="./imagens/scale-comparison.png" alt=""> Entenda a Matriz</button>
+                    </div>
+                </div>`;
+                
+                htmlImpact+=`<div style="font-size:.78rem;display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;background:var(--bg);padding:.6rem .85rem;border-radius:var(--radius);border:1px solid var(--border);">
+                    <strong>Prioridade:</strong>
+                    <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:#991b1b;"></span> Altíssima (≥6)</span>
+                    <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--rose);"></span> Muito Alta (≥4)</span>
+                    <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--orange);"></span> Alta (≥2)</span>
+                    <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:#fef08a;border:1px solid #d97706;"></span> Moderada (&gt;0)</span>
+                    <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--emerald);"></span> Baixa (≤0)</span>
+                </div>`;
+                htmlImpact+=`<table class="heatmap" style="margin-bottom:2rem; table-layout:fixed; width:100%;"><thead><tr><th style="width:45px;">Ord.</th><th class="row-header" onclick="window.toggleSort('row_header')" style="width:220px;">Unidade ${sortColumn==='row_header'?(sortDirection==='asc'?'▲':'▼'):''}</th><th onclick="window.toggleSort('indice_geral')" style="cursor:pointer;width:120px;">Prioridade Geral ${sortColumn==='indice_geral'?(sortDirection==='asc'?'▲':'▼'):''}</th>`;
+                cols.forEach(c=>htmlImpact+=`<th onclick="window.toggleSort('${c.replace(/'/g,"\\'")}');return false;" style="cursor:pointer;">${c} ${sortColumn===c?(sortDirection==='asc'?'▲':'▼'):''}</th>`);
+                htmlImpact+=`</tr></thead><tbody>`;
+                impEnts.forEach((e,i)=>{
+                    let rD=iM[e],pG=window.getIPC(rD.indiceGeral);
+                    htmlImpact+=`<tr><td style="font-weight:700;color:var(--light);">${i+1}º</td><td class="row-header">${e}</td><td class="${pG.class}" onclick="window.openOverallPriorityAudit('${e.replace(/'/g,"\\'")}');return false;" style="cursor:pointer;">${pG.label}</td>`;
+                    
+                    cols.forEach(c => {
+                        let cd = rD.componentes[c];
+                        if (cd) {
+                            let p = window.getIPC(cd.indice);
+                            if (window.sarespAuditMap[e]?.[c]) window.sarespAuditMap[e][c].classificacao = p.label;
+                            htmlImpact += `<td class="${p.class}" onclick="window.openSarespAudit('${e.replace(/'/g,"\\'")}','${c.replace(/'/g,"\\'")}');return false;" style="cursor:pointer; line-height: 1.25;"><span style="font-size: 0.75em; font-weight: 600; opacity: 0.85;">${cd.ipp.toFixed(0)}</span><br><span style="font-size: 1.05em; font-weight: 800;">${p.label}</span></td>`;
+                        } else {
+                            htmlImpact += `<td class="bg-empty" onclick="window.openSarespAuditEmpty()">-</td>`;
+                        }
+                });
+                    
+                    htmlImpact+=`</tr>`;
+                });
+                htmlImpact+=`</tbody></table>`;
+
+                let htmlSaresp = `<h3 style="margin-bottom:.6rem;color:var(--navy);font-size:.95rem;font-weight:700;"><img src="./imagens/stats.png" alt=""> Resumo Global</h3>`;
+                let metricsFiltered = sarespAreaFilter==='all' ? metrics : metrics.filter(m=>compMatchesArea(m.label, sarespAreaFilter));
+                htmlSaresp += `<table class="heatmap" style="margin-bottom:2rem; table-layout:fixed; width:100%;"><thead><tr><th style="width: 220px;">Componente</th><th style="width: 150px;">Registros Ponderados</th><th style="width: 150px;">Média Simulada</th><th style="color:var(--purple); width: 120px;">IPP Estimado</th><th style="width: 120px;">Nível</th></tr></thead><tbody>`;
+                metricsFiltered.forEach(m=>{let fc=m.media<3?'bg-red':m.media>5?'bg-green':'bg-yellow',tc=m.ipp<100?'bg-red':m.ipp>120?'bg-green':'bg-yellow';htmlSaresp+=`<tr><td class="row-header" style="text-align:center;font-weight:700;">${m.label}</td><td>${m.totalWeight.toLocaleString()}</td><td class="${fc}">${m.media.toFixed(2).replace('.',',')}</td><td style="font-weight:700;color:var(--purple);">${m.ipp.toFixed(1).replace('.',',')}</td><td class="${tc}">${m.proficiencia}</td></tr>`;});
+                htmlSaresp+=`</tbody></table>`;
+
+                let htmlMatrix = `<h3 style="margin-bottom:.6rem;color:var(--navy);font-size:.95rem;font-weight:700;"><img src="./imagens/bullseye-arrow.png" alt=""> Matriz de Proficiência IPP Estimada</h3>`;
+                htmlMatrix+=`<div style="font-size:.78rem;display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;background:var(--bg);padding:.6rem .85rem;border-radius:var(--radius);border:1px solid var(--border);">
+                    <strong>Escala IPP:</strong>
+                    <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--rose);"></span> &lt;100</span>
+                    <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:#fef08a;border:1px solid #d97706;"></span> 100–119</span>
+                    <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--emerald);"></span> 120–140</span>
+                    <span style="display:flex;align-items:center;gap:.3rem;"><span class="dot" style="background:var(--sky);"></span> &gt;140</span>
+                </div>`;
+                htmlMatrix+=`<table class="heatmap" style="margin-bottom:2rem; table-layout:fixed; width:100%;"><thead><tr><th style="width:45px;">Clas.</th><th class="row-header" onclick="window.toggleSort('row_header')" style="width: 220px;">Unidade ${sortColumn==='row_header'?(sortDirection==='asc'?'▲':'▼'):''}</th><th onclick="window.toggleSort('nota_geral')" style="color:var(--purple);cursor:pointer; width: 120px;">Nota Geral Est. ${sortColumn==='nota_geral'?(sortDirection==='asc'?'▲':'▼'):''}</th>`;
+                cols.forEach(c=>htmlMatrix+=`<th onclick="window.toggleSort('${c.replace(/'/g,"\\'")}');return false;" style="cursor:pointer;">${c} ${sortColumn===c?(sortDirection==='asc'?'▲':'▼'):''}</th>`);
+                htmlMatrix+=`</tr></thead><tbody>`;
+                ents.forEach((e,i)=>{
+                    htmlMatrix+=`<tr><td style="font-weight:700;color:var(--light);">${i+1}º</td><td class="row-header">${e}</td>`;
+                    let vG=mS[e].notaGeralEstimada;
+                    htmlMatrix+=vG!==null?`<td class="${CC(vG)}" style="font-size:1.02rem;">${vG.toFixed(1).replace('.',',')}</td>`:`<td class="bg-empty" onclick="window.openSarespAuditEmpty()">-</td>`;
+                    cols.forEach(c=>{let v=mS[e].componentes[c];htmlMatrix+=v!==null&&v!==undefined?`<td class="${CC(v)}" onclick="window.openSarespAudit('${e.replace(/'/g,"\\'")}','${c.replace(/'/g,"\\'")}');return false;">${v.toFixed(1).replace('.',',')}</td>`:`<td class="bg-empty" onclick="window.openSarespAuditEmpty()">-</td>`;});
+                    htmlMatrix+=`</tr>`;
+                });
+                htmlMatrix+=`</tbody></table>`;
+
+                container.innerHTML = htmlAreaPanel + htmlImpact + htmlSaresp + htmlMatrix;
+                setTimeout(()=>updateAreaChips(sarespAreaFilter), 0);
+                return;
+            }
+
+            /* ── NORMAL MODES ── */
+            let cSet=new Set();
+            const isTimeBased = ['eval','single_component','compare','general_compare'].includes(currentViewMode);
+            if(isTimeBased) activeData.forEach(d=>cSet.add(`${d.aval_bimestre}|||${d.aval_nome}`));
+            else activeData.forEach(d=>cSet.add(d.componente));
+            let colunas=Array.from(cSet);
+
+            if(isTimeBased) colunas.sort((a,b)=>{const o=v=>{const b=v.split('|||')[0].toLowerCase();if(b.includes('2025'))return 0;let n=parseInt(b.replace(/\D/g,''));return isNaN(n)?99:n;};return o(a)-o(b)||a.localeCompare(b);});
+            else colunas.sort();
+
+            if(currentViewMode==='compare'){
+                const a1=document.getElementById('comp-aval-1').value,a2=document.getElementById('comp-aval-2').value;
+                colunas=[];if(a1)colunas.push(a1);if(a2&&a2!==a1)colunas.push(a2);
+                if(colunas.length===2){colunas.push('VARIACAO');colunas.push('VARIACAO_PART');}
+            }
+
+            let titulo = isUre?'Acompanhamento por Escolas':'Acompanhamento por Turmas';
+            if(currentViewMode==='single_component') titulo+=` — ${document.getElementById('sub-filter-comp').value}`;
+            else if(currentViewMode==='single_eval') titulo+=` — ${document.getElementById('sub-filter-aval').value.replace('|||',' - ')}`;
+            else if(currentViewMode==='compare'){const cs=document.getElementById('compare-filter-componente').value;titulo=`Comparativo — ${cs==='GERAL'?'Todos os Componentes':cs}`;}
+            else if(currentViewMode==='general_compare') titulo=`Comparativo Geral`;
+            document.getElementById('table-title-context').textContent=titulo;
+
+            const matriz={},rowTot={},partLinha={};
+            activeData.forEach(d=>{
+                const r=d[rowKey],c=isTimeBased?`${d.aval_bimestre}|||${d.aval_nome}`:d.componente;
+                if(!matriz[r])matriz[r]={};if(!matriz[r][c])matriz[r][c]={sumProduct:0,totalWeight:0,idEscolaContext:d.id_escola,mapAval:new Map()};
+                if(d.nota>0){matriz[r][c].sumProduct+=d.nota*d.avaliados*d.peso;matriz[r][c].totalWeight+=d.avaliados*d.peso;if(!rowTot[r])rowTot[r]={sumProduct:0,totalWeight:0};rowTot[r].sumProduct+=d.nota*d.avaliados*d.peso;rowTot[r].totalWeight+=d.avaliados*d.peso;}
+                if(d.id_turma)matriz[r][c].mapAval.set(d.id_turma,{aval:d.avaliados,mat:d.matriculas,idEsc:d.id_escola});
+            });
+            let rows=Object.keys(matriz);
+
+            rows.forEach(r=>{
+                const sl=activeData.filter(d=>d[rowKey]===r);
+                const mAv=new Map();sl.forEach(d=>{if(d.id_turma)mAv.set(d.id_turma,d.avaliados);});
+                let hC=0;mAv.forEach(v=>hC+=v);
+                let mat=0;
+                if(isUre){const uIds=[...new Set(sl.map(d=>d.id_escola))].filter(Boolean);if(uIds.length&&escolasMap.size){uIds.forEach(id=>mat+=parseInt(escolasMap.get(id)?.total_alunos)||0);}else{const mM=new Map();sl.forEach(d=>{if(d.id_turma)mM.set(d.id_turma,d.matriculas);});mM.forEach(v=>mat+=v);}}
+                else{const mM=new Map();sl.forEach(d=>{if(d.id_turma)mM.set(d.id_turma,d.matriculas);});mM.forEach(v=>mat+=v);}
+                partLinha[r]={avaliados:hC,matriculados:mat,participacao:mat>0?(hC/mat)*100:0};
+            });
+
+            let rankCols={};
+            if(isRankMode){
+                colunas.forEach(c=>{let cv=[];rows.forEach(r=>{let cell=matriz[r][c];if(cell&&cell.totalWeight>0)cv.push({r,val:cell.sumProduct/cell.totalWeight});});cv.sort((a,b)=>b.val-a.val);let rm={};cv.forEach((item,i)=>rm[item.r]={pos:i+1,total:cv.length});rankCols[c]=rm;});
+                let cv=[];rows.forEach(r=>{let rt=rowTot[r];if(rt&&rt.totalWeight>0)cv.push({r,val:rt.sumProduct/rt.totalWeight});});cv.sort((a,b)=>b.val-a.val);let rm={};cv.forEach((item,i)=>rm[item.r]={pos:i+1,total:cv.length});rankCols['media_geral']=rm;
+            }
+
+            rows.sort((a,b)=>{
+                let vA,vB;
+                if(sortColumn==='row_header'){vA=a;vB=b;}
+                else if(sortColumn==='meta_ouro'){vA=getMetasEscola(a).o==='-'?0:getMetasEscola(a).o;vB=getMetasEscola(b).o==='-'?0:getMetasEscola(b).o;}
+                else if(sortColumn==='meta_diamante'){vA=getMetasEscola(a).d==='-'?0:getMetasEscola(a).d;vB=getMetasEscola(b).d==='-'?0:getMetasEscola(b).d;}
+                else if(sortColumn==='avaliados'){vA=partLinha[a].avaliados;vB=partLinha[b].avaliados;}
+                else if(sortColumn==='matriculados'){vA=partLinha[a].matriculados;vB=partLinha[b].matriculados;}
+                else if(sortColumn==='participacao'){vA=partLinha[a].participacao;vB=partLinha[b].participacao;}
+                else if(sortColumn==='media_geral'){vA=rowTot[a]?.totalWeight?(rowTot[a].sumProduct/rowTot[a].totalWeight):0;vB=rowTot[b]?.totalWeight?(rowTot[b].sumProduct/rowTot[b].totalWeight):0;}
+                else if(sortColumn==='VARIACAO'){
+                    const a1=colunas[0],a2=colunas[1];
+                    let n1A=matriz[a]?.[a1]?.totalWeight>0?matriz[a][a1].sumProduct/matriz[a][a1].totalWeight:null;let n2A=matriz[a]?.[a2]?.totalWeight>0?matriz[a][a2].sumProduct/matriz[a][a2].totalWeight:null;
+                    let n1B=matriz[b]?.[a1]?.totalWeight>0?matriz[b][a1].sumProduct/matriz[b][a1].totalWeight:null;let n2B=matriz[b]?.[a2]?.totalWeight>0?matriz[b][a2].sumProduct/matriz[b][a2].totalWeight:null;
+                    vA=n1A!==null&&n2A!==null?n2A-n1A:-999;vB=n1B!==null&&n2B!==null?n2B-n1B:-999;
+                } else if(sortColumn==='VARIACAO_PART'){
+                    const a1=colunas[0],a2=colunas[1];
+                    let p1A=matriz[a]?.[a1]?calcPart(matriz[a][a1].mapAval,isUre):null,p2A=matriz[a]?.[a2]?calcPart(matriz[a][a2].mapAval,isUre):null;
+                    let p1B=matriz[b]?.[a1]?calcPart(matriz[b][a1].mapAval,isUre):null,p2B=matriz[b]?.[a2]?calcPart(matriz[b][a2].mapAval,isUre):null;
+                    vA=p1A!==null&&p2A!==null&&p1A>0&&p2A>0?p2A-p1A:-999;vB=p1B!==null&&p2B!==null&&p1B>0&&p2B>0?p2B-p1B:-999;
+                } else {
+                    vA=matriz[a]?.[sortColumn]?.totalWeight>0?matriz[a][sortColumn].sumProduct/matriz[a][sortColumn].totalWeight:-1;
+                    vB=matriz[b]?.[sortColumn]?.totalWeight>0?matriz[b][sortColumn].sumProduct/matriz[b][sortColumn].totalWeight:-1;
+                }
+                return sortColumn==='row_header'?(sortDirection==='asc'?vA.localeCompare(vB):vB.localeCompare(vA)):(sortDirection==='asc'?(vA>vB?1:-1):(vA<vB?1:-1));
+            });
+
+            const TH = (label, col, style='') => `<th onclick="window.toggleSort('${col}')" style="cursor:pointer;${style}">${label} ${sortColumn===col?(sortDirection==='asc'?'▲':'▼'):''}</th>`;
+            let html=`<table class="heatmap"><thead><tr>`;
+            html+=`<th style="width:45px;">Clas.<br><span style="font-size:.7rem;opacity:.7;">/${rows.length}</span></th>`;
+            html+=TH('Unidade / Sala','row_header', 'width: 220px;');
+            html+=TH('Pres.','avaliados', 'width: 55px;');
+            html+=TH('Matric.','matriculados', 'width: 65px;');
+            html+=TH('Part. %','participacao', 'width: 70px;');
+            colunas.forEach(c=>{
+                let lbl=c==='VARIACAO'?'Evolução<br><span style="font-size:.7rem;font-weight:400;">(Nota)</span>':c==='VARIACAO_PART'?'Evolução<br><span style="font-size:.7rem;font-weight:400;">(Partic.)</span>':c.includes('|||')?`${c.split('|||')[0]}<br><span style="font-size:.7rem;font-weight:400;">${c.split('|||')[1]}</span>`:c;
+                html+=TH(lbl,c);
+            });
+            if(currentViewMode!=='compare') html+=TH('Média Geral','media_geral','border-left:3px solid rgba(255,255,255,.3); width: 85px;');
+            if(isUre&&isMetasVisible){html+=`<th style="color:#fef08a; width: 75px;">Meta Ouro</th><th style="color:var(--sky); width: 85px;">Meta Diamante</th>`;}
+            html+=`</tr></thead><tbody>`;
+
+            const FV = (v,prefix='',suffix='') => { const diff=parseFloat(v); return `${diff>0.1?'▲ ':(diff<-0.1?'▼ ':'')}${prefix}${Math.abs(diff).toFixed(2).replace('.',',')}${suffix}`; };
+            const CC2 = n => n<3?'bg-red':n>5?'bg-green':'bg-yellow';
+
+            if(isUre){
+                let gAv=0,gMat=0;rows.forEach(r=>{gAv+=partLinha[r].avaliados;gMat+=partLinha[r].matriculados;});
+                let gP=gMat>0?(gAv/gMat)*100:0;
+                let gCT={};colunas.forEach(c=>{gCT[c]={sumProduct:0,totalWeight:0,mapAval:new Map()};rows.forEach(r=>{if(matriz[r]?.[c]?.totalWeight>0){gCT[c].sumProduct+=matriz[r][c].sumProduct;gCT[c].totalWeight+=matriz[r][c].totalWeight;matriz[r][c].mapAval.forEach((v,k)=>gCT[c].mapAval.set(k,v));}});});
+                html+=`<tr style="background:var(--bg);font-weight:700;border-bottom:2px solid var(--navy);">`;
+                html+=`<td colspan="2" class="row-header" style="background:#e0e7ff;color:var(--navy);font-weight:800;">MÉDIA GLOBAL</td>`;
+                html+=`<td>${gAv}</td><td>${gMat}</td><td style="color:var(--sky);font-weight:800;">${gP.toFixed(1).replace('.',',')}%</td>`;
+                colunas.forEach(c=>{
+                    if(c==='VARIACAO'){const a1=colunas[0],a2=colunas[1];let n1=gCT[a1]?.totalWeight>0?gCT[a1].sumProduct/gCT[a1].totalWeight:null,n2=gCT[a2]?.totalWeight>0?gCT[a2].sumProduct/gCT[a2].totalWeight:null;if(n1!==null&&n2!==null){let d=n2-n1;html+=`<td style="color:${d>0.1?'var(--emerald)':d<-0.1?'var(--rose)':'#ca8a04'};font-weight:800;">${d>0?'▲ ':'▼ '}${Math.abs(d).toFixed(2).replace('.',',')}</td>`;}else html+=`<td class="bg-empty">-</td>`;}
+                    else if(c==='VARIACAO_PART'){const a1=colunas[0],a2=colunas[1];let p1=gCT[a1]?calcPart(gCT[a1].mapAval,isUre):null,p2=gCT[a2]?calcPart(gCT[a2].mapAval,isUre):null;if(p1!==null&&p2!==null&&p1>0&&p2>0){let d=p2-p1;html+=`<td style="color:${d>0.5?'var(--emerald)':d<-0.5?'var(--rose)':'#ca8a04'};font-weight:800;">${d>0?'▲ ':'▼ '}${Math.abs(d).toFixed(1).replace('.',',')}%</td>`;}else html+=`<td class="bg-empty">-</td>`;}
+                    else{const cell=gCT[c];if(cell?.totalWeight>0){const m=(cell.sumProduct/cell.totalWeight).toFixed(2);html+=`<td class="${CC2(parseFloat(m))}">${m.replace('.',',')}</td>`;}else html+=`<td class="bg-empty">-</td>`;}
+                });
+                if(currentViewMode!=='compare'){let gSP=0,gTW=0;rows.forEach(r=>{if(rowTot[r]){gSP+=rowTot[r].sumProduct;gTW+=rowTot[r].totalWeight;}});let gM=gTW?(gSP/gTW).toFixed(2):'—';html+=`<td class="${gM!=='—'?CC2(parseFloat(gM)):'bg-empty'}" style="border-left:3px solid var(--navy);font-weight:800;">${gM.replace('.',',')}</td>`;}
+                if(isMetasVisible) html+=`<td style="color:#d97706;font-weight:700;">4,8</td><td style="color:var(--sky);font-weight:700;">5,1</td>`;
+                html+=`</tr>`;
+            }
+
+            rows.forEach((r,idx)=>{
+                const pD=partLinha[r],mE=getMetasEscola(r);
+                html+=`<tr><td style="font-weight:700;color:var(--light);">${idx+1}º</td>`;
+                html+=`<td class="row-header" onclick="window.handleRowClick('${r.replace(/'/g,"\\'")}');return false;">${r}</td>`;
+                html+=`<td>${pD.avaliados}</td><td>${pD.matriculados}</td><td style="color:var(--sky);font-weight:700;">${pD.participacao.toFixed(1).replace('.',',')}%</td>`;
+                colunas.forEach(c=>{
+                    if(c==='VARIACAO'){const a1=colunas[0],a2=colunas[1];let n1=matriz[r]?.[a1]?.totalWeight>0?matriz[r][a1].sumProduct/matriz[r][a1].totalWeight:null,n2=matriz[r]?.[a2]?.totalWeight>0?matriz[r][a2].sumProduct/matriz[r][a2].totalWeight:null;if(n1!==null&&n2!==null){let d=n2-n1;html+=`<td style="color:${d>0.1?'var(--emerald)':d<-0.1?'var(--rose)':'#ca8a04'};font-weight:700;">${d>0?'▲ ':'▼ '}${Math.abs(d).toFixed(2).replace('.',',')}</td>`;}else html+=`<td class="bg-empty">-</td>`;}
+                    else if(c==='VARIACAO_PART'){const a1=colunas[0],a2=colunas[1];let p1=matriz[r]?.[a1]?calcPart(matriz[r][a1].mapAval,isUre):null,p2=matriz[r]?.[a2]?calcPart(matriz[r][a2].mapAval,isUre):null;if(p1!==null&&p2!==null&&p1>0&&p2>0){let d=p2-p1;html+=`<td style="color:${d>0.5?'var(--emerald)':d<-0.5?'var(--rose)':'#ca8a04'};font-weight:700;">${d>0?'▲ ':'▼ '}${Math.abs(d).toFixed(1).replace('.',',')}%</td>`;}else html+=`<td class="bg-empty">-</td>`;}
+                    else{const cell=matriz[r][c];if(cell?.totalWeight>0){const m=(cell.sumProduct/cell.totalWeight).toFixed(2),num=parseFloat(m),sR=r.replace(/'/g,"\\'");let dV=m.replace('.',',');if(isRankMode&&rankCols[c]?.[r])dV=`${rankCols[c][r].pos}/${rankCols[c][r].total}`;html+=`<td class="${CC2(num)}" onclick="window.calculateRanking('${m}','${sR}','${cell.idEscolaContext}','${c.replace(/'/g,"\\'")}',${isUre});return false;">${dV}</td>`;}else html+=`<td class="bg-empty" onclick="window.openSarespAuditEmpty()">-</td>`;}
+                });
+                if(currentViewMode!=='compare'){const rt=rowTot[r];let mV=rt?.totalWeight?(rt.sumProduct/rt.totalWeight).toFixed(2):'—';let dV=mV!=='—'?mV.replace('.',','):'—';if(isRankMode&&mV!=='—'&&rankCols['media_geral']?.[r])dV=`${rankCols['media_geral'][r].pos}/${rankCols['media_geral'][r].total}`;html+=`<td class="${mV!=='—'?CC2(parseFloat(mV)):'bg-empty'}" style="border-left:3px solid var(--navy);" ${mV!=='—'?`onclick="window.calculateRanking('${mV}','${r.replace(/'/g,"\\'")}',null,'GERAL',${isUre});return false;"`:`onclick="window.openSarespAuditEmpty()"`}>${dV}</td>`;}
+                if(isUre&&isMetasVisible){html+=`<td style="color:#d97706;font-weight:600;">${mE.o!=='-'?mE.o.toFixed(1).replace('.',','):'-'}</td><td style="color:var(--sky);font-weight:600;">${mE.d!=='-'?mE.d.toFixed(1).replace('.',','):'-'}</td>`;}
+                html+=`</tr>`;
+            });
+            container.innerHTML=html+`</tbody></table>`;
+            window.highlightSelectedRow();
+        };
+
+        function renderCharts(sub) {
+            Object.keys(chartsInstance).forEach(k=>{if(chartsInstance[k])chartsInstance[k].destroy();});
+            const grid=document.querySelector('.charts-grid'),ctrl=document.getElementById('chart-controls');
+            const isUre=userProfile.tipo_usuario!=='ESCOLA'&&getSelectedCheckboxes('escola').length===0;
+
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+            Chart.defaults.color = '#64748b';
+
+            const opts = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:11}}}} };
+
+            if(currentViewMode==='general_compare'){
+                ctrl.style.display='flex'; grid.style.gridTemplateColumns='1fr';
+                document.querySelectorAll('.chart-container').forEach(el=>{el.style.height='580px';});
+                const ef=isUre?'escola':'turma_nome';
+                const ents=[...new Set(sub.map(d=>d[ef]))].filter(Boolean).sort();
+                const compData=calculateAverages(sub,'componente',false);
+                const comps=compData.map(d=>d.label).filter(l=>l!=='N/A');
+                const mkDs=(ents,isLine=false)=>ents.map((e,i)=>{
+                    const ed=sub.filter(d=>d[ef]===e);
+                    const hue=(i*137.5)%360;
+                    const dp=isLine?[...new Set(sub.map(d=>`${d.aval_bimestre}|||${d.aval_nome}`))].sort((a,b)=>{const o=v=>{const bm=v.split('|||')[0].toLowerCase();if(bm.includes('2025'))return 0;let n=parseInt(bm.replace(/\D/g,''));return isNaN(n)?99:n;};return o(a)-o(b)||a.localeCompare(b);}).map(evK=>{const evD=ed.filter(d=>`${d.aval_bimestre}|||${d.aval_nome}`===evK&&d.nota>0);let sP=0,w=0;evD.forEach(d=>{sP+=d.nota*d.avaliados*d.peso;w+=d.avaliados*d.peso;});return w>0?(sP/w).toFixed(2):null;}):comps.map(c=>{const cD=ed.filter(d=>d.componente===c&&d.nota>0);let sP=0,w=0;cD.forEach(d=>{sP+=d.nota*d.avaliados*d.peso;w+=d.avaliados*d.peso;});return w>0?(sP/w).toFixed(2):null;});
+                    return isLine?{label:e,data:dp,borderColor:`hsla(${hue},65%,55%,1)`,backgroundColor:`hsla(${hue},65%,55%,.08)`,borderWidth:2,fill:false,tension:.2,spanGaps:true}:{label:e,data:dp,backgroundColor:`hsla(${hue},65%,55%,.7)`,borderColor:`hsla(${hue},65%,55%,1)`,borderWidth:1};
+                });
+                const sortedEvalsKeys=[...new Set(sub.map(d=>`${d.aval_bimestre}|||${d.aval_nome}`))].sort((a,b)=>{const o=v=>{const bm=v.split('|||')[0].toLowerCase();if(bm.includes('2025'))return 0;let n=parseInt(bm.replace(/\D/g,''));return isNaN(n)?99:n;};return o(a)-o(b)||a.localeCompare(b);});
+                chartsInstance.comp=new Chart(document.getElementById('chartComponentes').getContext('2d'),{type:'bar',data:{labels:comps,datasets:mkDs(ents)},options:{...opts,plugins:{...opts.plugins,legend:{display:true,position:'bottom'},title:{display:true,text:'Comparativo de Componentes por Entidade',font:{size:13,weight:'700'}}}}});
+                chartsInstance.evol=new Chart(document.getElementById('chartEvolucao').getContext('2d'),{type:'line',data:{labels:sortedEvalsKeys.map(k=>k.split('|||')[1]),datasets:mkDs(ents,true)},options:{...opts,plugins:{...opts.plugins,legend:{display:true,position:'bottom'},title:{display:true,text:'Evolução Histórica por Entidade',font:{size:13,weight:'700'}}}}});
+            } else {
+                ctrl.style.display='none'; grid.style.gridTemplateColumns='';
+                document.querySelectorAll('.chart-container').forEach(el=>el.style.height='340px');
+                    const compData=calculateAverages(sub,'componente',false);
+                const barColors=compData.map(d=>{const n=parseFloat(d.media);return n<3?'rgba(225,29,72,.72)':n>5?'rgba(5,150,105,.72)':'rgba(217,119,6,.72)';});
+                chartsInstance.comp=new Chart(document.getElementById('chartComponentes').getContext('2d'),{type:'bar',data:{labels:compData.map(d=>d.label),datasets:[{label:'Média',data:compData.map(d=>d.media),backgroundColor:barColors,borderRadius:4}]},options:{...opts,plugins:{...opts.plugins,title:{display:true,text:'Médias por Componente',font:{size:13,weight:'700'}}}}});
+                const evolData=calculateAverages(sub,'aval_nome',true);
+                chartsInstance.evol=new Chart(document.getElementById('chartEvolucao').getContext('2d'),{type:'line',data:{labels:evolData.map(d=>d.label),datasets:[{label:'Desempenho',data:evolData.map(d=>d.media),borderColor:'rgba(16,185,129,1)',backgroundColor:'rgba(16,185,129,.08)',fill:true,tension:.2,pointBackgroundColor:'rgba(16,185,129,1)',pointRadius:4}]},options:{...opts,plugins:{...opts.plugins,title:{display:true,text:'Evolução Histórica',font:{size:13,weight:'700'}}}}});
+            }
+        }
+
+        async function initDashboard() {
+            showLoading('Buscando perfil...');
+            document.getElementById('login-section').style.display='none';
+            document.getElementById('dashboard-section').style.display='block';
+            const {data:profile,error}=await window.supabaseClient.from('usuarios_escolas').select('*').eq('email',currentUser.email).single();
+            if(error||!profile){alert("Perfil não identificado.");window.handleLogout();return;}
+            userProfile=profile;
+            document.getElementById('user-email').textContent=profile.email;
+            const initials=(profile.email||'U').charAt(0).toUpperCase();
+            document.getElementById('user-avatar-initials').textContent=initials;
+            if(profile.tipo_usuario==='URE'||profile.tipo_usuario==='URE_AVARE'){
+                document.getElementById('dash-title').textContent=profile.tipo_usuario==='URE_AVARE'?'URE de Avaré':'Painel Geral URE';
+                document.getElementById('user-role-label').textContent='Gestor Regional';
+                const dup=document.getElementById('user-role-label-dup');if(dup)dup.textContent='Gestor Regional';
+            } else {
+                document.getElementById('dash-title').textContent=profile.nome_escola;
+                document.getElementById('user-role-label').textContent='Gestão Escolar';
+                const dup=document.getElementById('user-role-label-dup');if(dup)dup.textContent='Gestão Escolar';
+                document.getElementById('filter-escola-container').style.display='none';
+            }
+            await loadAndJoinData();
+        }
+
+        /* ─── SIMULADOR DE IMPACTOS ─── */
+        window.simData = {};
+        window.simChart = null;
+
+        window.openSimulator = () => {
+            const isUre = userProfile.tipo_usuario !== 'ESCOLA' && getSelectedCheckboxes('escola').length === 0;
+            const rowKey = isUre ? 'escola' : 'turma_nome';
+            
+            let ents = [...new Set(activeData.map(d => d[rowKey]))].filter(Boolean);
+            let entStats = [];
+            let globalSp = 0, globalWt = 0;
+
+            ents.forEach(e => {
+                let ed = activeData.filter(d => d[rowKey] === e && d.nota > 0);
+                let sp = 0, wt = 0;
+                
+                ed.forEach(d => {
+                    let sw = getSarespWeight(d.componente, d.turma_nome, d.tipo_ensino);
+                    sp += d.nota * sw * d.avaliados;
+                    wt += sw * d.avaliados;
+                });
+                
+                if (wt > 0) {
+                    let avg = sp / wt;
+                    globalSp += sp;
+                    globalWt += wt;
+                    
+                    let hexColor = '#94a3b8'; 
+                    if (window.sarespOverallMap && window.sarespOverallMap[e]) {
+                        let ipc = window.getIPC(window.sarespOverallMap[e].indiceGeral);
+                        if(ipc.class === 'bg-dark-red') hexColor = '#9f1239';
+                        else if(ipc.class === 'bg-red') hexColor = '#e11d48';
+                        else if(ipc.class === 'bg-orange') hexColor = '#c2410c';
+                        else if(ipc.class === 'bg-yellow') hexColor = '#eab308';
+                        else if(ipc.class === 'bg-green') hexColor = '#059669';
+                    }
+                    
+                    entStats.push({ name: e, originalAvg: avg, currentAvg: avg, sp: sp, wt: wt, color: hexColor });
+                }
+            });
+
+            if (entStats.length === 0) {
+                alert('Sem dados suficientes para simulação no filtro atual.');
+                return;
+            }
+
+            let globalAvg = globalSp / globalWt;
+
+            // Ordena as entidades simulando o formato de sino (Distribuição Normal)
+            entStats.sort((a, b) => a.originalAvg - b.originalAvg);
+            let bellCurveArr = [];
+            let left = true;
+            for (let i = 0; i < entStats.length; i++) {
+                if (left) bellCurveArr.push(entStats[i]);
+                else bellCurveArr.unshift(entStats[i]);
+                left = !left;
+            }
+
+            window.simData = {
+                entities: bellCurveArr,
+                globalWt: globalWt,
+                originalGlobalAvg: globalAvg,
+                activeSimIndex: -1
+            };
+
+            document.getElementById('simulator-controls').style.display = 'none';
+            document.getElementById('simulator-modal').style.display = 'flex';
+            window.renderSimChart();
+        };
+
+        window.renderSimChart = () => {
+            const ctx = document.getElementById('simulatorChart').getContext('2d');
+            if (window.simChart) window.simChart.destroy();
+
+            const labels = window.simData.entities.map(e => '');
+            
+            // Abordagem Stacked (Empilhada): Calcula as fatias exatas
+            const baseData = window.simData.entities.map(e => Math.min(e.originalAvg, e.currentAvg));
+            const upData   = window.simData.entities.map(e => Math.max(0, e.currentAvg - e.originalAvg));
+            const downData = window.simData.entities.map(e => Math.max(0, e.originalAvg - e.currentAvg));
+
+            const colors = window.simData.entities.map(e => e.color);
+            const colorsUp = window.simData.entities.map(e => e.color + '66'); // Cor + 40% opacidade
+
+            const horizontalLinePlugin = {
+                id: 'horizontalLine',
+                afterDatasetsDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const yAxis = chart.scales.y;
+                    const chartArea = chart.chartArea;
+                    
+                    let currentGlobalSp = window.simData.entities.reduce((acc, e) => acc + (e.currentAvg * e.wt), 0);
+                    let currentGlobalAvg = currentGlobalSp / window.simData.globalWt;
+                    let originalGlobalAvg = window.simData.originalGlobalAvg;
+                    
+                    // LINHA 1: Média Original (Tracejada)
+                    let yPosOrig = yAxis.getPixelForValue(originalGlobalAvg);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(chartArea.left, yPosOrig);
+                    ctx.lineTo(chartArea.right, yPosOrig);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(15, 23, 42, 0.5)'; 
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.roundRect(chartArea.right - 50, yPosOrig - 12, 50, 24, 4);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px "Geist Mono", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(originalGlobalAvg.toFixed(2), chartArea.right - 25, yPosOrig);
+                    
+                    // LINHA 2: Média Simulada
+                    if (Math.abs(currentGlobalAvg - originalGlobalAvg) > 0.005) {
+                        let yPosSim = yAxis.getPixelForValue(currentGlobalAvg);
+                        let simColor = currentGlobalAvg > originalGlobalAvg ? '#059669' : '#e11d48'; 
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(chartArea.left, yPosSim);
+                        ctx.lineTo(chartArea.right, yPosSim);
+                        ctx.lineWidth = 2.5;
+                        ctx.strokeStyle = simColor;
+                        ctx.setLineDash([]); 
+                        ctx.stroke();
+
+                        ctx.fillStyle = simColor;
+                        ctx.beginPath();
+                        ctx.roundRect(chartArea.right - 50, yPosSim - 12, 50, 24, 4);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(currentGlobalAvg.toFixed(2), chartArea.right - 25, yPosSim);
+                    }
+                    ctx.restore();
+                }
+            };
+
+            window.simChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Base',
+                            data: baseData,
+                            backgroundColor: colors,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Aumento',
+                            data: upData,
+                            backgroundColor: colorsUp,
+                            borderColor: colors,
+                            borderWidth: 1.5,
+                            borderDash: [3, 3],
+                            borderRadius: { topLeft: 4, topRight: 4 }
+                        },
+                        {
+                            label: 'Queda (Fantasma)',
+                            data: downData,
+                            backgroundColor: 'transparent',
+                            borderColor: colors,
+                            borderWidth: 1.5,
+                            borderDash: [4, 4],
+                            borderRadius: { topLeft: 4, topRight: 4 }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            filter: (tooltipItem) => tooltipItem.datasetIndex === 0, // Mostra tooltip só 1 vez por coluna
+                            callbacks: {
+                                title: (ctx) => window.simData.entities[ctx[0].dataIndex].name,
+                                label: (ctx) => {
+                                    let orig = window.simData.entities[ctx.dataIndex].originalAvg;
+                                    let curr = window.simData.entities[ctx.dataIndex].currentAvg;
+                                    let diff = curr - orig;
+                                    let diffStr = Math.abs(diff) >= 0.05 ? ` (${diff > 0 ? '+' : ''}${diff.toFixed(2)})` : '';
+                                    return `Nota Atual: ${curr.toFixed(2)}${diffStr} | Era: ${orig.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            stacked: true, // Empilha as barras no eixo Y
+                            beginAtZero: true, 
+                            max: 10, 
+                            grid: { color: 'rgba(0,0,0,.04)' } 
+                        },
+                        x: { 
+                            stacked: true, // Empilha as barras no eixo X
+                            grid: { display: false } 
+                        }
+                    },
+                    onHover: (event, chartElement) => {
+                        event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) window.selectSimEntity(elements[0].index);
+                    }
+                },
+                plugins: [horizontalLinePlugin]
+            });
+        };
+
+        window.selectSimEntity = (idx) => {
+            window.simData.activeSimIndex = idx;
+            let entity = window.simData.entities[idx];
+            
+            document.getElementById('sim-entity-name').textContent = entity.name;
+            document.getElementById('sim-slider').value = entity.currentAvg;
+            
+            window.updateSimText();
+            
+            const controls = document.getElementById('simulator-controls');
+            controls.style.display = 'block';
+            controls.style.animation = 'scaleIn 0.2s ease-out';
+        };
+
+        window.adjustSimValue = (delta) => {
+            const slider = document.getElementById('sim-slider');
+            let val = parseFloat(slider.value) + delta;
+            if (val < 0) val = 0;
+            if (val > 10) val = 10;
+            slider.value = val.toFixed(1);
+            window.updateSimChart();
+        };
+
+        window.resetSimValue = () => {
+            let idx = window.simData.activeSimIndex;
+            if (idx === -1) return;
+            let original = window.simData.entities[idx].originalAvg;
+            document.getElementById('sim-slider').value = original.toFixed(1);
+            window.updateSimChart();
+        };
+
+        window.resetAllSimValues = () => {
+            if (!window.simData || !window.simData.entities) return;
+            
+            window.simData.entities.forEach((e, i) => {
+                e.currentAvg = e.originalAvg;
+                // Zera as fatias empilhadas
+                if (window.simChart) {
+                    window.simChart.data.datasets[0].data[i] = e.originalAvg;
+                    window.simChart.data.datasets[1].data[i] = 0;
+                    window.simChart.data.datasets[2].data[i] = 0;
+                }
+            });
+            
+            if (window.simChart) window.simChart.update();
+            
+            if (window.simData.activeSimIndex !== -1) {
+                let activeOrig = window.simData.entities[window.simData.activeSimIndex].originalAvg;
+                document.getElementById('sim-slider').value = activeOrig.toFixed(1);
+            }
+            
+            window.updateSimText();
+        };
+
+        window.updateSimChart = () => {
+            let idx = window.simData.activeSimIndex;
+            if (idx === -1) return;
+            
+            let newAvg = parseFloat(document.getElementById('sim-slider').value);
+            let orig = window.simData.entities[idx].originalAvg;
+            window.simData.entities[idx].currentAvg = newAvg;
+            
+            // Recalcula as 3 camadas da barra empilhada
+            window.simChart.data.datasets[0].data[idx] = Math.min(orig, newAvg);
+            window.simChart.data.datasets[1].data[idx] = Math.max(0, newAvg - orig);
+            window.simChart.data.datasets[2].data[idx] = Math.max(0, orig - newAvg);
+            
+            window.simChart.update();
+            window.updateSimText();
+        };
+
+        window.updateSimText = () => {
+            let currentGlobalSp = window.simData.entities.reduce((acc, e) => acc + (e.currentAvg * e.wt), 0);
+            let currentGlobalAvg = currentGlobalSp / window.simData.globalWt;
+            
+            document.getElementById('sim-global-avg').textContent = currentGlobalAvg.toFixed(2);
+            
+            let diff = currentGlobalAvg - window.simData.originalGlobalAvg;
+            let diffEl = document.getElementById('sim-global-diff');
+            
+            if (Math.abs(diff) < 0.005) {
+                diffEl.textContent = '(0.00)';
+                diffEl.style.color = 'var(--muted)';
+            } else if (diff > 0) {
+                diffEl.textContent = `(+${diff.toFixed(2)})`;
+                diffEl.style.color = 'var(--emerald)';
+            } else {
+                diffEl.textContent = `(${diff.toFixed(2)})`;
+                diffEl.style.color = 'var(--rose)';
+            }
+
+            let idx = window.simData.activeSimIndex;
+            if (idx !== -1) {
+                let entity = window.simData.entities[idx];
+                let entDiff = entity.currentAvg - entity.originalAvg;
+                
+                let entDiffStr = "";
+                if (Math.abs(entDiff) >= 0.05) {
+                    entDiffStr = entDiff > 0 ? `(+${entDiff.toFixed(2)})` : `(${entDiff.toFixed(2)})`;
+                }
+                
+                let entDiffColor = entDiff > 0 ? 'var(--emerald)' : (entDiff < 0 ? 'var(--rose)' : 'inherit');
+                
+                document.getElementById('sim-entity-val').innerHTML = `${entity.currentAvg.toFixed(2)} <span style="color:${entDiffColor}; font-size:0.85em; margin-left:4px;">${entDiffStr}</span>`;
+            }
+        };
+
+        window.onload=async()=>{try{if(!window.supabaseClient)return;const{data:{session}}=await window.supabaseClient.auth.getSession();if(session){currentUser=session.user;initDashboard();}}catch(e){console.error("Auto login error",e);}};
+    </script>
+</body>
+</html>

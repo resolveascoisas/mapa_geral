@@ -1,1 +1,987 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Frequência Escolar</title>
+    <link rel="icon" type="image/png" href="./imagens/icone.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <style>
+        :root {
+            --navy:    #0c1a35;
+            --navy2:   #142040;
+            --blue:    #1d4ed8;
+            --blue2:   #2563eb;
+            --sky:     #0284c7;
+            --teal:    #0f766e;
+            --emerald: #059669;
+            --amber:   #d97706;
+            --rose:    #e11d48;
+            --bg:      #f1f5fb;
+            --surface: #ffffff;
+            --surface2:#f8fafd;
+            --border:  #e4eaf3;
+            --border2: #c9d5e8;
+            --text:    #0d1829;
+            --muted:   #5a6e8a;
+            --light:   #8fa3bc;
+            --radius:  8px;
+            --radius2: 14px;
+            --shadow:  0 1px 2px rgba(0,0,0,.04), 0 4px 20px rgba(12,26,53,.06);
+            --grad-blue: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+            --grad-header: linear-gradient(160deg, #0c1a35 0%, #0f2a52 60%, #1a3d72 100%);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            font-size: 14.5px;
+            line-height: 1.55;
+        }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+        #loading-overlay {
+            position: fixed; inset: 0;
+            background: rgba(12,26,53,.88);
+            backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center;
+            flex-direction: column; z-index: 9999; gap: 1.25rem;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 2.5px solid rgba(255,255,255,.12);
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+        #loading-text { color: rgba(255,255,255,.75); font-size: .88rem; font-weight: 500; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Login */
+        #login-section {
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; background: var(--grad-header); position: relative; overflow: hidden;
+        }
+        .login-box {
+            position: relative; z-index: 1; background: rgba(255,255,255,.05);
+            backdrop-filter: blur(28px); border: 1px solid rgba(255,255,255,.13);
+            padding: 2.75rem 2.5rem; border-radius: 20px; width: 100%; max-width: 400px;
+            box-shadow: 0 40px 80px rgba(0,0,0,.45);
+        }
+        .login-title { color: #fff; font-size: 1.45rem; font-weight: 800; text-align: center; margin-bottom: .35rem; }
+        .login-sub { color: rgba(255,255,255,.45); font-size: .85rem; text-align: center; margin-bottom: 2.25rem; }
+        .input-group { margin-bottom: 1rem; }
+        .input-group label { display: block; font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.5); margin-bottom: .45rem; text-transform: uppercase; }
+        .input-group input {
+            width: 100%; padding: .75rem 1rem; background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.11); border-radius: var(--radius); color: #fff;
+            font-family: inherit; font-size: .925rem; outline: none;
+        }
+        .login-btn { width: 100%; padding: .875rem; background: var(--grad-blue); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .925rem; font-weight: 700; border: none; cursor: pointer; margin-top: .5rem; }
+        #login-error { color: #fca5a5; font-size: .84rem; margin-top: .75rem; display: none; text-align: center; font-weight: 500; }
+
+        /* Header */
+        header {
+            background: var(--grad-header); padding: .85rem 2rem;
+            display: flex; align-items: center; gap: 1.5rem;
+            position: sticky; top: 0; z-index: 200; border-bottom: 1px solid rgba(255,255,255,.06);
+        }
+        .header-brand h1 { font-size: .95rem; font-weight: 800; color: #fff; line-height: 1.2; }
+        .header-brand span { font-size: .7rem; color: rgba(255,255,255,.38); font-weight: 600; text-transform: uppercase; }
+        .header-actions { display: flex; gap: .45rem; align-items: center; margin-left: auto; }
+        .btn-logout { background: transparent; color: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.15); padding: .45rem .9rem; border-radius: var(--radius); font-size: .8rem; font-weight: 600; cursor: pointer; }
+
+        .container { padding: 1.75rem 2rem; max-width: 1600px; margin: 0 auto; }
+
+        /* Abas de Navegação (Views) */
+        .view-tabs {
+            display: flex; gap: .35rem; margin-bottom: 1.25rem; align-items: center; flex-wrap: wrap;
+            background: var(--surface); padding: .4rem .5rem; border-radius: var(--radius2); border: 1px solid var(--border);
+            box-shadow: var(--shadow); width: fit-content;
+        }
+        .btn-toggle {
+            display: inline-flex; align-items: center; gap: .38rem; padding: .5rem 1.1rem; border-radius: 99px;
+            font-family: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; border: 1.5px solid transparent;
+            transition: all .18s; background: transparent; color: var(--muted);
+        }
+        .btn-toggle:hover { background: var(--bg); color: var(--navy); border-color: var(--border2); }
+        .btn-toggle.active { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 2px 10px rgba(12,26,53,.25); }
+
+        /* Filtros */
+        .filters-wrapper {
+            background: var(--surface); border-radius: var(--radius2);
+            padding: 1.1rem 1.5rem; margin-bottom: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border);
+        }
+        .filters-label { font-size: .7rem; font-weight: 800; color: var(--light); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .8rem; }
+        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .7rem; align-items: end; }
+        
+        .filter-item label { display: block; font-size: .72rem; font-weight: 700; color: var(--muted); margin-bottom: .3rem; text-transform: uppercase; }
+        .multi-select { position: relative; user-select: none; }
+        .select-display {
+            padding: .6rem .85rem; border: 1.5px solid var(--border); border-radius: var(--radius);
+            background: var(--surface2); cursor: pointer; display: flex; justify-content: space-between;
+            align-items: center; font-size: .875rem; color: var(--text); min-height: 40px;
+        }
+        .select-options {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius);
+            max-height: 260px; overflow-y: auto; z-index: 100; display: none; box-shadow: var(--shadow);
+        }
+        .select-options.show { display: block; }
+        .select-options label {
+            display: flex; align-items: center; gap: .6rem; padding: .6rem .85rem;
+            cursor: pointer; font-size: .85rem; border-bottom: 1px solid var(--bg); font-weight: normal; text-transform: none;
+        }
+        .select-options label:hover { background: var(--bg); color: var(--blue); }
+        
+        .btn-clear {
+            background: transparent; border: 1.5px solid var(--border2); color: var(--muted);
+            border-radius: var(--radius); padding: .6rem .85rem; font-size: .85rem; font-weight: 600;
+            cursor: pointer; height: 40px; width: 100%; display: flex; align-items: center; justify-content: center;
+        }
+
+        .btn-excel {
+            display: inline-flex; align-items: center; gap: .4rem;
+            background: rgba(5,150,105,.1); color: #065f46; border: 1px solid rgba(5,150,105,.25);
+            padding: .45rem .9rem; border-radius: 6px; font-family: inherit; font-size: .78rem; font-weight: 700;
+            cursor: pointer; transition: all .18s;
+        }
+        .btn-excel:hover { background: rgba(5,150,105,.2); }
+
+        /* Cards Resumo */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .card {
+            background: var(--surface); border-radius: var(--radius2); padding: 1.4rem 1.5rem;
+            box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden;
+        }
+        .card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2.5px; background: var(--grad-blue); }
+        .card h3 { font-size: .68rem; font-weight: 800; color: var(--light); text-transform: uppercase; margin-bottom: .65rem; }
+        .card .value { font-size: 2.1rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; line-height: 1; }
+
+        /* Tabela Heatmap */
+        .table-container {
+            background: var(--surface); border-radius: var(--radius2); padding: 1.4rem 1.5rem;
+            box-shadow: var(--shadow); border: 1px solid var(--border); overflow-x: auto;
+        }
+        .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; }
+        .table-title { font-size: .95rem; font-weight: 800; color: var(--navy); }
+        
+        table.heatmap { width: 100%; border-collapse: collapse; font-size: .8rem; }
+        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: .55rem .45rem; text-align: center; vertical-align: middle; white-space: nowrap; }
+        table.heatmap th {
+            background: var(--navy); color: rgba(255,255,255,.85);
+            font-size: .72rem; font-weight: 700; letter-spacing: .05em; white-space: normal; line-height: 1.25;
+            cursor: pointer; user-select: none; transition: background .15s;
+        }
+        table.heatmap th:hover { background: var(--navy2); }
+        table.heatmap .row-header {
+            text-align: left; background: var(--surface2); color: var(--text); font-weight: 600; font-size: .8rem; white-space: normal;
+        }
+        table.heatmap .row-clickable {
+            cursor: pointer; transition: color .18s, text-decoration .18s;
+        }
+        table.heatmap .row-clickable:hover {
+            color: var(--blue); text-decoration: underline;
+        }
+
+        /* Cores do Semáforo */
+        .bg-green { background: var(--emerald) !important; color: #fff !important; font-weight: 700; }
+        .bg-yellow { background: #fef08a !important; color: #78350f !important; font-weight: 700; }
+        .bg-red { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
+        .bg-empty { background: var(--bg) !important; color: var(--light) !important; }
+
+        /* Legenda */
+        .legend { display: flex; gap: 1rem; align-items: center; font-size: .75rem; font-weight: 600; color: var(--muted); margin-top: .4rem; }
+        .legend-item { display: flex; align-items: center; gap: .35rem; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+        /* Modais */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(12,26,53,.65); backdrop-filter: blur(6px);
+            z-index: 10000; justify-content: center; align-items: center; padding: 1rem;
+        }
+        .modal-content {
+            background: var(--surface); padding: 2rem;
+            border-radius: var(--radius2); width: 100%; max-width: 900px;
+            max-height: 90vh; overflow-y: auto; position: relative;
+            box-shadow: 0 40px 80px rgba(0,0,0,.28); animation: scaleIn .18s cubic-bezier(.22,1,.36,1);
+        }
+        @keyframes scaleIn { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:scale(1); } }
+        .modal-close {
+            position: absolute; top: 1rem; right: 1rem; cursor: pointer; width: 28px; height: 28px;
+            background: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: .95rem; color: var(--muted); font-weight: 700; transition: all .18s; border: 1px solid var(--border);
+        }
+        .modal-close:hover { background: var(--border); color: var(--text); }
+        .modal-content h2 { color: var(--navy); font-size: 1.2rem; font-weight: 800; margin-bottom: .25rem; }
+        .modal-subtitle { font-size: .88rem; color: var(--muted); margin-bottom: 1.5rem; }
+
+        .chart-box {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1rem; height: 320px; margin-bottom: 1.5rem;
+        }
+
+        #dashboard-section { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Sincronizando frequências...</div>
+    </div>
+
+    <!-- MODAL DE PROGRESSÃO ANUAL -->
+    <div id="modal-progressao" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModalProgressao()">&times;</span>
+            <h2 id="modal-entidade-nome">Progressão Anual de Frequência</h2>
+            <div id="modal-entidade-sub" class="modal-subtitle">Evolução detalhada ao longo das semanas do ano</div>
+            
+            <!-- Gráfico de Linhas -->
+            <div class="chart-box">
+                <canvas id="chartProgressao"></canvas>
+            </div>
+
+            <!-- Tabela Detalhada -->
+            <div style="overflow-x: auto;">
+                <table class="heatmap" id="modal-tabela-detalhada">
+                    <thead>
+                        <tr>
+                            <th>Semana</th>
+                            <th>Período de Referência</th>
+                            <th>Matrículas</th>
+                            <th>Frequência</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-tabela-body">
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-section">
+        <div class="login-box">
+            <div class="login-title">Painel de Frequência</div>
+            <div class="login-sub">Sistema de Gestão Educacional</div>
+            <div class="input-group">
+                <label>E-mail</label>
+                <input type="email" id="email" placeholder="seu@email.com" onkeypress="if(event.key==='Enter')handleLogin()">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key==='Enter')handleLogin()">
+            </div>
+            <button class="login-btn" onclick="handleLogin()">Entrar no Painel</button>
+            <div id="login-error">Credenciais inválidas.</div>
+        </div>
+    </div>
+
+    <!-- TELA DO PAINEL -->
+    <div id="dashboard-section">
+        <header>
+            <div class="header-brand">
+                <h1 id="dash-title">Painel de Frequência Escolar</h1>
+                <span>Acompanhamento Ponderado de Presença</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-logout" onclick="handleLogout()">Sair</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <!-- ABAS DE NAVEGAÇÃO -->
+            <div class="view-tabs">
+                <button class="btn-toggle active" id="btn-view-escola" onclick="switchViewMode('escola')">Visão por Escola</button>
+                <button class="btn-toggle" id="btn-view-turma" onclick="switchViewMode('turma')">Visão por Turma</button>
+            </div>
+
+            <!-- FILTROS -->
+            <div class="filters-wrapper">
+                <div class="filters-label">Filtros Adaptativos</div>
+                <div class="filters-grid">
+                    <div class="filter-item">
+                        <label>Escola</label>
+                        <div class="multi-select" data-filter="escola">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Etapa de Ensino</label>
+                        <div class="multi-select" data-filter="etapa">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Mês</label>
+                        <div class="multi-select" data-filter="mes">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Semana</label>
+                        <div class="multi-select" data-filter="semana">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item" style="display:flex;align-items:flex-end;">
+                        <button class="btn-clear" onclick="clearFilters()">✕ Limpar Filtros</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARDS DE RESUMO -->
+            <div class="cards-grid">
+                <div class="card">
+                    <h3>Frequência Média Geral</h3>
+                    <div class="value" id="card-media-geral">0.0%</div>
+                </div>
+                <div class="card">
+                    <h3 id="card-label-entidades">Escolas Acompanhadas</h3>
+                    <div class="value" id="card-total-entidades">0</div>
+                </div>
+                <div class="card">
+                    <h3>Total de Matrículas</h3>
+                    <div class="value" id="card-total-matriculas">0</div>
+                </div>
+            </div>
+
+            <!-- TABELA DINÂMICA -->
+            <div class="table-container">
+                <div class="table-toolbar">
+                    <div>
+                        <div class="table-title" id="table-title-context">Acompanhamento Semanal por Escola</div>
+                        <div class="legend">
+                            <span>Semáforo:</span>
+                            <div class="legend-item"><span class="dot" style="background:var(--emerald);"></span> &gt; 90% (Excelente)</div>
+                            <div class="legend-item"><span class="dot" style="background:#fef08a;border:1px solid #d97706;"></span> 85% a 90% (Atenção)</div>
+                            <div class="legend-item"><span class="dot" style="background:var(--rose);"></span> &lt; 85% (Crítico)</div>
+                        </div>
+                    </div>
+                    <button class="btn-excel" onclick="exportarExcel()">📥 Exportar Excel</button>
+                </div>
+                <div id="heatmap-container">
+                    <table class="heatmap">
+                        <thead>
+                            <tr><th>Carregando...</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Aguarde a sincronização dos dados.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kmplasayzhtjoelxnvif.supabase.co';
+        const supabaseKey = 'sb_publishable_24GErsvesucjCS2GKZkBUQ_8xMMXuoh';
+
+        let supabaseClient = null;
+        if (window.supabase) {
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        }
+
+        let globalData = [];
+        let filteredData = [];
+        let currentView = 'escola';
+
+        let sortColumn = 'entidade';
+        let sortDirection = 'asc';
+        let chartInstance = null;
+
+        const mesesNomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+        function showLoading(text='Carregando...') {
+            document.getElementById('loading-text').textContent = text;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('password').value;
+            const err = document.getElementById('login-error');
+            err.style.display = 'none';
+
+            if (!email || !pass) {
+                err.style.display = 'block';
+                err.textContent = 'Preencha todos os campos.';
+                return;
+            }
+
+            try {
+                showLoading('Autenticando...');
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                if (error) throw error;
+                initDashboard();
+            } catch (e) {
+                hideLoading();
+                err.style.display = 'block';
+                err.textContent = 'Erro: ' + e.message;
+            }
+        }
+
+        async function handleLogout() {
+            showLoading('Saindo...');
+            await supabaseClient.auth.signOut();
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'flex';
+            hideLoading();
+        }
+
+        async function fetchAllData(table) {
+            let all = [];
+            let pageSize = 1000;
+            let page = 0;
+            let hasMore = true;
+
+            while (hasMore) {
+                showLoading(`Baixando ${table}... (${all.length} linhas)`);
+                const from = page * pageSize;
+                const to = from + pageSize - 1;
+
+                const { data, error } = await supabaseClient
+                    .from(table)
+                    .select('*')
+                    .range(from, to);
+
+                if (error) throw new Error(`Erro na tabela ${table}: ${error.message}`);
+
+                if (data && data.length > 0) {
+                    all.push(...data);
+                    page++;
+                    if (data.length < pageSize) hasMore = false;
+                } else {
+                    hasMore = false;
+                }
+            }
+            return all;
+        }
+
+        async function loadDatabase() {
+            try {
+                const [presencas, turmas, escolas] = await Promise.all([
+                    fetchAllData('aluno_presente'),
+                    fetchAllData('turmas'),
+                    fetchAllData('escolas')
+                ]);
+
+                const escolasMap = new Map();
+                escolas.forEach(e => {
+                    const idKey = String(e.id_escola || e.id || '').trim();
+                    const nome = e.nome_escola || e.escola || e.nome;
+                    if (idKey && nome) escolasMap.set(idKey, nome);
+                });
+
+                const turmasMap = new Map();
+                turmas.forEach(t => {
+                    const idKey = String(t.id || '').trim();
+                    const idEscolaStr = String(t.id_escola || '').trim();
+                    const nomeEscolaCruzada = escolasMap.get(idEscolaStr) || t.escola || 'Escola Não Identificada';
+                    
+                    if (idKey) {
+                        turmasMap.set(idKey, {
+                            nomeLimpo: t.nome_limpo || t.turma || t.nome || 'Turma Não Identificada',
+                            idEscola: idEscolaStr,
+                            nomeEscola: nomeEscolaCruzada,
+                            tipoEnsino: t.tipo_ensino || t.etapa || 'Etapa Não Informada'
+                        });
+                    }
+                });
+
+                globalData = presencas.map(p => {
+                    const idTurmaStr = String(p.id_turma || '').trim();
+                    const turmaInfo = turmasMap.get(idTurmaStr) || {};
+                    
+                    const nomeEscola = turmaInfo.nomeEscola || p.escola || 'Escola Não Identificada';
+                    const nomeTurmaLimpa = turmaInfo.nomeLimpo || p.turma || 'Turma Não Identificada';
+                    const tipoEnsino = turmaInfo.tipoEnsino || 'Etapa Não Informada';
+
+                    let mesNum = null;
+                    let mesNome = 'Indefinido';
+                    if (p.data_inicial) {
+                        const d = new Date(p.data_inicial);
+                        if (!isNaN(d.getTime())) {
+                            mesNum = d.getMonth() + 1;
+                            mesNome = mesesNomes[d.getMonth()];
+                        }
+                    }
+
+                    let presencaNum = parseFloat(p.presenca);
+                    if (isNaN(presencaNum)) presencaNum = 0;
+
+                    return {
+                        semana: parseInt(p.semana) || 0,
+                        semanaRotulo: `Semana ${p.semana}`,
+                        data_inicial: p.data_inicial,
+                        data_final: p.data_final,
+                        mesNum: mesNum,
+                        mesNome: mesNome,
+                        turmaOriginal: p.turma,
+                        turmaLimpa: nomeTurmaLimpa,
+                        escola: nomeEscola,
+                        tipoEnsino: tipoEnsino,
+                        id_turma: idTurmaStr,
+                        matriculas: parseInt(p.matriculas) || 0,
+                        presencaPct: presencaNum > 1 ? presencaNum : presencaNum * 100
+                    };
+                });
+
+                updateAllFiltersOptions();
+                applyFilters();
+                hideLoading();
+            } catch (e) {
+                hideLoading();
+                alert('Falha na sincronização: ' + e.message);
+            }
+        }
+
+        function switchViewMode(mode) {
+            currentView = mode;
+            document.getElementById('btn-view-escola').classList.toggle('active', mode === 'escola');
+            document.getElementById('btn-view-turma').classList.toggle('active', mode === 'turma');
+            
+            document.getElementById('table-title-context').textContent = mode === 'escola' ? 'Acompanhamento Semanal por Escola' : 'Acompanhamento Semanal por Turma';
+            document.getElementById('card-label-entidades').textContent = mode === 'escola' ? 'Escolas Acompanhadas' : 'Turmas Acompanhadas';
+
+            sortColumn = 'entidade';
+            sortDirection = 'asc';
+            updateAllFiltersOptions();
+            applyFilters();
+        }
+
+        function toggleDropdown(el) {
+            const opts = el.nextElementSibling;
+            const showing = opts.classList.contains('show');
+            document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            if (!showing) opts.classList.add('show');
+        }
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.multi-select')) {
+                document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            }
+        });
+
+        function updateMultiSelectDisplay(k) {
+            const c = document.querySelector(`.multi-select[data-filter="${k}"]`);
+            if (!c) return;
+            const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
+            const span = c.querySelector('.select-display span');
+            span.textContent = cbs.length === 0 ? 'Todas/Todos' : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionados`;
+        }
+
+        function getSelectedCheckboxes(k) {
+            return Array.from(document.querySelectorAll(`.multi-select[data-filter="${k}"] input[type="checkbox"]:checked`)).map(cb => cb.value);
+        }
+
+        function updateAllFiltersOptions() {
+            const sEscola = getSelectedCheckboxes('escola');
+            const sEtapa = getSelectedCheckboxes('etapa');
+            const sMes = getSelectedCheckboxes('mes');
+            const sSemana = getSelectedCheckboxes('semana');
+
+            const escolasDisponiveis = new Set();
+            const etapasDisponiveis = new Set();
+            const mesesDisponiveis = new Set();
+            const semanasDisponiveis = new Set();
+
+            globalData.forEach(d => {
+                const matchEscola = sEscola.length === 0 || sEscola.includes(d.escola);
+                const matchEtapa = sEtapa.length === 0 || sEtapa.includes(d.tipoEnsino);
+                const matchMes = sMes.length === 0 || sMes.includes(d.mesNome);
+                const matchSemana = sSemana.length === 0 || sSemana.includes(String(d.semana));
+
+                if (matchEtapa && matchMes && matchSemana && d.escola) escolasDisponiveis.add(d.escola);
+                if (matchEscola && matchMes && matchSemana && d.tipoEnsino) etapasDisponiveis.add(d.tipoEnsino);
+                if (matchEscola && matchEtapa && matchSemana && d.mesNome) mesesDisponiveis.add(d.mesNome);
+                if (matchEscola && matchEtapa && matchMes && d.semana) semanasDisponiveis.add(String(d.semana));
+            });
+
+            rebuildDropdown('escola', Array.from(escolasDisponiveis).sort(), sEscola);
+            rebuildDropdown('etapa', Array.from(etapasDisponiveis).sort(), sEtapa);
+            
+            const mesesOrdenados = Array.from(mesesDisponiveis).sort((a, b) => mesesNomes.indexOf(a) - mesesNomes.indexOf(b));
+            rebuildDropdown('mes', mesesOrdenados, sMes);
+
+            const semanasOrdenadas = Array.from(semanasDisponiveis).sort((a, b) => parseInt(a) - parseInt(b));
+            rebuildDropdown('semana', semanasOrdenadas, sSemana, val => `Semana ${val}`);
+        }
+
+        function rebuildDropdown(filterKey, availableValues, currentSelected, labelFormatter = null) {
+            const container = document.querySelector(`.multi-select[data-filter="${filterKey}"] .select-options`);
+            if (!container) return;
+
+            container.innerHTML = '';
+            availableValues.forEach(val => {
+                const isChecked = currentSelected.includes(val);
+                const displayLabel = labelFormatter ? labelFormatter(val) : val;
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${val.replace(/"/g,'&quot;')}" ${isChecked ? 'checked' : ''} onchange="updateMultiSelectDisplay('${filterKey}'); updateAllFiltersOptions(); applyFilters();"> ${displayLabel}`;
+                container.appendChild(label);
+            });
+            updateMultiSelectDisplay(filterKey);
+        }
+
+        function clearFilters() {
+            document.querySelectorAll('.multi-select input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateAllFiltersOptions();
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const sEscola = getSelectedCheckboxes('escola');
+            const sEtapa = getSelectedCheckboxes('etapa');
+            const sMes = getSelectedCheckboxes('mes');
+            const sSemana = getSelectedCheckboxes('semana');
+
+            filteredData = globalData.filter(d => {
+                const matchEscola = sEscola.length === 0 || sEscola.includes(d.escola);
+                const matchEtapa = sEtapa.length === 0 || sEtapa.includes(d.tipoEnsino);
+                const matchMes = sMes.length === 0 || sMes.includes(d.mesNome);
+                const matchSemana = sSemana.length === 0 || sSemana.includes(String(d.semana));
+
+                return matchEscola && matchEtapa && matchMes && matchSemana;
+            });
+
+            renderDashboard();
+        }
+
+        window.toggleSort = (col) => {
+            if (sortColumn === col) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = col;
+                sortDirection = 'asc';
+            }
+            renderDashboard();
+        };
+
+        function getSemaforoClass(pct) {
+            if (pct >= 90) return 'bg-green';
+            if (pct >= 85) return 'bg-yellow';
+            return 'bg-red';
+        }
+
+        function getSemaforoHexColor(pct) {
+            if (pct >= 90) return '#059669';
+            if (pct >= 85) return '#d97706';
+            return '#e11d48';
+        }
+
+        function exportarExcel() {
+            const container = document.getElementById('heatmap-container');
+            const table = container.querySelector('table');
+            if (!table) {
+                alert('Nenhum dado para exportar.');
+                return;
+            }
+
+            const sheetName = currentView === 'escola' ? "Presenca_Por_Escola" : "Presenca_Por_Turma";
+            const fileName = currentView === 'escola' ? 'Frequencia_Escolas.xlsx' : 'Frequencia_Turmas.xlsx';
+
+            const wb = XLSX.utils.table_to_book(table, { sheet: sheetName });
+            XLSX.writeFile(wb, fileName);
+        }
+
+        window.openModalProgressao = (chaveUnica) => {
+            const isEscolaView = currentView === 'escola';
+            
+            const dadosEntidade = filteredData.filter(d => {
+                if (isEscolaView) return d.escola === chaveUnica;
+                return `${d.id_turma}___${d.turmaLimpa}` === chaveUnica;
+            });
+
+            if (dadosEntidade.length === 0) return;
+
+            const nomeExibicao = isEscolaView ? chaveUnica : dadosEntidade[0].turmaLimpa;
+            const escolaPai = isEscolaView ? '' : ` — Escola: ${dadosEntidade[0].escola}`;
+
+            document.getElementById('modal-entidade-nome').textContent = nomeExibicao;
+            document.getElementById('modal-entidade-sub').textContent = `Evolução Semanal da Frequência no Ano${escolaPai}`;
+
+            const semanasMap = new Map();
+            dadosEntidade.forEach(d => {
+                const sem = d.semana;
+                if (!semanasMap.has(sem)) {
+                    semanasMap.set(sem, {
+                        semana: sem,
+                        dataInicial: d.data_inicial,
+                        dataFinal: d.data_final,
+                        somaProd: 0,
+                        totalMat: 0
+                    });
+                }
+                const item = semanasMap.get(sem);
+                item.somaProd += d.presencaPct * d.matriculas;
+                item.totalMat += d.matriculas;
+            });
+
+            const listaSemanas = Array.from(semanasMap.values()).sort((a, b) => a.semana - b.semana);
+
+            const labelsChart = [];
+            const dataChart = [];
+            const pointColors = [];
+            let tbodyHtml = '';
+
+            listaSemanas.forEach(s => {
+                const mediaPct = s.totalMat > 0 ? (s.somaProd / s.totalMat) : 0;
+                const valFormatted = parseFloat(mediaPct.toFixed(1));
+                
+                labelsChart.push(`Semana ${s.semana}`);
+                dataChart.push(valFormatted);
+                pointColors.push(getSemaforoHexColor(valFormatted));
+
+                let periodoStr = '-';
+                if (s.dataInicial && s.dataFinal) {
+                    periodoStr = `${s.dataInicial} até ${s.dataFinal}`;
+                }
+
+                tbodyHtml += `<tr>
+                    <td style="font-weight:700;">Semana ${s.semana}</td>
+                    <td>${periodoStr}</td>
+                    <td>${s.totalMat.toLocaleString('pt-BR')}</td>
+                    <td class="${getSemaforoClass(mediaPct)}">${mediaPct.toFixed(1).replace('.', ',')}%</td>
+                </tr>`;
+            });
+
+            document.getElementById('modal-tabela-body').innerHTML = tbodyHtml;
+
+            const ctx = document.getElementById('chartProgressao').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labelsChart,
+                    datasets: [{
+                        label: 'Frequência Média (%)',
+                        data: dataChart,
+                        borderColor: '#94a3b8',
+                        borderWidth: 2,
+                        backgroundColor: 'rgba(226, 232, 240, 0.2)',
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 50,
+                            max: 100,
+                            ticks: { callback: v => v + '%' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` Frequência: ${ctx.parsed.y}%`
+                            }
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('modal-progressao').style.display = 'flex';
+        };
+
+        window.closeModalProgressao = () => {
+            document.getElementById('modal-progressao').style.display = 'none';
+        };
+
+        function renderDashboard() {
+            const container = document.getElementById('heatmap-container');
+            if (filteredData.length === 0) {
+                document.getElementById('card-media-geral').textContent = '0.0%';
+                document.getElementById('card-total-entidades').textContent = 0;
+                document.getElementById('card-total-matriculas').textContent = 0;
+                container.innerHTML = '<p style="padding:1rem;color:var(--muted);text-align:center;">Nenhum registro de frequência encontrado para os filtros selecionados.</p>';
+                return;
+            }
+
+            const semanasSet = new Set(filteredData.map(d => d.semana));
+            const semanasOrdenadas = Array.from(semanasSet).sort((a, b) => a - b);
+
+            const mapaEntidades = new Map();
+            let somaProdutoGeral = 0;
+            let totalMatriculasGeral = 0;
+
+            const matriculaPorTurma = new Map();
+            filteredData.forEach(d => {
+                const idT = d.id_turma;
+                const mat = d.matriculas;
+                if (!matriculaPorTurma.has(idT) || mat > matriculaPorTurma.get(idT)) {
+                    matriculaPorTurma.set(idT, mat);
+                }
+            });
+
+            filteredData.forEach(d => {
+                const chaveUnica = currentView === 'escola' ? d.escola : `${d.id_turma}___${d.turmaLimpa}`;
+                
+                if (!mapaEntidades.has(chaveUnica)) {
+                    mapaEntidades.set(chaveUnica, {
+                        chave: chaveUnica,
+                        entidadeRotulo: currentView === 'escola' ? d.escola : d.turmaLimpa,
+                        escolaPai: d.escola,
+                        idTurma: d.id_turma,
+                        semanas: {},
+                        somaProdutoTotal: 0,
+                        totalMatriculasTotal: 0,
+                        turmasInclusas: new Set()
+                    });
+                }
+
+                const item = mapaEntidades.get(chaveUnica);
+                const prod = d.presencaPct * d.matriculas;
+
+                if (!item.semanas[d.semana]) {
+                    item.semanas[d.semana] = { somaProd: 0, totalMat: 0 };
+                }
+                item.semanas[d.semana].somaProd += prod;
+                item.semanas[d.semana].totalMat += d.matriculas;
+
+                item.somaProdutoTotal += prod;
+                item.totalMatriculasTotal += d.matriculas;
+                item.turmasInclusas.add(d.id_turma);
+
+                somaProdutoGeral += prod;
+                totalMatriculasGeral += d.matriculas;
+            });
+
+            const mediaGeralGlobal = totalMatriculasGeral > 0 ? (somaProdutoGeral / totalMatriculasGeral) : 0;
+            document.getElementById('card-media-geral').textContent = `${mediaGeralGlobal.toFixed(1).replace('.', ',')}%`;
+            document.getElementById('card-total-entidades').textContent = mapaEntidades.size;
+
+            let somaMatriculasRepresentativa = 0;
+            if (currentView === 'escola') {
+                mapaEntidades.forEach(item => {
+                    item.turmasInclusas.forEach(idT => {
+                        somaMatriculasRepresentativa += (matriculaPorTurma.get(idT) || 0);
+                    });
+                });
+            } else {
+                mapaEntidades.forEach(item => {
+                    somaMatriculasRepresentativa += (matriculaPorTurma.get(item.idTurma) || 0);
+                });
+            }
+            document.getElementById('card-total-matriculas').textContent = somaMatriculasRepresentativa.toLocaleString('pt-BR');
+
+            let linhasMatriz = Array.from(mapaEntidades.values()).map(e => {
+                const mediaTotal = e.totalMatriculasTotal > 0 ? (e.somaProdutoTotal / e.totalMatriculasTotal) : 0;
+                return {
+                    ...e,
+                    mediaTotal: mediaTotal
+                };
+            });
+
+            linhasMatriz.sort((a, b) => {
+                let vA, vB;
+                if (sortColumn.startsWith('sem_')) {
+                    const semNum = parseInt(sortColumn.replace('sem_', ''));
+                    const dataA = a.semanas[semNum];
+                    const dataB = b.semanas[semNum];
+                    vA = dataA && dataA.totalMat > 0 ? (dataA.somaProd / dataA.totalMat) : -999;
+                    vB = dataB && dataB.totalMat > 0 ? (dataB.somaProd / dataB.totalMat) : -999;
+                } else if (sortColumn === 'total') {
+                    vA = a.mediaTotal;
+                    vB = b.mediaTotal;
+                } else {
+                    vA = String(a.entidadeRotulo || '').toLowerCase();
+                    vB = String(b.entidadeRotulo || '').toLowerCase();
+                }
+
+                if (vA < vB) return sortDirection === 'asc' ? -1 : 1;
+                if (vA > vB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            const getArrow = (col) => sortColumn === col ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+
+            let html = `<table class="heatmap"><thead><tr>`;
+            html += `<th style="width:45px;">#</th>`;
+            html += `<th onclick="toggleSort('entidade')" style="width:250px;text-align:left;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('entidade')}</th>`;
+            if (currentView === 'turma') {
+                html += `<th style="width:180px;text-align:left;">Escola Pertencente</th>`;
+            }
+
+            semanasOrdenadas.forEach(sem => {
+                const colKey = `sem_${sem}`;
+                html += `<th onclick="toggleSort('${colKey}')">Semana ${sem}${getArrow(colKey)}</th>`;
+            });
+
+            html += `<th onclick="toggleSort('total')" style="width:100px;border-left:2px solid var(--navy2);">Média Geral${getArrow('total')}</th>`;
+            html += `</tr></thead><tbody>`;
+
+            linhasMatriz.forEach((row, idx) => {
+                html += `<tr>`;
+                html += `<td style="font-weight:700;color:var(--light);">${idx + 1}</td>`;
+                html += `<td class="row-header row-clickable" style="font-weight:700;" onclick="openModalProgressao('${row.chave.replace(/'/g, "\\'")}')" title="Clique para ver a evolução anual com faróis">${row.entidadeRotulo}</td>`;
+                if (currentView === 'turma') {
+                    html += `<td class="row-header" style="font-weight:500;color:var(--muted);">${row.escolaPai}</td>`;
+                }
+
+                semanasOrdenadas.forEach(sem => {
+                    const dadosSem = row.semanas[sem];
+                    if (dadosSem && dadosSem.totalMat > 0) {
+                        const pctSem = dadosSem.somaProd / dadosSem.totalMat;
+                        html += `<td class="${getSemaforoClass(pctSem)}">${pctSem.toFixed(1).replace('.', ',')}%</td>`;
+                    } else {
+                        html += `<td class="bg-empty">-</td>`;
+                    }
+                });
+
+                html += `<td class="${getSemaforoClass(row.mediaTotal)}" style="border-left:2px solid var(--border2);font-size:.85rem;">${row.mediaTotal.toFixed(1).replace('.', ',')}%</td>`;
+                html += `</tr>`;
+            });
+
+            container.innerHTML = html + `</tbody></table>`;
+        }
+
+        async function initDashboard() {
+            showLoading('Carregando sistema...');
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('dashboard-section').style.display = 'block';
+            await loadDatabase();
+        }
+
+        window.onload = async () => {
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                initDashboard();
+            }
+        };
+    </script>
+</body>
+</html>

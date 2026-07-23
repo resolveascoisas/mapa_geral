@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard 360º - Gestão Educacional URE</title>
+    <link rel="icon" type="image/png" href="./imagens/icone.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --navy:    #0c1a35;
+            --navy2:   #142040;
+            --blue:    #1d4ed8;
+            --blue2:   #2563eb;
+            --sky:     #0284c7;
+            --teal:    #0f766e;
+            --emerald: #059669;
+            --amber:   #d97706;
+            --rose:    #e11d48;
+            --purple:  #7c3aed;
+            --bg:      #f1f5fb;
+            --surface: #ffffff;
+            --surface2:#f8fafd;
+            --border:  #e4eaf3;
+            --border2: #c9d5e8;
+            --text:    #0d1829;
+            --muted:   #5a6e8a;
+            --light:   #8fa3bc;
+            --radius:  12px;
+            --radius2: 16px;
+            --shadow:  0 4px 20px rgba(12,26,53,.06);
+            --grad-blue: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+            --grad-header: linear-gradient(160deg, #0c1a35 0%, #0f2a52 60%, #1a3d72 100%);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+        #loading-overlay {
+            position: fixed; inset: 0; background: rgba(12,26,53,.9); backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center; flex-direction: column; z-index: 9999; gap: 1rem;
+        }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,.15); border-top-color: var(--sky); border-radius: 50%; animation: spin .8s linear infinite; }
+        #loading-text { color: #fff; font-size: .9rem; font-weight: 600; letter-spacing: 0.5px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Login */
+        #login-section { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: var(--grad-header); }
+        .login-box { background: rgba(255,255,255,.05); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.15); padding: 2.5rem; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 40px 80px rgba(0,0,0,.5); }
+        .login-title { color: #fff; font-size: 1.5rem; font-weight: 800; text-align: center; margin-bottom: .25rem; }
+        .login-sub { color: rgba(255,255,255,.5); font-size: .85rem; text-align: center; margin-bottom: 2rem; }
+        .input-group { margin-bottom: 1rem; }
+        .input-group label { display: block; font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.6); margin-bottom: .4rem; text-transform: uppercase; }
+        .input-group input { width: 100%; padding: .75rem 1rem; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .9rem; outline: none; transition: border-color 0.2s; }
+        .input-group input:focus { border-color: var(--sky); }
+        .login-btn { width: 100%; padding: .85rem; background: var(--grad-blue); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .95rem; font-weight: 700; border: none; cursor: pointer; margin-top: .5rem; transition: transform 0.1s; }
+        .login-btn:active { transform: scale(0.98); }
+        #login-error { color: #fca5a5; font-size: .85rem; margin-top: .75rem; display: none; text-align: center; font-weight: 600; }
+
+        /* Header */
+        header { background: var(--grad-header); padding: 1rem 2rem; display: flex; align-items: center; gap: 1.5rem; position: sticky; top: 0; z-index: 200; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .header-brand h1 { font-size: 1.05rem; font-weight: 800; color: #fff; line-height: 1.2; }
+        .header-brand span { font-size: .75rem; color: var(--sky); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .header-actions { margin-left: auto; }
+        .btn-logout { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,.2); padding: .5rem 1rem; border-radius: var(--radius); font-size: .8rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .btn-logout:hover { background: rgba(225,29,72,0.8); border-color: rgba(225,29,72,1); }
+
+        .container { padding: 2rem; max-width: 1600px; margin: 0 auto; }
+
+        /* NAVEGAÇÃO DE ABAS PRINCIPAIS */
+        .main-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; background: var(--surface); padding: .4rem .5rem; border-radius: var(--radius2); border: 1px solid var(--border); box-shadow: var(--shadow); width: fit-content; flex-wrap: wrap; }
+        .btn-main-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1.2rem; border-radius: 99px; font-family: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; border: 1.5px solid transparent; transition: all .18s; background: transparent; color: var(--muted); }
+        .btn-main-tab:hover { background: var(--bg); color: var(--navy); }
+        .btn-main-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 4px 12px rgba(12,26,53,.2); }
+
+        /* FILTROS GLOBAIS */
+        .filters-wrapper { background: var(--surface); border-radius: var(--radius2); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .filters-label { font-size: .75rem; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; align-items: end; }
+        
+        .filter-item label { display: block; font-size: .7rem; font-weight: 700; color: var(--muted); margin-bottom: .4rem; text-transform: uppercase; }
+        .multi-select { position: relative; user-select: none; }
+        .select-display { padding: .65rem .85rem; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--surface2); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: .85rem; font-weight: 600; color: var(--navy); transition: border-color 0.2s; }
+        .select-display:hover { border-color: var(--blue); }
+        .select-options { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); max-height: 280px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .select-options.show { display: block; }
+        .select-options label { display: flex; align-items: center; gap: .6rem; padding: .6rem .85rem; cursor: pointer; font-size: .85rem; border-bottom: 1px solid var(--bg); transition: background 0.1s; }
+        .select-options label:hover { background: var(--bg); color: var(--blue); }
+        
+        .btn-clear { background: #fef2f2; border: 1.5px solid #fecdd3; color: var(--rose); border-radius: var(--radius); padding: .65rem .85rem; font-size: .85rem; font-weight: 700; cursor: pointer; height: 42px; width: 100%; transition: background 0.2s; }
+        .btn-clear:hover { background: var(--rose); color: #fff; }
+
+        /* CARDS RESUMO GLOBAIS */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+        .card { background: var(--surface); border-radius: var(--radius2); padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px; background: var(--grad-blue); }
+        .card.card-green::before { background: var(--emerald); }
+        .card.card-amber::before { background: var(--amber); }
+        .card.card-purple::before { background: var(--purple); }
+        .card h3 { font-size: .75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; margin-bottom: .5rem; letter-spacing: 0.05em; }
+        .card .value { font-size: 2.2rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; line-height: 1.1; }
+        .card .sub { font-size: 0.75rem; color: var(--light); margin-top: 0.4rem; font-weight: 600; }
+
+        /* GRÁFICOS CONTAINER */
+        .charts-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+        .chart-box { background: var(--surface); border-radius: var(--radius2); padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; flex-direction: column; }
+        .chart-box.full-width { grid-column: 1 / -1; }
+        .chart-header { margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem; }
+        .chart-title { font-size: 1rem; font-weight: 800; color: var(--navy); }
+        .chart-sub { font-size: 0.8rem; color: var(--muted); }
+        .canvas-wrapper { position: relative; flex: 1; min-height: 320px; width: 100%; }
+
+        /* ELEMENTOS DAS ABAS ESPECÍFICAS */
+        .comp-selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; background: var(--surface2); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 1.25rem; }
+        .comp-select-group label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--navy); text-transform: uppercase; margin-bottom: 0.35rem; }
+        .comp-select-group select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border2); border-radius: var(--radius); background: var(--surface); font-family: inherit; font-size: 0.85rem; font-weight: 600; color: var(--navy); outline: none; }
+
+        .comparison-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; }
+        .comp-sidebar { background: var(--surface); border-radius: var(--radius2); border: 1px solid var(--border); padding: 1.25rem; box-shadow: var(--shadow); display: flex; flex-direction: column; max-height: calc(100vh - 120px); position: sticky; top: 90px; }
+        .comp-sidebar h3 { font-size: 0.85rem; font-weight: 800; color: var(--navy); text-transform: uppercase; margin-bottom: 0.75rem; }
+        .entity-selector-list { display: flex; flex-direction: column; gap: 0.4rem; overflow-y: auto; flex: 1; padding-right: 0.25rem; }
+        .entity-selector-list label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; font-weight: 600; color: var(--text); cursor: pointer; padding: 0.35rem 0.5rem; border-radius: 6px; transition: background 0.15s; }
+        .entity-selector-list label:hover { background: var(--bg); color: var(--blue2); }
+
+        .correlation-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border2); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: var(--navy); }
+
+        @media (max-width: 1024px) {
+            .charts-container { grid-template-columns: 1fr; }
+            .comparison-layout { grid-template-columns: 1fr; }
+            .comp-sidebar { position: static; max-height: 250px; }
+            .comp-selectors { grid-template-columns: 1fr; }
+        }
+
+        #dashboard-section { display: none; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Processando dados analíticos...</div>
+    </div>
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-section">
+        <div class="login-box">
+            <div class="login-title">Dashboard 360º URE</div>
+            <div class="login-sub">Módulo de Acompanhamento Global</div>
+            <div class="input-group">
+                <label>E-mail Corporativo</label>
+                <input type="email" id="email" placeholder="seu.email@educacao.sp.gov.br" onkeypress="if(event.key==='Enter')handleLogin()">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key==='Enter')handleLogin()">
+            </div>
+            <button class="login-btn" onclick="handleLogin()">Acessar Plataforma</button>
+            <div id="login-error">Credenciais inválidas ou sem permissão.</div>
+        </div>
+    </div>
+
+    <!-- TELA DO PAINEL -->
+    <div id="dashboard-section">
+        <header>
+            <div class="header-brand">
+                <h1 id="dash-title">Dashboard Analítico 360º URE</h1>
+                <span id="dash-subtitle">Perfil Completo de Desempenho e Frequência Escolar</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-logout" onclick="handleLogout()">Encerrar Sessão</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <!-- NAVEGAÇÃO DE ABAS PRINCIPAIS -->
+            <div class="main-tabs">
+                <button class="btn-main-tab active" id="btn-tab-visao360" onclick="switchMainTab('visao360')">
+                    📊 Visão Geral 360º
+                </button>
+                <button class="btn-main-tab" id="btn-tab-componentes" onclick="switchMainTab('componentes')">
+                    📚 Componentes Curriculares
+                </button>
+                <button class="btn-main-tab" id="btn-tab-comp-componentes" onclick="switchMainTab('comp-componentes')">
+                    🔄 Comparação de Componentes
+                </button>
+                <button class="btn-main-tab" id="btn-tab-comp-entidades" onclick="switchMainTab('comp-entidades')">
+                    🏫 Comparação de Entidades
+                </button>
+            </div>
+
+            <!-- FILTROS DE SEGMENTAÇÃO GLOBAIS -->
+            <div class="filters-wrapper">
+                <div class="filters-label">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                    Filtros de Segmentação
+                </div>
+                <div class="filters-grid">
+                    <div class="filter-item">
+                        <label>Escola</label>
+                        <div class="multi-select" data-filter="escola">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas as Escolas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Turma</label>
+                        <div class="multi-select" data-filter="turma">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas as Turmas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Ano / Série</label>
+                        <div class="multi-select" data-filter="anoSerie">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todos os Anos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Etapa de Ensino</label>
+                        <div class="multi-select" data-filter="etapa">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas as Etapas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Modalidade</label>
+                        <div class="multi-select" data-filter="modalidade">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Integral / Parcial</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Avaliação (Notas)</label>
+                        <div class="multi-select" data-filter="avaliacao">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas as Avaliações</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item" style="display:flex;align-items:flex-end;">
+                        <button class="btn-clear" onclick="clearFilters()">Limpar Filtros</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARDS DE RESUMO GLOBAIS -->
+            <div class="cards-grid">
+                <div class="card card-purple">
+                    <h3>Alunos (Última Semana)</h3>
+                    <div class="value" id="card-total-alunos">0</div>
+                    <div class="sub" id="card-sub-semana">Semana de Referência: -</div>
+                </div>
+                <div class="card card-green">
+                    <h3>Frequência Geral Média</h3>
+                    <div class="value" id="card-presenca">0.0%</div>
+                    <div class="sub">Período letivo acumulado</div>
+                </div>
+                <div class="card card-amber">
+                    <h3>Média Geral de Notas</h3>
+                    <div class="value" id="card-nota">0.00</div>
+                    <div class="sub">Média ponderada de todas as áreas</div>
+                </div>
+                <div class="card">
+                    <h3 id="card-label-entidades">Escolas Atendidas</h3>
+                    <div class="value" id="card-entidades">0</div>
+                    <div class="sub">No escopo do filtro atual</div>
+                </div>
+            </div>
+
+            <!-- ABA 1: VISÃO GERAL 360º -->
+            <div id="tab-visao360" class="tab-content active">
+                <div class="charts-container">
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">Comparativo de Desempenho nas Avaliações</div>
+                                <div class="chart-sub">Média do Filtro Selecionado vs Média Geral da URE</div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="chartLineNotas"></canvas></div>
+                    </div>
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">Comparativo de Evolução da Frequência</div>
+                                <div class="chart-sub">Assiduidade Semanal do Filtro vs Média Geral da URE</div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="chartLinePresenca"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">Desempenho por Área de Conhecimento</div>
+                                <div class="chart-sub">Com Língua Portuguesa destacada em mapa de calor</div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="chartRadarAreas"></canvas></div>
+                    </div>
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">Frequência por Ano/Série (Radar Termal)</div>
+                                <div class="chart-sub">Mapa de calor por segmento de ensino</div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="chartRadarPresenca"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 2: COMPONENTES CURRICULARES -->
+            <div id="tab-componentes" class="tab-content">
+                <div style="background:var(--surface2); padding:1rem; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:1.5rem;">
+                    <label style="display:block; font-size:0.75rem; font-weight:800; color:var(--navy); text-transform:uppercase; margin-bottom:0.5rem;">Seleção de Componentes Curriculares</label>
+                    <div class="multi-select" data-filter="compSel">
+                        <div class="select-display" onclick="toggleDropdown(this)"><span>Todos os Componentes</span></div>
+                        <div class="select-options" id="options-compSel"></div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">Desempenho por Componente Curricular (Barras)</div>
+                                <div class="chart-sub">Média geral dos componentes selecionados</div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="chartBarCompOnly"></canvas></div>
+                    </div>
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">Evolução do Desempenho ao Longo do Tempo</div>
+                                <div class="chart-sub">Trajetória das notas de cada componente por avaliação</div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="chartLineCompEvol"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 3: COMPARAÇÃO DE COMPONENTES -->
+            <div id="tab-comp-componentes" class="tab-content">
+                <div class="comp-selectors">
+                    <div class="comp-select-group">
+                        <label>Variável X (Horizontal)</label>
+                        <select id="selectCompX" onchange="renderCompComponentesTab()">
+                            <option value="FREQUENCIA">Frequência Média (%)</option>
+                        </select>
+                    </div>
+                    <div class="comp-select-group">
+                        <label>Variável Y (Vertical)</label>
+                        <select id="selectCompY" onchange="renderCompComponentesTab()">
+                        </select>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <!-- 1. DISPERSÃO -->
+                    <div class="chart-box full-width">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title" id="comp-scatter-title">Dispersão e Correlação</div>
+                                <div class="chart-sub">Cruzamento de variáveis com linha de tendência estatística</div>
+                            </div>
+                            <div class="correlation-badge">
+                                <span>Pearson (r):</span>
+                                <span id="comp-correlation-value" style="color:var(--blue2);">0.00</span>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper" style="min-height:380px;"><canvas id="chartScatterCustom"></canvas></div>
+                    </div>
+
+                    <!-- 2. BARRAS POR ENTIDADE -->
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title" id="comp-bar-ent-title">Desempenho dos Componentes por Entidade</div>
+                                <div class="chart-sub">Comparação do rendimento entre Escolas/Turmas</div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="chartBarCompEntidade"></canvas></div>
+                    </div>
+
+                    <!-- 3. EVOLUÇÃO TEMPORAL POR ENTIDADE -->
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title" id="comp-line-ent-title">Evolução do Desempenho das Entidades</div>
+                                <div class="chart-sub">Evolução das notas médias ao longo das avaliações</div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="chartLineCompEntidade"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 4: COMPARAÇÃO DE ENTIDADES -->
+            <div id="tab-comp-entidades" class="tab-content">
+                <div class="comparison-layout">
+                    <!-- PAINEL LATERAL DE SELEÇÃO DE ENTIDADES -->
+                    <div class="comp-sidebar">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                            <h3 id="comp-sidebar-title">Selecione Entidades</h3>
+                            <button style="background:none; border:none; color:var(--blue2); font-size:0.75rem; font-weight:700; cursor:pointer;" onclick="clearCompEntities()">Apenas Média Geral</button>
+                        </div>
+                        <div class="entity-selector-list" id="comp-entity-checkboxes">
+                            <!-- Preenchido dinamicamente -->
+                        </div>
+                    </div>
+
+                    <!-- CONTEÚDO DA ABA DE COMPARAÇÃO DE ENTIDADES -->
+                    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                        <!-- 1. EVOLUÇÃO DE NOTAS POR ENTIDADE -->
+                        <div class="chart-box">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title" id="ent-notas-title">Evolução de Notas por Entidade</div>
+                                    <div class="chart-sub">Por padrão exibe apenas a Média Geral (marque entidades ao lado para comparar)</div>
+                                </div>
+                            </div>
+                            <div class="canvas-wrapper" style="min-height:380px;"><canvas id="chartEntLineNotas"></canvas></div>
+                        </div>
+
+                        <!-- 2. EVOLUÇÃO DA FREQUÊNCIA POR ENTIDADE -->
+                        <div class="chart-box">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title" id="ent-presenca-title">Evolução da Frequência por Entidade</div>
+                                    <div class="chart-sub">Assiduidade semana a semana por entidade selecionada</div>
+                                </div>
+                            </div>
+                            <div class="canvas-wrapper" style="min-height:380px;"><canvas id="chartEntLinePresenca"></canvas></div>
+                        </div>
+
+                        <!-- 3. RADAR ESPELHADO -->
+                        <div class="chart-box">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">Perfil por Área de Conhecimento (Espelhado)</div>
+                                    <div class="chart-sub">Sobreposição dos radares das entidades selecionadas</div>
+                                </div>
+                            </div>
+                            <div class="canvas-wrapper" style="min-height:400px;"><canvas id="chartEntRadarAreas"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kmplasayzhtjoelxnvif.supabase.co';
+        const supabaseKey = 'sb_publishable_24GErsvesucjCS2GKZkBUQ_8xMMXuoh';
+
+        let supabaseClient = null;
+        if (window.supabase) {
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        }
+
+        // Estado do Banco de Dados
+        let dbTurmas = new Map();
+        let dbEscolas = new Map();
+        let rawPresencas = [];
+        let rawDesempenho = [];
+        let rawAvaliacoes = new Map();
+        
+        let filteredPresencas = [];
+        let filteredDesempenho = [];
+
+        let currentMainTab = 'visao360';
+
+        // Instâncias Chart.js - Aba 1: Visão Geral
+        let chartLineNotas = null;
+        let chartLinePresenca = null;
+        let chartRadarAreas = null;
+        let chartRadarPresenca = null;
+
+        // Instâncias Chart.js - Aba 2: Componentes
+        let chartBarCompOnly = null;
+        let chartLineCompEvol = null;
+
+        // Instâncias Chart.js - Aba 3: Comparação de Componentes
+        let chartScatterCustom = null;
+        let chartBarCompEntidade = null;
+        let chartLineCompEntidade = null;
+
+        // Instâncias Chart.js - Aba 4: Comparação de Entidades
+        let chartEntLineNotas = null;
+        let chartEntLinePresenca = null;
+        let chartEntRadarAreas = null;
+
+        // Seleção de Entidades na Aba 4 (Inicialmente vazio = Apenas Média Geral)
+        let entAvailableEntities = [];
+        let entSelectedEntities = new Set();
+
+        const AREAS_CONHECIMENTO = {
+            "MATEMÁTICA": ["MAT", "MATEMATICA"],
+            "LÍNGUA PORTUGUESA": ["LPT", "LP", "PORT", "LINGUA PORTUGUESA"],
+            "LINGUAGENS": ["ING", "INGLES", "ART", "ARTE", "EDF", "EF", "EDUCACAO FISICA"],
+            "CIÊNCIAS DA NATUREZA": ["CIE", "CIENCIAS", "BIO", "BIOLOGIA", "FIS", "FISICA", "QUI", "QUIMICA"],
+            "CIÊNCIAS HUMANAS": ["HIS", "HISTORIA", "GEO", "GEOGRAFIA", "FIL", "FILOSOFIA", "SOC", "SOCIOLOGIA"]
+        };
+
+        const ORDEM_ANOS = [
+            "6º ANO", "7º ANO", "8º ANO", "9º ANO",
+            "1ª SÉRIE", "2ª SÉRIE", "3ª SÉRIE", "Outros"
+        ];
+
+        const PALETA_CORES = [
+            '#2563eb', '#059669', '#d97706', '#e11d48', '#7c3aed', 
+            '#0284c7', '#0f766e', '#b45309', '#be123c', '#6d28d9',
+            '#1d4ed8', '#047857', '#9a3412', '#9f1239', '#5b21b6'
+        ];
+
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+        Chart.defaults.color = '#5a6e8a';
+
+        function createHeatmapGradient(ctx, chartArea, isNotas = true) {
+            if (!chartArea) return 'rgba(37, 99, 235, 0.1)';
+            const cx = (chartArea.left + chartArea.right) / 2;
+            const cy = (chartArea.top + chartArea.bottom) / 2;
+            const r = Math.min((chartArea.right - chartArea.left) / 2, (chartArea.bottom - chartArea.top) / 2);
+            
+            const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            if (isNotas) {
+                gradient.addColorStop(0, 'rgba(225, 29, 72, 0.65)');     
+                gradient.addColorStop(0.4, 'rgba(225, 29, 72, 0.45)');   
+                gradient.addColorStop(0.6, 'rgba(217, 119, 6, 0.5)');    
+                gradient.addColorStop(0.75, 'rgba(5, 150, 105, 0.45)');  
+                gradient.addColorStop(1, 'rgba(5, 150, 105, 0.7)');      
+            } else {
+                gradient.addColorStop(0, 'rgba(225, 29, 72, 0.7)');      
+                gradient.addColorStop(0.5, 'rgba(225, 29, 72, 0.45)');
+                gradient.addColorStop(0.7, 'rgba(217, 119, 6, 0.5)');    
+                gradient.addColorStop(0.85, 'rgba(5, 150, 105, 0.45)');
+                gradient.addColorStop(1, 'rgba(5, 150, 105, 0.7)');      
+            }
+            return gradient;
+        }
+
+        function switchMainTab(tab) {
+            currentMainTab = tab;
+            document.querySelectorAll('.btn-main-tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            document.getElementById(`btn-tab-${tab}`).classList.add('active');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            if (tab === 'componentes') {
+                populateComponentesDropdown();
+                renderComponentesTab();
+            } else if (tab === 'comp-componentes') {
+                populateCompComponentesSelectors();
+                renderCompComponentesTab();
+            } else if (tab === 'comp-entidades') {
+                setupCompEntidadesSidebar();
+                renderCompEntidadesTab();
+            } else {
+                renderVisaoGeralTab();
+            }
+        }
+
+        function showLoading(text='Carregando...') {
+            document.getElementById('loading-text').textContent = text;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('password').value;
+            const err = document.getElementById('login-error');
+            err.style.display = 'none';
+
+            if (!email || !pass) { err.style.display = 'block'; err.textContent = 'Preencha todos os campos.'; return; }
+
+            try {
+                showLoading('Autenticando...');
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                if (error) throw error;
+                initDashboard();
+            } catch (e) {
+                hideLoading();
+                err.style.display = 'block';
+                err.textContent = 'Falha na autenticação.';
+            }
+        }
+
+        async function handleLogout() {
+            showLoading('Saindo...');
+            await supabaseClient.auth.signOut();
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'flex';
+            hideLoading();
+        }
+
+        async function fetchAllData(table, orderKey = null) {
+            let all = [], limit = 1000, page = 0, hasMore = true;
+            while (hasMore) {
+                showLoading(`Baixando ${table}... (${all.length} linhas)`);
+                const from = page * limit;
+                const to = from + limit - 1;
+                let query = supabaseClient.from(table).select('*');
+                if (orderKey) query = query.order(orderKey, { ascending: true });
+                
+                const { data, error } = await query.range(from, to);
+                if (error) {
+                    const fallback = await supabaseClient.from(table).select('*').range(from, to);
+                    if (fallback.error) throw new Error(fallback.error.message);
+                    if (fallback.data.length > 0) { all.push(...fallback.data); page++; }
+                    if (fallback.data.length < limit) hasMore = false;
+                } else {
+                    if (data.length > 0) { all.push(...data); page++; }
+                    if (data.length < limit) hasMore = false;
+                }
+            }
+            return all;
+        }
+
+        function extrairAnoSerie(nome) {
+            if (!nome) return "Outros";
+            const upper = nome.toUpperCase();
+            const m = upper.match(/([1-9])[ºª°OA]?\s*(ANO|S[EÉ]RIE)/);
+            if (m) {
+                const num = m[1];
+                const tipo = m[2].startsWith('S') ? 'SÉRIE' : 'ANO';
+                const suf = tipo === 'SÉRIE' ? 'ª' : 'º';
+                return `${num}${suf} ${tipo}`;
+            }
+            return "Outros";
+        }
+
+        function extrairModalidade(tipoClasse, nomeTurma, nomeEscola) {
+            const str = `${tipoClasse} ${nomeTurma} ${nomeEscola}`.toUpperCase();
+            if (str.includes('INTEGRAL') || str.includes('PEI')) return 'Integral';
+            return 'Parcial';
+        }
+
+        async function loadDatabase() {
+            try {
+                const [escolas, turmas, presencas, avaliacoes, desempenho] = await Promise.all([
+                    fetchAllData('escolas', 'id_escola'),
+                    fetchAllData('turmas', 'id'),
+                    fetchAllData('aluno_presente', 'semana'),
+                    fetchAllData('avaliacoes'),
+                    fetchAllData('desempenho')
+                ]);
+
+                escolas.forEach(e => dbEscolas.set(String(e.id_escola || e.id).trim(), e.nome_escola || e.escola || e.nome));
+                avaliacoes.forEach(a => rawAvaliacoes.set(String(a.id), a.nome || a.tipo || `Avaliação ${a.id}`));
+
+                turmas.forEach(t => {
+                    const id = String(t.id).trim();
+                    const idEscola = String(t.id_escola || '').trim();
+                    const escolaNome = dbEscolas.get(idEscola) || t.escola || 'Escola Não Identificada';
+                    const nomeTurma = t.nome_limpo || t.turma || t.nome || 'Turma Não Identificada';
+                    
+                    dbTurmas.set(id, {
+                        id_turma: id,
+                        escola: escolaNome,
+                        turmaLimpa: nomeTurma,
+                        anoSerie: extrairAnoSerie(nomeTurma),
+                        etapa: t.tipo_ensino || t.etapa || 'Não Informada',
+                        modalidade: extrairModalidade(t.tipo_classe, nomeTurma, escolaNome)
+                    });
+                });
+
+                rawPresencas = presencas.map(p => {
+                    const t = dbTurmas.get(String(p.id_turma).trim()) || { 
+                        escola: p.escola || 'Escola Não Identificada', 
+                        turmaLimpa: p.turma || 'Turma Não Identificada',
+                        anoSerie: extrairAnoSerie(p.turma),
+                        etapa: 'Não Informada',
+                        modalidade: 'Parcial'
+                    };
+                    
+                    let num = parseFloat(p.presenca) || 0;
+                    return {
+                        id_turma: String(p.id_turma).trim(),
+                        semana: parseInt(p.semana) || 0,
+                        escola: t.escola,
+                        turma: t.turmaLimpa,
+                        anoSerie: t.anoSerie,
+                        etapa: t.etapa,
+                        modalidade: t.modalidade,
+                        matriculas: parseInt(p.matriculas) || 0,
+                        presencaPct: num > 1 ? num : num * 100
+                    };
+                });
+
+                rawDesempenho = desempenho.map(d => {
+                    const t = dbTurmas.get(String(d.id).trim()) || { 
+                        escola: 'Escola Não Identificada', 
+                        turmaLimpa: 'Turma Não Identificada',
+                        anoSerie: 'Outros', etapa: 'Não Informada', modalidade: 'Parcial'
+                    };
+                    
+                    const comp = String(d.componente || '').trim().toUpperCase();
+                    let areaConhecimento = "OUTROS";
+                    for (const [area, siglaArray] of Object.entries(AREAS_CONHECIMENTO)) {
+                        if (siglaArray.includes(comp)) { areaConhecimento = area; break; }
+                    }
+
+                    return {
+                        id_turma: String(d.id).trim(),
+                        id_avaliacao: String(d.id_avaliacao).trim(),
+                        escola: t.escola,
+                        turma: t.turmaLimpa,
+                        anoSerie: t.anoSerie,
+                        etapa: t.etapa,
+                        modalidade: t.modalidade,
+                        componente: comp,
+                        area: areaConhecimento,
+                        nota: parseFloat(d.nota) || 0,
+                        peso: parseFloat(d.peso) || 1,
+                        avaliados: parseInt(d.avaliados) || 0
+                    };
+                }).filter(d => d.nota > 0 && d.avaliados > 0);
+
+                updateAllFiltersOptions();
+                applyFilters();
+                hideLoading();
+            } catch (e) {
+                hideLoading();
+                alert('Erro na sincronização: ' + e.message);
+            }
+        }
+
+        function toggleDropdown(el) {
+            const opts = el.nextElementSibling;
+            const showing = opts.classList.contains('show');
+            document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            if (!showing) opts.classList.add('show');
+        }
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.multi-select')) {
+                document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            }
+        });
+
+        function updateMultiSelectDisplay(k) {
+            const c = document.querySelector(`.multi-select[data-filter="${k}"]`);
+            if (!c) return;
+            const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
+            const span = c.querySelector('.select-display span');
+            span.textContent = cbs.length === 0 ? 'Todas/Todos' : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionados`;
+        }
+
+        function getSelectedCheckboxes(k) {
+            return Array.from(document.querySelectorAll(`.multi-select[data-filter="${k}"] input[type="checkbox"]:checked`)).map(cb => cb.value);
+        }
+
+        function updateAllFiltersOptions() {
+            const sEsc = getSelectedCheckboxes('escola');
+            const sTur = getSelectedCheckboxes('turma');
+            const sAno = getSelectedCheckboxes('anoSerie');
+            const sEta = getSelectedCheckboxes('etapa');
+            const sMod = getSelectedCheckboxes('modalidade');
+            const sAva = getSelectedCheckboxes('avaliacao');
+
+            const setEsc = new Set(), setTur = new Set(), setAno = new Set();
+            const setEta = new Set(), setMod = new Set(), setAva = new Set();
+
+            const turmasArray = Array.from(dbTurmas.values());
+            
+            turmasArray.forEach(t => {
+                const mEsc = sEsc.length === 0 || sEsc.includes(t.escola);
+                const mTur = sTur.length === 0 || sTur.includes(t.turmaLimpa);
+                const mAno = sAno.length === 0 || sAno.includes(t.anoSerie);
+                const mEta = sEta.length === 0 || sEta.includes(t.etapa);
+                const mMod = sMod.length === 0 || sMod.includes(t.modalidade);
+
+                if (mTur && mAno && mEta && mMod && t.escola) setEsc.add(t.escola);
+                if (mEsc && mAno && mEta && mMod && t.turmaLimpa) setTur.add(t.turmaLimpa);
+                if (mEsc && mTur && mEta && mMod && t.anoSerie) setAno.add(t.anoSerie);
+                if (mEsc && mTur && mAno && mMod && t.etapa) setEta.add(t.etapa);
+                if (mEsc && mTur && mAno && mEta && t.modalidade) setMod.add(t.modalidade);
+            });
+
+            rawDesempenho.forEach(d => {
+                const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
+                const mTur = sTur.length === 0 || sTur.includes(d.turma);
+                const mAno = sAno.length === 0 || sAno.includes(d.anoSerie);
+                if (mEsc && mTur && mAno) {
+                    const nomeAva = rawAvaliacoes.get(d.id_avaliacao) || d.id_avaliacao;
+                    setAva.add(nomeAva);
+                }
+            });
+
+            rebuildDropdown('escola', Array.from(setEsc).sort(), sEsc);
+            rebuildDropdown('turma', Array.from(setTur).sort(), sTur);
+            
+            const anosOrdenados = Array.from(setAno).sort((a,b) => {
+                const idxA = ORDEM_ANOS.indexOf(a), idxB = ORDEM_ANOS.indexOf(b);
+                return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+            });
+            rebuildDropdown('anoSerie', anosOrdenados, sAno);
+            
+            rebuildDropdown('etapa', Array.from(setEta).sort(), sEta);
+            rebuildDropdown('modalidade', Array.from(setMod).sort(), sMod);
+            rebuildDropdown('avaliacao', Array.from(setAva).sort(), sAva);
+        }
+
+        function rebuildDropdown(key, values, selected) {
+            const container = document.querySelector(`.multi-select[data-filter="${key}"] .select-options`);
+            if (!container) return;
+            container.innerHTML = '';
+            values.forEach(v => {
+                const lbl = document.createElement('label');
+                lbl.innerHTML = `<input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${selected.includes(v) ? 'checked' : ''} onchange="updateMultiSelectDisplay('${key}'); updateAllFiltersOptions(); applyFilters();"> ${v}`;
+                container.appendChild(lbl);
+            });
+            updateMultiSelectDisplay(key);
+        }
+
+        function clearFilters() {
+            document.querySelectorAll('.multi-select input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateAllFiltersOptions();
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const sEsc = getSelectedCheckboxes('escola');
+            const sTur = getSelectedCheckboxes('turma');
+            const sAno = getSelectedCheckboxes('anoSerie');
+            const sEta = getSelectedCheckboxes('etapa');
+            const sMod = getSelectedCheckboxes('modalidade');
+            const sAva = getSelectedCheckboxes('avaliacao');
+
+            filteredPresencas = rawPresencas.filter(p => {
+                return (sEsc.length===0 || sEsc.includes(p.escola)) &&
+                       (sTur.length===0 || sTur.includes(p.turma)) &&
+                       (sAno.length===0 || sAno.includes(p.anoSerie)) &&
+                       (sEta.length===0 || sEta.includes(p.etapa)) &&
+                       (sMod.length===0 || sMod.includes(p.modalidade));
+            });
+
+            filteredDesempenho = rawDesempenho.filter(d => {
+                const nomeAva = rawAvaliacoes.get(d.id_avaliacao) || d.id_avaliacao;
+                return (sEsc.length===0 || sEsc.includes(d.escola)) &&
+                       (sTur.length===0 || sTur.includes(d.turma)) &&
+                       (sAno.length===0 || sAno.includes(d.anoSerie)) &&
+                       (sEta.length===0 || sEta.includes(d.etapa)) &&
+                       (sMod.length===0 || sMod.includes(d.modalidade)) &&
+                       (sAva.length===0 || sAva.includes(nomeAva));
+            });
+
+            updateCards();
+
+            if (currentMainTab === 'componentes') {
+                populateComponentesDropdown();
+                renderComponentesTab();
+            } else if (currentMainTab === 'comp-componentes') {
+                populateCompComponentesSelectors();
+                renderCompComponentesTab();
+            } else if (currentMainTab === 'comp-entidades') {
+                setupCompEntidadesSidebar();
+                renderCompEntidadesTab();
+            } else {
+                renderVisaoGeralTab();
+            }
+        }
+
+        function updateCards() {
+            let maxSemana = 0;
+            filteredPresencas.forEach(p => { if (p.semana > maxSemana) maxSemana = p.semana; });
+            
+            let totalMatriculasUltimaSemana = 0;
+            const tMap = new Set();
+            filteredPresencas.filter(p => p.semana === maxSemana).forEach(p => {
+                if (!tMap.has(p.id_turma)) {
+                    totalMatriculasUltimaSemana += p.matriculas;
+                    tMap.add(p.id_turma);
+                }
+            });
+
+            document.getElementById('card-total-alunos').textContent = totalMatriculasUltimaSemana.toLocaleString('pt-BR');
+            document.getElementById('card-sub-semana').textContent = maxSemana > 0 ? `Ref: Semana ${maxSemana}` : 'Sem registros';
+
+            let sProd = 0, sMat = 0;
+            filteredPresencas.forEach(p => { sProd += p.presencaPct * p.matriculas; sMat += p.matriculas; });
+            const mediaPres = sMat > 0 ? (sProd / sMat) : 0;
+            document.getElementById('card-presenca').textContent = `${mediaPres.toFixed(1).replace('.', ',')}%`;
+
+            let sNota = 0, sPeso = 0;
+            filteredDesempenho.forEach(d => {
+                const w = d.peso * d.avaliados;
+                sNota += d.nota * w;
+                sPeso += w;
+            });
+            const mediaNota = sPeso > 0 ? (sNota / sPeso) : 0;
+            document.getElementById('card-nota').textContent = mediaNota.toFixed(2).replace('.', ',');
+
+            const sEsc = getSelectedCheckboxes('escola');
+            if (sEsc.length === 0) {
+                document.getElementById('card-label-entidades').textContent = 'Escolas Atendidas';
+                document.getElementById('card-entidades').textContent = new Set(filteredPresencas.map(p => p.escola)).size;
+            } else {
+                document.getElementById('card-label-entidades').textContent = 'Turmas Atendidas';
+                document.getElementById('card-entidades').textContent = new Set(filteredPresencas.map(p => p.turma)).size;
+            }
+        }
+
+        function getPointColorNota(n) { return n >= 6 ? '#059669' : n >= 4 ? '#d97706' : '#e11d48'; }
+        function getPointColorPresenca(p) { return p >= 90 ? '#059669' : p >= 85 ? '#d97706' : '#e11d48'; }
+
+        function calcularRegressaoLinear(pontos) {
+            const n = pontos.length;
+            if (n < 2) return [];
+
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            let minX = Infinity, maxX = -Infinity;
+
+            pontos.forEach(p => {
+                sumX += p.x; sumY += p.y; sumXY += p.x * p.y; sumX2 += p.x * p.x;
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+            });
+
+            const den = (n * sumX2) - (sumX * sumX);
+            if (den === 0) return [];
+
+            const m = ((n * sumXY) - (sumX * sumY)) / den;
+            const b = (sumY - (m * sumX)) / n;
+
+            return [
+                { x: minX, y: parseFloat((m * minX + b).toFixed(2)) },
+                { x: maxX, y: parseFloat((m * maxX + b).toFixed(2)) }
+            ];
+        }
+
+        function calcularPearson(pontos) {
+            const n = pontos.length;
+            if (n < 2) return { r: 0, texto: "Dados insuficientes" };
+
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+            pontos.forEach(p => {
+                sumX += p.x; sumY += p.y; sumXY += p.x * p.y;
+                sumX2 += p.x * p.x; sumY2 += p.y * p.y;
+            });
+
+            const num = (n * sumXY) - (sumX * sumY);
+            const den = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+
+            if (den === 0) return { r: 0, texto: "Sem variação" };
+            const r = num / den;
+
+            let texto = "";
+            const absR = Math.abs(r);
+            if (absR >= 0.7) texto = r > 0 ? "Forte Positiva" : "Forte Negativa";
+            else if (absR >= 0.4) texto = r > 0 ? "Moderada Positiva" : "Moderada Negativa";
+            else if (absR >= 0.2) texto = r > 0 ? "Fraca Positiva" : "Fraca Negativa";
+            else texto = "Inexistente / Desprezível";
+
+            return { r: r, texto: texto };
+        }
+
+        /* ABA 1: RENDERIZAÇÃO DA VISÃO GERAL 360º */
+        function renderVisaoGeralTab() {
+            [chartLineNotas, chartLinePresenca, chartRadarAreas, chartRadarPresenca].forEach(c => { if (c) c.destroy(); });
+
+            const sEsc = getSelectedCheckboxes('escola');
+
+            // 1. LINHAS: NOTAS BENCHMARK (FILTRO vs URE)
+            const avaliacoesSet = new Set();
+            rawDesempenho.forEach(d => avaliacoesSet.add(d.id_avaliacao));
+            const avalsOrdenadas = Array.from(avaliacoesSet).sort();
+            const labelsAvals = avalsOrdenadas.map(id => rawAvaliacoes.get(id) || id);
+
+            const dataUreNotas = avalsOrdenadas.map(id => {
+                let sN = 0, sW = 0;
+                rawDesempenho.filter(d => d.id_avaliacao === id).forEach(d => {
+                    const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
+                });
+                return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
+            });
+
+            const dataFiltroNotas = avalsOrdenadas.map(id => {
+                let sN = 0, sW = 0;
+                filteredDesempenho.filter(d => d.id_avaliacao === id).forEach(d => {
+                    const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
+                });
+                return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
+            });
+
+            const ctxLineNotas = document.getElementById('chartLineNotas').getContext('2d');
+            chartLineNotas = new Chart(ctxLineNotas, {
+                type: 'line',
+                data: {
+                    labels: labelsAvals,
+                    datasets: [
+                        { label: 'Média URE (Geral)', data: dataUreNotas, borderColor: '#64748b', borderWidth: 2.5, borderDash: [5, 5], pointRadius: 4, pointBackgroundColor: '#64748b', fill: false, tension: 0.2 },
+                        { label: sEsc.length === 1 ? sEsc[0] : 'Filtro Selecionado', data: dataFiltroNotas, borderColor: '#2563eb', borderWidth: 3.5, pointRadius: 6, pointBackgroundColor: '#1d4ed8', pointBorderColor: '#fff', pointBorderWidth: 2, fill: false, tension: 0.2 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
+            });
+
+            // 2. LINHAS: FREQUÊNCIA BENCHMARK (FILTRO vs URE)
+            const semanasSet = new Set();
+            rawPresencas.forEach(p => semanasSet.add(p.semana));
+            const semanasOrdenadas = Array.from(semanasSet).sort((a,b) => a - b);
+            const labelsSemanas = semanasOrdenadas.map(s => `Semana ${s}`);
+
+            const dataUrePresenca = semanasOrdenadas.map(s => {
+                let sP = 0, sM = 0;
+                rawPresencas.filter(p => p.semana === s).forEach(p => {
+                    sP += p.presencaPct * p.matriculas; sM += p.matriculas;
+                });
+                return sM > 0 ? parseFloat((sP / sM).toFixed(1)) : null;
+            });
+
+            const dataFiltroPresenca = semanasOrdenadas.map(s => {
+                let sP = 0, sM = 0;
+                filteredPresencas.filter(p => p.semana === s).forEach(p => {
+                    sP += p.presencaPct * p.matriculas; sM += p.matriculas;
+                });
+                return sM > 0 ? parseFloat((sP / sM).toFixed(1)) : null;
+            });
+
+            const ctxLinePresenca = document.getElementById('chartLinePresenca').getContext('2d');
+            chartLinePresenca = new Chart(ctxLinePresenca, {
+                type: 'line',
+                data: {
+                    labels: labelsSemanas,
+                    datasets: [
+                        { label: 'Média URE (Geral)', data: dataUrePresenca, borderColor: '#64748b', borderWidth: 2.5, borderDash: [5, 5], pointRadius: 3, pointBackgroundColor: '#64748b', fill: false, tension: 0.2 },
+                        { label: sEsc.length === 1 ? sEsc[0] : 'Filtro Selecionado', data: dataFiltroPresenca, borderColor: '#059669', borderWidth: 3.5, pointRadius: 5, pointBackgroundColor: '#047857', pointBorderColor: '#fff', pointBorderWidth: 2, fill: false, tension: 0.2 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 50, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
+            });
+
+            // 3. RADAR: ÁREAS DO CONHECIMENTO
+            const mapAreas = new Map();
+            Object.keys(AREAS_CONHECIMENTO).forEach(a => mapAreas.set(a, { sN: 0, sW: 0 }));
+            filteredDesempenho.forEach(d => {
+                if (mapAreas.has(d.area)) {
+                    const obj = mapAreas.get(d.area);
+                    const w = d.peso * d.avaliados; obj.sN += d.nota * w; obj.sW += w;
+                }
+            });
+            const labelsAreas = [], dataAreas = [], colorsAreas = [];
+            mapAreas.forEach((val, key) => {
+                const m = val.sW > 0 ? parseFloat((val.sN / val.sW).toFixed(2)) : 0;
+                labelsAreas.push(key); dataAreas.push(m); colorsAreas.push(getPointColorNota(m));
+            });
+
+            const ctxRadarAreas = document.getElementById('chartRadarAreas').getContext('2d');
+            chartRadarAreas = new Chart(ctxRadarAreas, {
+                type: 'radar',
+                data: {
+                    labels: labelsAreas,
+                    datasets: [{
+                        label: 'Desempenho Médio', data: dataAreas,
+                        backgroundColor: function(context) { return createHeatmapGradient(context.chart.ctx, context.chart.chartArea, true); },
+                        borderColor: '#2563eb', borderWidth: 2, pointBackgroundColor: colorsAreas, pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 } } }, plugins: { legend: { display: false } } }
+            });
+
+            // 4. RADAR: PRESENÇA POR ANO / SÉRIE
+            const mapAno = new Map();
+            ORDEM_ANOS.forEach(a => mapAno.set(a, { sP: 0, sM: 0 }));
+            filteredPresencas.forEach(p => {
+                const a = ORDEM_ANOS.includes(p.anoSerie) ? p.anoSerie : 'Outros';
+                const obj = mapAno.get(a); obj.sP += p.presencaPct * p.matriculas; obj.sM += p.matriculas;
+            });
+            const labelsAnos = [], dataAnos = [], colorsAnos = [];
+            ORDEM_ANOS.forEach(a => {
+                const val = mapAno.get(a);
+                if (val.sM > 0) {
+                    const pct = parseFloat((val.sP / val.sM).toFixed(1));
+                    labelsAnos.push(a); dataAnos.push(pct); colorsAnos.push(getPointColorPresenca(pct));
+                }
+            });
+
+            const ctxRadarPres = document.getElementById('chartRadarPresenca').getContext('2d');
+            chartRadarPresenca = new Chart(ctxRadarPres, {
+                type: 'radar',
+                data: {
+                    labels: labelsAnos,
+                    datasets: [{
+                        label: 'Frequência %', data: dataAnos,
+                        backgroundColor: function(context) { return createHeatmapGradient(context.chart.ctx, context.chart.chartArea, false); },
+                        borderColor: '#059669', borderWidth: 2, pointBackgroundColor: colorsAnos, pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 60, max: 100, ticks: { stepSize: 10 } } }, plugins: { legend: { display: false } } }
+            });
+        }
+
+        /* ABA 2: RENDERIZAÇÃO DA ABA DE COMPONENTES CURRICULARES */
+        function populateComponentesDropdown() {
+            const container = document.getElementById('options-compSel');
+            const compsSet = new Set(filteredDesempenho.map(d => d.componente));
+            const compsList = Array.from(compsSet).sort();
+
+            const sSelected = getSelectedCheckboxes('compSel');
+
+            let html = '';
+            compsList.forEach(c => {
+                const isChecked = sSelected.length === 0 || sSelected.includes(c);
+                html += `<label><input type="checkbox" value="${c.replace(/"/g,'&quot;')}" ${isChecked ? 'checked' : ''} onchange="updateMultiSelectDisplay('compSel'); renderComponentesTab();"> ${c}</label>`;
+            });
+            container.innerHTML = html;
+            updateMultiSelectDisplay('compSel');
+        }
+
+        function renderComponentesTab() {
+            if (chartBarCompOnly) chartBarCompOnly.destroy();
+            if (chartLineCompEvol) chartLineCompEvol.destroy();
+
+            const selectedComps = getSelectedCheckboxes('compSel');
+
+            // Filtra desempenho apenas pelos componentes marcados no filtro
+            const listDesempenhoComp = filteredDesempenho.filter(d => selectedComps.length === 0 || selectedComps.includes(d.componente));
+
+            // ====== 1. BARRAS: DESEMPENHO POR COMPONENTE ======
+            const mapComp = new Map();
+            listDesempenhoComp.forEach(d => {
+                if (!mapComp.has(d.componente)) mapComp.set(d.componente, { sN: 0, sW: 0 });
+                const w = d.peso * d.avaliados; mapComp.get(d.componente).sN += d.nota * w; mapComp.get(d.componente).sW += w;
+            });
+
+            const compsOrdenados = Array.from(mapComp.keys()).sort();
+            const dataComps = compsOrdenados.map(c => {
+                const val = mapComp.get(c); return val.sW > 0 ? parseFloat((val.sN / val.sW).toFixed(2)) : 0;
+            });
+            const bgComps = dataComps.map(n => getPointColorNota(n));
+
+            const ctxBarComp = document.getElementById('chartBarCompOnly').getContext('2d');
+            chartBarCompOnly = new Chart(ctxBarComp, {
+                type: 'bar',
+                data: { labels: compsOrdenados, datasets: [{ label: 'Nota Média', data: dataComps, backgroundColor: bgComps, borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
+            });
+
+            // ====== 2. LINHAS: EVOLUÇÃO DAS NOTAS POR COMPONENTE ======
+            const avaliacoesSet = new Set();
+            rawDesempenho.forEach(d => avaliacoesSet.add(d.id_avaliacao));
+            const avalsOrdenadas = Array.from(avaliacoesSet).sort();
+            const labelsAvals = avalsOrdenadas.map(id => rawAvaliacoes.get(id) || id);
+
+            const datasetsCompLine = [];
+            compsOrdenados.forEach((cNome, idx) => {
+                const cor = PALETA_CORES[idx % PALETA_CORES.length];
+                const dataCompAvals = avalsOrdenadas.map(id => {
+                    let sN = 0, sW = 0;
+                    listDesempenhoComp.filter(d => d.componente === cNome && d.id_avaliacao === id).forEach(d => {
+                        const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
+                    });
+                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
+                });
+
+                datasetsCompLine.push({
+                    label: cNome, data: dataCompAvals, borderColor: cor, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2
+                });
+            });
+
+            const ctxLineComp = document.getElementById('chartLineCompEvol').getContext('2d');
+            chartLineCompEvol = new Chart(ctxLineComp, {
+                type: 'line',
+                data: { labels: labelsAvals, datasets: datasetsCompLine },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
+            });
+        }
+
+        /* ABA 3: RENDERIZAÇÃO DA COMPARAÇÃO DE COMPONENTES */
+        function populateCompComponentesSelectors() {
+            const selX = document.getElementById('selectCompX');
+            const selY = document.getElementById('selectCompY');
+
+            const valXAnt = selX.value; const valYAnt = selY.value;
+
+            const compsSet = new Set(filteredDesempenho.map(d => d.componente));
+            const compsList = Array.from(compsSet).sort();
+
+            let optionsX = '<option value="FREQUENCIA">Frequência Média (%)</option>';
+            let optionsY = '';
+
+            compsList.forEach(c => {
+                optionsX += `<option value="${c}">${c}</option>`;
+                optionsY += `<option value="${c}">${c}</option>`;
+            });
+
+            selX.innerHTML = optionsX; selY.innerHTML = optionsY;
+
+            if (valXAnt && selX.querySelector(`option[value="${valXAnt}"]`)) selX.value = valXAnt;
+            if (valYAnt && selY.querySelector(`option[value="${valYAnt}"]`)) selY.value = valYAnt;
+            else if (compsList.length > 1) selY.value = compsList[1];
+        }
+
+        function renderCompComponentesTab() {
+            if (chartScatterCustom) chartScatterCustom.destroy();
+            if (chartBarCompEntidade) chartBarCompEntidade.destroy();
+            if (chartLineCompEntidade) chartLineCompEntidade.destroy();
+
+            const varX = document.getElementById('selectCompX').value;
+            const varY = document.getElementById('selectCompY').value;
+
+            const sEsc = getSelectedCheckboxes('escola');
+            const isVisaoEscola = sEsc.length === 0;
+
+            // ====== 1. DISPERSÃO CUSTOMIZADA ======
+            document.getElementById('comp-scatter-title').textContent = `Dispersão: ${varX} vs ${varY} (${isVisaoEscola ? 'Por Escola' : 'Por Turma'})`;
+
+            const mapaComparacao = new Map();
+
+            if (varX === 'FREQUENCIA') {
+                filteredPresencas.forEach(p => {
+                    const key = isVisaoEscola ? p.escola : p.id_turma;
+                    const rot = isVisaoEscola ? key : `${p.turma} (${p.escola})`;
+                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: rot, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapaComparacao.get(key); item.valX_sum += p.presencaPct * p.matriculas; item.valX_w += p.matriculas;
+                });
+            } else {
+                filteredDesempenho.filter(d => d.componente === varX).forEach(d => {
+                    const key = isVisaoEscola ? d.escola : d.id_turma;
+                    const rot = isVisaoEscola ? key : `${d.turma} (${d.escola})`;
+                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: rot, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapaComparacao.get(key); const w = d.peso * d.avaliados; item.valX_sum += d.nota * w; item.valX_w += w;
+                });
+            }
+
+            if (varY === 'FREQUENCIA') {
+                filteredPresencas.forEach(p => {
+                    const key = isVisaoEscola ? p.escola : p.id_turma;
+                    const rot = isVisaoEscola ? key : `${p.turma} (${p.escola})`;
+                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: rot, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapaComparacao.get(key); item.valY_sum += p.presencaPct * p.matriculas; item.valY_w += p.matriculas;
+                });
+            } else {
+                filteredDesempenho.filter(d => d.componente === varY).forEach(d => {
+                    const key = isVisaoEscola ? d.escola : d.id_turma;
+                    const rot = isVisaoEscola ? key : `${d.turma} (${d.escola})`;
+                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: rot, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapaComparacao.get(key); const w = d.peso * d.avaliados; item.valY_sum += d.nota * w; item.valY_w += w;
+                });
+            }
+
+            const pointsCustom = [];
+            mapaComparacao.forEach(item => {
+                if (item.valX_w > 0 && item.valY_w > 0) {
+                    const xVal = parseFloat((item.valX_sum / item.valX_w).toFixed(2));
+                    const yVal = parseFloat((item.valY_sum / item.valY_w).toFixed(2));
+                    pointsCustom.push({ x: xVal, y: yVal, rotulo: item.rotulo });
+                }
+            });
+
+            const corrStats = calcularPearson(pointsCustom);
+            document.getElementById('comp-correlation-value').textContent = `${corrStats.r.toFixed(2)} (${corrStats.texto})`;
+
+            const trendLinePoints = calcularRegressaoLinear(pointsCustom);
+            const isXFreq = varX === 'FREQUENCIA';
+            const isYFreq = varY === 'FREQUENCIA';
+
+            const ctxCustom = document.getElementById('chartScatterCustom').getContext('2d');
+            chartScatterCustom = new Chart(ctxCustom, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        { label: isVisaoEscola ? 'Escolas' : 'Turmas', data: pointsCustom, backgroundColor: '#2563eb', pointRadius: 7, pointHoverRadius: 10 },
+                        { label: 'Linha de Tendência', data: trendLinePoints, type: 'line', borderColor: '#e11d48', borderWidth: 2.5, borderDash: [6, 6], pointRadius: 0, fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'top' }, tooltip: { callbacks: { label: ctx => { const raw = ctx.raw; if (ctx.dataset.type === 'line') return ' Tendência Linear'; return ` ${raw.rotulo}: ${varX} ${raw.x}${isXFreq?'%':''} | ${varY} ${raw.y}${isYFreq?'%':''}`; } } } },
+                    scales: {
+                        x: { title: { display: true, text: `${varX} ${isXFreq ? '(%)' : '(0 - 10)'}`, font: { weight: 'bold' } }, min: isXFreq ? 50 : 0, max: isXFreq ? 100 : 10, grid: { color: 'rgba(0,0,0,0.05)' } },
+                        y: { title: { display: true, text: `${varY} ${isYFreq ? '(%)' : '(0 - 10)'}`, font: { weight: 'bold' } }, min: isYFreq ? 50 : 0, max: isYFreq ? 100 : 10, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    }
+                }
+            });
+
+            // ====== 2. BARRAS POR ENTIDADE ======
+            document.getElementById('comp-bar-ent-title').textContent = `Média de Desempenho por ${isVisaoEscola ? 'Escola' : 'Turma'}`;
+            const mapEntBar = new Map();
+            filteredDesempenho.forEach(d => {
+                const key = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                if (!mapEntBar.has(key)) mapEntBar.set(key, { sN: 0, sW: 0 });
+                const w = d.peso * d.avaliados; mapEntBar.get(key).sN += d.nota * w; mapEntBar.get(key).sW += w;
+            });
+
+            const labelsEntBar = Array.from(mapEntBar.keys()).sort();
+            const dataEntBar = labelsEntBar.map(k => {
+                const v = mapEntBar.get(k); return v.sW > 0 ? parseFloat((v.sN / v.sW).toFixed(2)) : 0;
+            });
+            const bgEntBar = dataEntBar.map(n => getPointColorNota(n));
+
+            const ctxBarEnt = document.getElementById('chartBarCompEntidade').getContext('2d');
+            chartBarCompEntidade = new Chart(ctxBarEnt, {
+                type: 'bar',
+                data: { labels: labelsEntBar, datasets: [{ label: 'Nota Média', data: dataEntBar, backgroundColor: bgEntBar, borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
+            });
+
+            // ====== 3. LINHAS DE EVOLUÇÃO POR ENTIDADE ======
+            document.getElementById('comp-line-ent-title').textContent = `Evolução das Notas por ${isVisaoEscola ? 'Escola' : 'Turma'}`;
+            const avaliacoesSet = new Set();
+            rawDesempenho.forEach(d => avaliacoesSet.add(d.id_avaliacao));
+            const avalsOrdenadas = Array.from(avaliacoesSet).sort();
+            const labelsAvals = avalsOrdenadas.map(id => rawAvaliacoes.get(id) || id);
+
+            const datasetsEntLine = [];
+            labelsEntBar.slice(0, 10).forEach((entNome, idx) => {
+                const cor = PALETA_CORES[idx % PALETA_CORES.length];
+                const dataEntLine = avalsOrdenadas.map(id => {
+                    let sN = 0, sW = 0;
+                    filteredDesempenho.filter(d => {
+                        const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                        return chave === entNome && d.id_avaliacao === id;
+                    }).forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
+                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
+                });
+
+                datasetsEntLine.push({ label: entNome, data: dataEntLine, borderColor: cor, borderWidth: 2, pointRadius: 3, fill: false, tension: 0.2 });
+            });
+
+            const ctxLineEnt = document.getElementById('chartLineCompEntidade').getContext('2d');
+            chartLineCompEntidade = new Chart(ctxLineEnt, {
+                type: 'line',
+                data: { labels: labelsAvals, datasets: datasetsEntLine },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
+            });
+        }
+
+        /* ABA 4: RENDERIZAÇÃO DA COMPARAÇÃO DE ENTIDADES (COM MÉDIA GERAL PADRÃO) */
+        function setupCompEntidadesSidebar() {
+            const sEsc = getSelectedCheckboxes('escola');
+            const isVisaoEscola = sEsc.length === 0;
+
+            document.getElementById('comp-sidebar-title').textContent = isVisaoEscola ? 'Escolas' : 'Turmas';
+
+            if (isVisaoEscola) {
+                entAvailableEntities = Array.from(dbEscolas.values()).sort();
+            } else {
+                const turmasSet = new Set(filteredPresencas.map(p => `${p.turma} (${p.escola})`));
+                entAvailableEntities = Array.from(turmasSet).sort();
+            }
+
+            renderCompEntidadesSidebarCheckboxes();
+        }
+
+        function renderCompEntidadesSidebarCheckboxes() {
+            const container = document.getElementById('comp-entity-checkboxes');
+            let html = '';
+            entAvailableEntities.forEach(ent => {
+                const isChecked = entSelectedEntities.has(ent);
+                html += `<label>
+                    <input type="checkbox" value="${ent.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''} onchange="onEntCheckChange(this)">
+                    <span>${ent}</span>
+                </label>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function onEntCheckChange(cb) {
+            if (cb.checked) entSelectedEntities.add(cb.value);
+            else entSelectedEntities.delete(cb.value);
+            renderCompEntidadesTab();
+        }
+
+        function clearCompEntities() {
+            entSelectedEntities.clear();
+            renderCompEntidadesSidebarCheckboxes();
+            renderCompEntidadesTab();
+        }
+
+        function renderCompEntidadesTab() {
+            if (chartEntLineNotas) chartEntLineNotas.destroy();
+            if (chartEntLinePresenca) chartEntLinePresenca.destroy();
+            if (chartEntRadarAreas) chartEntRadarAreas.destroy();
+
+            const sEsc = getSelectedCheckboxes('escola');
+            const isVisaoEscola = sEsc.length === 0;
+            const selectedList = Array.from(entSelectedEntities);
+
+            // ====== 1. EVOLUÇÃO DE NOTAS POR ENTIDADE (COM MÉDIA GERAL OBRIGATÓRIA) ======
+            document.getElementById('ent-notas-title').textContent = isVisaoEscola ? 'Evolução de Notas por Escola' : 'Evolução de Notas por Turma / Sala';
+
+            const avaliacoesSet = new Set();
+            rawDesempenho.forEach(d => avaliacoesSet.add(d.id_avaliacao));
+            const avalsOrdenadas = Array.from(avaliacoesSet).sort();
+            const labelsAvals = avalsOrdenadas.map(id => rawAvaliacoes.get(id) || id);
+
+            const datasetsNotas = [];
+
+            // Média Geral da URE/Filtro (SEMPRE PRESENTE POR PADRÃO)
+            const dataUreNotas = avalsOrdenadas.map(id => {
+                let sN = 0, sW = 0;
+                filteredDesempenho.filter(d => d.id_avaliacao === id).forEach(d => {
+                    const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
+                });
+                return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
+            });
+
+            datasetsNotas.push({
+                label: 'Média Geral (URE)',
+                data: dataUreNotas,
+                borderColor: '#0f172a',
+                borderWidth: 3.5,
+                borderDash: [4, 4],
+                pointRadius: 5,
+                pointBackgroundColor: '#0f172a',
+                fill: false,
+                tension: 0.2
+            });
+
+            // Entidades adicionadas via Checkbox
+            selectedList.forEach((entNome, idx) => {
+                const cor = PALETA_CORES[idx % PALETA_CORES.length];
+                const dataEnt = avalsOrdenadas.map(id => {
+                    let sN = 0, sW = 0;
+                    const items = filteredDesempenho.filter(d => {
+                        const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                        return chave === entNome && d.id_avaliacao === id;
+                    });
+                    items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
+                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
+                });
+
+                if (dataEnt.some(v => v !== null)) {
+                    datasetsNotas.push({
+                        label: entNome, data: dataEnt, borderColor: cor, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2
+                    });
+                }
+            });
+
+            const ctxNotas = document.getElementById('chartEntLineNotas').getContext('2d');
+            chartEntLineNotas = new Chart(ctxNotas, {
+                type: 'line',
+                data: { labels: labelsAvals, datasets: datasetsNotas },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
+            });
+
+            // ====== 2. EVOLUÇÃO DA FREQUÊNCIA POR ENTIDADE ======
+            document.getElementById('ent-presenca-title').textContent = isVisaoEscola ? 'Evolução da Frequência por Escola' : 'Evolução da Frequência por Turma / Sala';
+
+            const semanasSet = new Set();
+            rawPresencas.forEach(p => semanasSet.add(p.semana));
+            const semanasOrdenadas = Array.from(semanasSet).sort((a,b) => a - b);
+            const labelsSemanas = semanasOrdenadas.map(s => `Semana ${s}`);
+
+            const datasetsPresenca = [];
+
+            const dataUrePresenca = semanasOrdenadas.map(s => {
+                let sP = 0, sM = 0;
+                filteredPresencas.filter(p => p.semana === s).forEach(p => {
+                    sP += p.presencaPct * p.matriculas; sM += p.matriculas;
+                });
+                return sM > 0 ? parseFloat((sP / sM).toFixed(1)) : null;
+            });
+
+            datasetsPresenca.push({
+                label: 'Média Geral (URE)',
+                data: dataUrePresenca,
+                borderColor: '#0f172a',
+                borderWidth: 3.5,
+                borderDash: [4, 4],
+                pointRadius: 4,
+                pointBackgroundColor: '#0f172a',
+                fill: false,
+                tension: 0.2
+            });
+
+            selectedList.forEach((entNome, idx) => {
+                const cor = PALETA_CORES[idx % PALETA_CORES.length];
+                const dataEnt = semanasOrdenadas.map(s => {
+                    let sP = 0, sM = 0;
+                    const items = filteredPresencas.filter(p => {
+                        const chave = isVisaoEscola ? p.escola : `${p.turma} (${p.escola})`;
+                        return chave === entNome && p.semana === s;
+                    });
+                    items.forEach(p => { sP += p.presencaPct * p.matriculas; sM += p.matriculas; });
+                    return sM > 0 ? parseFloat((sP / sM).toFixed(1)) : null;
+                });
+
+                if (dataEnt.some(v => v !== null)) {
+                    datasetsPresenca.push({
+                        label: entNome, data: dataEnt, borderColor: cor, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2
+                    });
+                }
+            });
+
+            const ctxPresenca = document.getElementById('chartEntLinePresenca').getContext('2d');
+            chartEntLinePresenca = new Chart(ctxPresenca, {
+                type: 'line',
+                data: { labels: labelsSemanas, datasets: datasetsPresenca },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 50, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
+            });
+
+            // ====== 3. RADAR ESPELHADO ======
+            const labelsAreas = Object.keys(AREAS_CONHECIMENTO);
+            const datasetsRadar = [];
+
+            const dataUreRadar = labelsAreas.map(areaKey => {
+                let sN = 0, sW = 0;
+                filteredDesempenho.filter(d => d.area === areaKey).forEach(d => {
+                    const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
+                });
+                return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : 0;
+            });
+
+            datasetsRadar.push({
+                label: 'Média Geral (URE)',
+                data: dataUreRadar,
+                borderColor: '#0f172a',
+                borderWidth: 3,
+                borderDash: [4, 4],
+                backgroundColor: 'transparent',
+                pointBackgroundColor: '#0f172a',
+                pointRadius: 5
+            });
+
+            selectedList.forEach((entNome, idx) => {
+                const cor = PALETA_CORES[idx % PALETA_CORES.length];
+                const dataRadarEnt = labelsAreas.map(areaKey => {
+                    let sN = 0, sW = 0;
+                    const items = filteredDesempenho.filter(d => {
+                        const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                        return chave === entNome && d.area === areaKey;
+                    });
+                    items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
+                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : 0;
+                });
+
+                datasetsRadar.push({
+                    label: entNome, data: dataRadarEnt, borderColor: cor, backgroundColor: 'transparent', borderWidth: 2.5, pointBackgroundColor: cor, pointRadius: 4
+                });
+            });
+
+            const ctxRadarEnt = document.getElementById('chartEntRadarAreas').getContext('2d');
+            chartEntRadarAreas = new Chart(ctxRadarEnt, {
+                type: 'radar',
+                data: { labels: labelsAreas, datasets: datasetsRadar },
+                options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 } } }, plugins: { legend: { display: true, position: 'top' } } }
+            });
+        }
+
+        async function initDashboard() {
+            showLoading('Iniciando plataforma analítica...');
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('dashboard-section').style.display = 'block';
+            await loadDatabase();
+        }
+
+        window.onload = async () => {
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                initDashboard();
+            }
+        };
+    </script>
+</body>
+</html>

@@ -83,13 +83,13 @@
 
         .container { padding: 2rem; max-width: 1600px; margin: 0 auto; }
 
-        /* NAVEGAÇÃO DE ABAS PRINCIPAIS */
+        /* Abas Principais */
         .main-tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; background: var(--surface); padding: .4rem .5rem; border-radius: var(--radius2); border: 1px solid var(--border); box-shadow: var(--shadow); width: fit-content; flex-wrap: wrap; }
         .btn-main-tab { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1.2rem; border-radius: 99px; font-family: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; border: 1.5px solid transparent; transition: all .18s; background: transparent; color: var(--muted); }
         .btn-main-tab:hover { background: var(--bg); color: var(--navy); }
         .btn-main-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 4px 12px rgba(12,26,53,.2); }
 
-        /* FILTROS GLOBAIS */
+        /* Filtros */
         .filters-wrapper { background: var(--surface); border-radius: var(--radius2); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
         .filters-label { font-size: .75rem; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
         .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; align-items: end; }
@@ -106,7 +106,7 @@
         .btn-clear { background: #fef2f2; border: 1.5px solid #fecdd3; color: var(--rose); border-radius: var(--radius); padding: .65rem .85rem; font-size: .85rem; font-weight: 700; cursor: pointer; height: 42px; width: 100%; transition: background 0.2s; }
         .btn-clear:hover { background: var(--rose); color: #fff; }
 
-        /* CARDS RESUMO GLOBAIS */
+        /* Cards Resumo */
         .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
         .card { background: var(--surface); border-radius: var(--radius2); padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
         .card::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px; background: var(--grad-blue); }
@@ -117,7 +117,7 @@
         .card .value { font-size: 2.2rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; line-height: 1.1; }
         .card .sub { font-size: 0.75rem; color: var(--light); margin-top: 0.4rem; font-weight: 600; }
 
-        /* GRÁFICOS CONTAINER */
+        /* Charts Grid */
         .charts-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
         .chart-box { background: var(--surface); border-radius: var(--radius2); padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; flex-direction: column; }
         .chart-box.full-width { grid-column: 1 / -1; }
@@ -126,11 +126,9 @@
         .chart-sub { font-size: 0.8rem; color: var(--muted); }
         .canvas-wrapper { position: relative; flex: 1; min-height: 320px; width: 100%; }
 
-        /* ELEMENTOS DAS ABAS ESPECÍFICAS */
-        .comp-selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; background: var(--surface2); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 1.25rem; }
-        .comp-select-group label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--navy); text-transform: uppercase; margin-bottom: 0.35rem; }
-        .comp-select-group select { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border2); border-radius: var(--radius); background: var(--surface); font-family: inherit; font-size: 0.85rem; font-weight: 600; color: var(--navy); outline: none; }
+        .correlation-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border2); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: var(--navy); }
 
+        /* Layout da Aba de Comparação de Entidades */
         .comparison-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; }
         .comp-sidebar { background: var(--surface); border-radius: var(--radius2); border: 1px solid var(--border); padding: 1.25rem; box-shadow: var(--shadow); display: flex; flex-direction: column; max-height: calc(100vh - 120px); position: sticky; top: 90px; }
         .comp-sidebar h3 { font-size: 0.85rem; font-weight: 800; color: var(--navy); text-transform: uppercase; margin-bottom: 0.75rem; }
@@ -138,7 +136,11 @@
         .entity-selector-list label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; font-weight: 600; color: var(--text); cursor: pointer; padding: 0.35rem 0.5rem; border-radius: 6px; transition: background 0.15s; }
         .entity-selector-list label:hover { background: var(--bg); color: var(--blue2); }
 
-        .correlation-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border2); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: var(--navy); }
+        /* Layout da Aba de Correlações */
+        .correl-layout { display: flex; flex-direction: column; gap: 1.5rem; }
+        .comp-selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; background: var(--surface2); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border); }
+        .comp-select-group label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--navy); text-transform: uppercase; margin-bottom: 0.35rem; }
+        .comp-select-group select { width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid var(--border2); border-radius: var(--radius); background: var(--surface); font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--navy); outline: none; }
 
         @media (max-width: 1024px) {
             .charts-container { grid-template-columns: 1fr; }
@@ -195,14 +197,11 @@
                 <button class="btn-main-tab active" id="btn-tab-visao360" onclick="switchMainTab('visao360')">
                     📊 Visão Geral 360º
                 </button>
-                <button class="btn-main-tab" id="btn-tab-componentes" onclick="switchMainTab('componentes')">
-                    📚 Componentes Curriculares
+                <button class="btn-main-tab" id="btn-tab-entidades" onclick="switchMainTab('entidades')">
+                    🏫 Comparar Entidades
                 </button>
-                <button class="btn-main-tab" id="btn-tab-comp-componentes" onclick="switchMainTab('comp-componentes')">
-                    🔄 Comparação de Componentes
-                </button>
-                <button class="btn-main-tab" id="btn-tab-comp-entidades" onclick="switchMainTab('comp-entidades')">
-                    🏫 Comparação de Entidades
+                <button class="btn-main-tab" id="btn-tab-correlacoes" onclick="switchMainTab('correlacoes')">
+                    📈 Comparação de Correlações
                 </button>
             </div>
 
@@ -321,150 +320,138 @@
                     <div class="chart-box">
                         <div class="chart-header">
                             <div>
+                                <div class="chart-title">Desempenho por Componente Curricular</div>
+                                <div class="chart-sub">Análise radar por disciplina individual</div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="chartRadarComponentes"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-box full-width">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title" id="scatter-title">Análise de Dispersão: Frequência vs Desempenho</div>
+                                <div class="chart-sub" id="scatter-sub">Plotagem de pontos com linha de tendência estatística</div>
+                            </div>
+                            <div class="correlation-badge">
+                                <span>Correlação de Pearson (r):</span>
+                                <span id="correlation-value" style="color:var(--blue2);">0.00</span>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper" style="min-height:380px;"><canvas id="chartScatter"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <div>
                                 <div class="chart-title">Frequência por Ano/Série (Radar Termal)</div>
                                 <div class="chart-sub">Mapa de calor por segmento de ensino</div>
                             </div>
                         </div>
                         <div class="canvas-wrapper"><canvas id="chartRadarPresenca"></canvas></div>
                     </div>
-                </div>
-            </div>
-
-            <!-- ABA 2: COMPONENTES CURRICULARES -->
-            <div id="tab-componentes" class="tab-content">
-                <div style="background:var(--surface2); padding:1rem; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:1.5rem;">
-                    <label style="display:block; font-size:0.75rem; font-weight:800; color:var(--navy); text-transform:uppercase; margin-bottom:0.5rem;">Seleção de Componentes Curriculares</label>
-                    <div class="multi-select" data-filter="compSel">
-                        <div class="select-display" onclick="toggleDropdown(this)"><span>Todos os Componentes</span></div>
-                        <div class="select-options" id="options-compSel"></div>
-                    </div>
-                </div>
-
-                <div class="charts-container">
                     <div class="chart-box">
                         <div class="chart-header">
                             <div>
-                                <div class="chart-title">Desempenho por Componente Curricular (Barras)</div>
-                                <div class="chart-sub">Média geral dos componentes selecionados</div>
+                                <div class="chart-title">Frequência por Ano/Série (Barras)</div>
+                                <div class="chart-sub">Comparativo direto de assiduidade</div>
                             </div>
                         </div>
-                        <div class="canvas-wrapper"><canvas id="chartBarCompOnly"></canvas></div>
-                    </div>
-                    <div class="chart-box">
-                        <div class="chart-header">
-                            <div>
-                                <div class="chart-title">Evolução do Desempenho ao Longo do Tempo</div>
-                                <div class="chart-sub">Trajetória das notas de cada componente por avaliação</div>
-                            </div>
-                        </div>
-                        <div class="canvas-wrapper"><canvas id="chartLineCompEvol"></canvas></div>
+                        <div class="canvas-wrapper"><canvas id="chartBarPresenca"></canvas></div>
                     </div>
                 </div>
             </div>
 
-            <!-- ABA 3: COMPARAÇÃO DE COMPONENTES -->
-            <div id="tab-comp-componentes" class="tab-content">
-                <div class="comp-selectors">
-                    <div class="comp-select-group">
-                        <label>Variável X (Horizontal)</label>
-                        <select id="selectCompX" onchange="renderCompComponentesTab()">
-                            <option value="FREQUENCIA">Frequência Média (%)</option>
-                        </select>
-                    </div>
-                    <div class="comp-select-group">
-                        <label>Variável Y (Vertical)</label>
-                        <select id="selectCompY" onchange="renderCompComponentesTab()">
-                        </select>
-                    </div>
-                </div>
-
-                <div class="charts-container">
-                    <!-- 1. DISPERSÃO -->
-                    <div class="chart-box full-width">
-                        <div class="chart-header">
-                            <div>
-                                <div class="chart-title" id="comp-scatter-title">Dispersão e Correlação</div>
-                                <div class="chart-sub">Cruzamento de variáveis com linha de tendência estatística</div>
-                            </div>
-                            <div class="correlation-badge">
-                                <span>Pearson (r):</span>
-                                <span id="comp-correlation-value" style="color:var(--blue2);">0.00</span>
-                            </div>
-                        </div>
-                        <div class="canvas-wrapper" style="min-height:380px;"><canvas id="chartScatterCustom"></canvas></div>
-                    </div>
-
-                    <!-- 2. BARRAS POR ENTIDADE -->
-                    <div class="chart-box">
-                        <div class="chart-header">
-                            <div>
-                                <div class="chart-title" id="comp-bar-ent-title">Desempenho dos Componentes por Entidade</div>
-                                <div class="chart-sub">Comparação do rendimento entre Escolas/Turmas</div>
-                            </div>
-                        </div>
-                        <div class="canvas-wrapper"><canvas id="chartBarCompEntidade"></canvas></div>
-                    </div>
-
-                    <!-- 3. EVOLUÇÃO TEMPORAL POR ENTIDADE -->
-                    <div class="chart-box">
-                        <div class="chart-header">
-                            <div>
-                                <div class="chart-title" id="comp-line-ent-title">Evolução do Desempenho das Entidades</div>
-                                <div class="chart-sub">Evolução das notas médias ao longo das avaliações</div>
-                            </div>
-                        </div>
-                        <div class="canvas-wrapper"><canvas id="chartLineCompEntidade"></canvas></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ABA 4: COMPARAÇÃO DE ENTIDADES -->
-            <div id="tab-comp-entidades" class="tab-content">
+            <!-- ABA 2: COMPARAÇÃO DE ENTIDADES -->
+            <div id="tab-entidades" class="tab-content">
                 <div class="comparison-layout">
-                    <!-- PAINEL LATERAL DE SELEÇÃO DE ENTIDADES -->
                     <div class="comp-sidebar">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
                             <h3 id="comp-sidebar-title">Selecione Entidades</h3>
-                            <button style="background:none; border:none; color:var(--blue2); font-size:0.75rem; font-weight:700; cursor:pointer;" onclick="clearCompEntities()">Apenas Média Geral</button>
+                            <button style="background:none; border:none; color:var(--blue2); font-size:0.75rem; font-weight:700; cursor:pointer;" onclick="toggleAllCompEntities()">Todas</button>
                         </div>
-                        <div class="entity-selector-list" id="comp-entity-checkboxes">
-                            <!-- Preenchido dinamicamente -->
+                        <div class="entity-selector-list" id="comp-entity-checkboxes"></div>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                        <div class="chart-box">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title" id="comp-notas-title">Evolução de Notas por Entidade</div>
+                                    <div class="chart-sub">Desempenho ao longo das avaliações das entidades selecionadas</div>
+                                </div>
+                            </div>
+                            <div class="canvas-wrapper" style="min-height:380px;"><canvas id="chartCompLineNotas"></canvas></div>
+                        </div>
+
+                        <div class="chart-box">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title" id="comp-presenca-title">Evolução da Frequência por Entidade</div>
+                                    <div class="chart-sub">Assiduidade semana a semana das entidades selecionadas</div>
+                                </div>
+                            </div>
+                            <div class="canvas-wrapper" style="min-height:380px;"><canvas id="chartCompLinePresenca"></canvas></div>
+                        </div>
+
+                        <div class="charts-container" style="margin-bottom:0;">
+                            <div class="chart-box" style="margin-bottom:0;">
+                                <div class="chart-header">
+                                    <div>
+                                        <div class="chart-title" id="comp-radar-title">Perfil por Área de Conhecimento</div>
+                                        <div class="chart-sub">Sobreposição dos radares por área</div>
+                                    </div>
+                                </div>
+                                <div class="canvas-wrapper" style="min-height:400px;"><canvas id="chartCompRadarAreas"></canvas></div>
+                            </div>
+                            <div class="chart-box" style="margin-bottom:0;">
+                                <div class="chart-header">
+                                    <div>
+                                        <div class="chart-title" id="comp-radar-comps-title">Perfil por Componente Curricular Individual</div>
+                                        <div class="chart-sub">Sobreposição dos radares disciplina por disciplina</div>
+                                    </div>
+                                </div>
+                                <div class="canvas-wrapper" style="min-height:400px;"><canvas id="chartCompRadarComps"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 3: COMPARAÇÃO DE CORRELAÇÕES -->
+            <div id="tab-correlacoes" class="tab-content">
+                <div class="correl-layout">
+                    <div class="comp-selectors">
+                        <div class="comp-select-group">
+                            <label>Eixo Horizontal (Variável X)</label>
+                            <select id="selectCompX" onchange="renderCorrelacoesTab()">
+                                <option value="FREQUENCIA">Frequência Média (%)</option>
+                            </select>
+                        </div>
+                        <div class="comp-select-group">
+                            <label>Eixo Vertical (Variável Y)</label>
+                            <select id="selectCompY" onchange="renderCorrelacoesTab()">
+                            </select>
                         </div>
                     </div>
 
-                    <!-- CONTEÚDO DA ABA DE COMPARAÇÃO DE ENTIDADES -->
-                    <div style="display:flex; flex-direction:column; gap:1.5rem;">
-                        <!-- 1. EVOLUÇÃO DE NOTAS POR ENTIDADE -->
-                        <div class="chart-box">
+                    <div class="charts-container">
+                        <div class="chart-box full-width">
                             <div class="chart-header">
                                 <div>
-                                    <div class="chart-title" id="ent-notas-title">Evolução de Notas por Entidade</div>
-                                    <div class="chart-sub">Por padrão exibe apenas a Média Geral (marque entidades ao lado para comparar)</div>
+                                    <div class="chart-title" id="comp-scatter-title">Análise de Correlação Customizada</div>
+                                    <div class="chart-sub">Cruzamento de quaisquer duas variáveis com linha de regressão linear</div>
+                                </div>
+                                <div class="correlation-badge">
+                                    <span>Pearson (r):</span>
+                                    <span id="comp-correlation-value" style="color:var(--blue2);">0.00</span>
                                 </div>
                             </div>
-                            <div class="canvas-wrapper" style="min-height:380px;"><canvas id="chartEntLineNotas"></canvas></div>
-                        </div>
-
-                        <!-- 2. EVOLUÇÃO DA FREQUÊNCIA POR ENTIDADE -->
-                        <div class="chart-box">
-                            <div class="chart-header">
-                                <div>
-                                    <div class="chart-title" id="ent-presenca-title">Evolução da Frequência por Entidade</div>
-                                    <div class="chart-sub">Assiduidade semana a semana por entidade selecionada</div>
-                                </div>
-                            </div>
-                            <div class="canvas-wrapper" style="min-height:380px;"><canvas id="chartEntLinePresenca"></canvas></div>
-                        </div>
-
-                        <!-- 3. RADAR ESPELHADO -->
-                        <div class="chart-box">
-                            <div class="chart-header">
-                                <div>
-                                    <div class="chart-title">Perfil por Área de Conhecimento (Espelhado)</div>
-                                    <div class="chart-sub">Sobreposição dos radares das entidades selecionadas</div>
-                                </div>
-                            </div>
-                            <div class="canvas-wrapper" style="min-height:400px;"><canvas id="chartEntRadarAreas"></canvas></div>
+                            <div class="canvas-wrapper" style="min-height:480px;"><canvas id="chartScatterCustom"></canvas></div>
                         </div>
                     </div>
                 </div>
@@ -482,7 +469,7 @@
             supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         }
 
-        // Estado do Banco de Dados
+        // Estado do Banco
         let dbTurmas = new Map();
         let dbEscolas = new Map();
         let rawPresencas = [];
@@ -494,29 +481,27 @@
 
         let currentMainTab = 'visao360';
 
-        // Instâncias Chart.js - Aba 1: Visão Geral
+        // Instâncias Chart.js - Visão Geral
         let chartLineNotas = null;
         let chartLinePresenca = null;
         let chartRadarAreas = null;
+        let chartRadarComponentes = null;
+        let chartScatter = null;
         let chartRadarPresenca = null;
+        let chartBarPresenca = null;
 
-        // Instâncias Chart.js - Aba 2: Componentes
-        let chartBarCompOnly = null;
-        let chartLineCompEvol = null;
+        // Instâncias Chart.js - Aba Comparar Entidades
+        let chartCompLineNotas = null;
+        let chartCompLinePresenca = null;
+        let chartCompRadarAreas = null;
+        let chartCompRadarComps = null;
 
-        // Instâncias Chart.js - Aba 3: Comparação de Componentes
+        // Instâncias Chart.js - Aba Correlações
         let chartScatterCustom = null;
-        let chartBarCompEntidade = null;
-        let chartLineCompEntidade = null;
 
-        // Instâncias Chart.js - Aba 4: Comparação de Entidades
-        let chartEntLineNotas = null;
-        let chartEntLinePresenca = null;
-        let chartEntRadarAreas = null;
-
-        // Seleção de Entidades na Aba 4 (Inicialmente vazio = Apenas Média Geral)
-        let entAvailableEntities = [];
-        let entSelectedEntities = new Set();
+        // Seleção de Entidades na Aba 2
+        let compAvailableEntities = [];
+        let compSelectedEntities = new Set();
 
         const AREAS_CONHECIMENTO = {
             "MATEMÁTICA": ["MAT", "MATEMATICA"],
@@ -565,23 +550,22 @@
 
         function switchMainTab(tab) {
             currentMainTab = tab;
-            document.querySelectorAll('.btn-main-tab').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('btn-tab-visao360').classList.toggle('active', tab === 'visao360');
+            document.getElementById('btn-tab-entidades').classList.toggle('active', tab === 'entidades');
+            document.getElementById('btn-tab-correlacoes').classList.toggle('active', tab === 'correlacoes');
+            
+            document.getElementById('tab-visao360').classList.toggle('active', tab === 'visao360');
+            document.getElementById('tab-entidades').classList.toggle('active', tab === 'entidades');
+            document.getElementById('tab-correlacoes').classList.toggle('active', tab === 'correlacoes');
 
-            document.getElementById(`btn-tab-${tab}`).classList.add('active');
-            document.getElementById(`tab-${tab}`).classList.add('active');
-
-            if (tab === 'componentes') {
-                populateComponentesDropdown();
-                renderComponentesTab();
-            } else if (tab === 'comp-componentes') {
-                populateCompComponentesSelectors();
-                renderCompComponentesTab();
-            } else if (tab === 'comp-entidades') {
-                setupCompEntidadesSidebar();
-                renderCompEntidadesTab();
+            if (tab === 'entidades') {
+                setupCompSidebarEntities();
+                renderEntidadesTab();
+            } else if (tab === 'correlacoes') {
+                populateCorrelacaoSelectors();
+                renderCorrelacoesTab();
             } else {
-                renderVisaoGeralTab();
+                renderCharts();
             }
         }
 
@@ -874,17 +858,14 @@
 
             updateCards();
 
-            if (currentMainTab === 'componentes') {
-                populateComponentesDropdown();
-                renderComponentesTab();
-            } else if (currentMainTab === 'comp-componentes') {
-                populateCompComponentesSelectors();
-                renderCompComponentesTab();
-            } else if (currentMainTab === 'comp-entidades') {
-                setupCompEntidadesSidebar();
-                renderCompEntidadesTab();
+            if (currentMainTab === 'entidades') {
+                setupCompSidebarEntities();
+                renderEntidadesTab();
+            } else if (currentMainTab === 'correlacoes') {
+                populateCorrelacaoSelectors();
+                renderCorrelacoesTab();
             } else {
-                renderVisaoGeralTab();
+                renderCharts();
             }
         }
 
@@ -982,13 +963,361 @@
             return { r: r, texto: texto };
         }
 
-        /* ABA 1: RENDERIZAÇÃO DA VISÃO GERAL 360º */
-        function renderVisaoGeralTab() {
-            [chartLineNotas, chartLinePresenca, chartRadarAreas, chartRadarPresenca].forEach(c => { if (c) c.destroy(); });
+        /* LÓGICA DA ABA 2: COMPARAR ENTIDADES COM MÉDIA GERAL MARCAADA POR PADRÃO */
+        function setupCompSidebarEntities() {
+            const sEsc = getSelectedCheckboxes('escola');
+            const isVisaoEscola = sEsc.length === 0;
+
+            document.getElementById('comp-sidebar-title').textContent = isVisaoEscola ? 'Escolas' : 'Turmas';
+
+            if (isVisaoEscola) {
+                compAvailableEntities = Array.from(dbEscolas.values()).sort();
+            } else {
+                const turmasSet = new Set(filteredPresencas.map(p => `${p.turma} (${p.escola})`));
+                compAvailableEntities = Array.from(turmasSet).sort();
+            }
+
+            // Se for inicialização, marca APENAS O PRIMEIRO ITEM (Média Geral) ou o primeiro da lista
+            if (compSelectedEntities.size === 0 && compAvailableEntities.length > 0) {
+                compSelectedEntities = new Set(["MÉDIA GERAL"]);
+            }
+
+            renderCompSidebarCheckboxes();
+        }
+
+        function renderCompSidebarCheckboxes() {
+            const container = document.getElementById('comp-entity-checkboxes');
+            let html = '';
+            
+            // Adiciona a "Média Geral" fixa no topo da lista lateral
+            const isMGChecked = compSelectedEntities.has("MÉDIA GERAL");
+            html += `<label style="border-bottom: 2px solid var(--border); padding-bottom: 6px; margin-bottom: 6px; font-weight:700; color:var(--blue2);">
+                <input type="checkbox" value="MÉDIA GERAL" ${isMGChecked ? 'checked' : ''} onchange="onCompEntityCheckChange(this)">
+                <span>MÉDIA GERAL</span>
+            </label>`;
+
+            compAvailableEntities.forEach(ent => {
+                const isChecked = compSelectedEntities.has(ent);
+                html += `<label>
+                    <input type="checkbox" value="${ent.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''} onchange="onCompEntityCheckChange(this)">
+                    <span>${ent}</span>
+                </label>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function onCompEntityCheckChange(cb) {
+            if (cb.checked) compSelectedEntities.add(cb.value);
+            else compSelectedEntities.delete(cb.value);
+            renderEntidadesTab();
+        }
+
+        function toggleAllCompEntities() {
+            const allItems = ["MÉDIA GERAL", ...compAvailableEntities];
+            if (compSelectedEntities.size === allItems.length) {
+                compSelectedEntities.clear();
+            } else {
+                compSelectedEntities = new Set(allItems);
+            }
+            renderCompSidebarCheckboxes();
+            renderEntidadesTab();
+        }
+
+        function renderEntidadesTab() {
+            if (chartCompLineNotas) chartCompLineNotas.destroy();
+            if (chartCompLinePresenca) chartCompLinePresenca.destroy();
+            if (chartCompRadarAreas) chartCompRadarAreas.destroy();
+            if (chartCompRadarComps) chartCompRadarComps.destroy();
 
             const sEsc = getSelectedCheckboxes('escola');
+            const isVisaoEscola = sEsc.length === 0;
+            const selectedList = Array.from(compSelectedEntities);
 
-            // 1. LINHAS: NOTAS BENCHMARK (FILTRO vs URE)
+            // 1. Evolução de Notas por Entidade (ou Média Geral)
+            document.getElementById('comp-notas-title').textContent = isVisaoEscola ? 'Evolução de Notas por Escola' : 'Evolução de Notas por Turma / Sala';
+            
+            const avaliacoesSet = new Set();
+            rawDesempenho.forEach(d => avaliacoesSet.add(d.id_avaliacao));
+            const avalsOrdenadas = Array.from(avaliacoesSet).sort();
+            const labelsAvals = avalsOrdenadas.map(id => rawAvaliacoes.get(id) || id);
+
+            const datasetsNotas = [];
+            selectedList.forEach((entNome, idx) => {
+                const cor = PALETA_CORES[idx % PALETA_CORES.length];
+                const dataEnt = avalsOrdenadas.map(id => {
+                    let sN = 0, sW = 0;
+                    if (entNome === "MÉDIA GERAL") {
+                        filteredDesempenho.filter(d => d.id_avaliacao === id).forEach(d => {
+                            const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
+                        });
+                    } else {
+                        const items = filteredDesempenho.filter(d => {
+                            const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                            return chave === entNome && d.id_avaliacao === id;
+                        });
+                        items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
+                    }
+                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
+                });
+
+                if (dataEnt.some(v => v !== null)) {
+                    datasetsNotas.push({ label: entNome, data: dataEnt, borderColor: cor, borderWidth: entNome === "MÉDIA GERAL" ? 3.5 : 2.5, borderDash: entNome === "MÉDIA GERAL" ? [4,4] : [], pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2 });
+                }
+            });
+
+            const ctxNotas = document.getElementById('chartCompLineNotas').getContext('2d');
+            chartCompLineNotas = new Chart(ctxNotas, {
+                type: 'line',
+                data: { labels: labelsAvals, datasets: datasetsNotas },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
+            });
+
+            // 2. Evolução da Frequência por Entidade (ou Média Geral)
+            document.getElementById('comp-presenca-title').textContent = isVisaoEscola ? 'Evolução da Frequência por Escola' : 'Evolução da Frequência por Turma / Sala';
+
+            const semanasSet = new Set();
+            rawPresencas.forEach(p => semanasSet.add(p.semana));
+            const semanasOrdenadas = Array.from(semanasSet).sort((a,b) => a - b);
+            const labelsSemanas = semanasOrdenadas.map(s => `Semana ${s}`);
+
+            const datasetsPresenca = [];
+            selectedList.forEach((entNome, idx) => {
+                const cor = PALETA_CORES[idx % PALETA_CORES.length];
+                const dataEnt = semanasOrdenadas.map(s => {
+                    let sP = 0, sM = 0;
+                    if (entNome === "MÉDIA GERAL") {
+                        filteredPresencas.filter(p => p.semana === s).forEach(p => {
+                            sP += p.presencaPct * p.matriculas; sM += p.matriculas;
+                        });
+                    } else {
+                        const items = filteredPresencas.filter(p => {
+                            const chave = isVisaoEscola ? p.escola : `${p.turma} (${p.escola})`;
+                            return chave === entNome && p.semana === s;
+                        });
+                        items.forEach(p => { sP += p.presencaPct * p.matriculas; sM += p.matriculas; });
+                    }
+                    return sM > 0 ? parseFloat((sP / sM).toFixed(1)) : null;
+                });
+
+                if (dataEnt.some(v => v !== null)) {
+                    datasetsPresenca.push({ label: entNome, data: dataEnt, borderColor: cor, borderWidth: entNome === "MÉDIA GERAL" ? 3.5 : 2.5, borderDash: entNome === "MÉDIA GERAL" ? [4,4] : [], pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2 });
+                }
+            });
+
+            const ctxPresenca = document.getElementById('chartCompLinePresenca').getContext('2d');
+            chartCompLinePresenca = new Chart(ctxPresenca, {
+                type: 'line',
+                data: { labels: labelsSemanas, datasets: datasetsPresenca },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 50, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
+            });
+
+            // 3. Radar por Área de Conhecimento
+            const labelsAreas = Object.keys(AREAS_CONHECIMENTO);
+            const datasetsRadarAreas = [];
+
+            selectedList.forEach((entNome, idx) => {
+                const cor = PALETA_CORES[idx % PALETA_CORES.length];
+                const dataRadarEnt = labelsAreas.map(areaKey => {
+                    let sN = 0, sW = 0;
+                    if (entNome === "MÉDIA GERAL") {
+                        filteredDesempenho.filter(d => d.area === areaKey).forEach(d => {
+                            const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
+                        });
+                    } else {
+                        const items = filteredDesempenho.filter(d => {
+                            const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                            return chave === entNome && d.area === areaKey;
+                        });
+                        items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
+                    }
+                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : 0;
+                });
+
+                datasetsRadarAreas.push({
+                    label: entNome,
+                    data: dataRadarEnt,
+                    borderColor: cor,
+                    backgroundColor: 'transparent',
+                    borderWidth: entNome === "MÉDIA GERAL" ? 3.5 : 2.5,
+                    pointBackgroundColor: cor,
+                    pointRadius: 4
+                });
+            });
+
+            const ctxRadarAreas = document.getElementById('chartCompRadarAreas').getContext('2d');
+            chartCompRadarAreas = new Chart(ctxRadarAreas, {
+                type: 'radar',
+                data: { labels: labelsAreas, datasets: datasetsRadarAreas },
+                options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 } } }, plugins: { legend: { display: true, position: 'top' } } }
+            });
+
+            // 4. Radar por Componente Curricular Individual
+            const mapComp = new Map();
+            filteredDesempenho.forEach(d => mapComp.set(d.componente, true));
+            const labelsComps = Array.from(mapComp.keys()).sort();
+
+            const datasetsRadarComps = [];
+            selectedList.forEach((entNome, idx) => {
+                const cor = PALETA_CORES[idx % PALETA_CORES.length];
+                const dataRadarCompEnt = labelsComps.map(compKey => {
+                    let sN = 0, sW = 0;
+                    if (entNome === "MÉDIA GERAL") {
+                        filteredDesempenho.filter(d => d.componente === compKey).forEach(d => {
+                            const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
+                        });
+                    } else {
+                        const items = filteredDesempenho.filter(d => {
+                            const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                            return chave === entNome && d.componente === compKey;
+                        });
+                        items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
+                    }
+                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : 0;
+                });
+
+                datasetsRadarComps.push({
+                    label: entNome,
+                    data: dataRadarCompEnt,
+                    borderColor: cor,
+                    backgroundColor: 'transparent',
+                    borderWidth: entNome === "MÉDIA GERAL" ? 3.5 : 2.5,
+                    pointBackgroundColor: cor,
+                    pointRadius: 4
+                });
+            });
+
+            const ctxRadarComps = document.getElementById('chartCompRadarComps').getContext('2d');
+            chartCompRadarComps = new Chart(ctxRadarComps, {
+                type: 'radar',
+                data: { labels: labelsComps, datasets: datasetsRadarComps },
+                options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 } } }, plugins: { legend: { display: true, position: 'top' } } }
+            });
+        }
+
+        /* LÓGICA DA ABA 3: COMPARAÇÃO DE CORRELAÇÕES */
+        function populateCorrelacaoSelectors() {
+            const selX = document.getElementById('selectCompX');
+            const selY = document.getElementById('selectCompY');
+
+            const valXAnt = selX.value;
+            const valYAnt = selY.value;
+
+            const compsSet = new Set();
+            filteredDesempenho.forEach(d => compsSet.add(d.componente));
+            const compsList = Array.from(compsSet).sort();
+
+            let optionsX = '<option value="FREQUENCIA">Frequência Média (%)</option>';
+            let optionsY = '';
+
+            compsList.forEach(c => {
+                optionsX += `<option value="${c}">${c}</option>`;
+                optionsY += `<option value="${c}">${c}</option>`;
+            });
+
+            selX.innerHTML = optionsX;
+            selY.innerHTML = optionsY;
+
+            if (valXAnt && selX.querySelector(`option[value="${valXAnt}"]`)) selX.value = valXAnt;
+            if (valYAnt && selY.querySelector(`option[value="${valYAnt}"]`)) selY.value = valYAnt;
+            else if (compsList.length > 1) selY.value = compsList[1];
+        }
+
+        function renderCorrelacoesTab() {
+            if (chartScatterCustom) chartScatterCustom.destroy();
+
+            const varX = document.getElementById('selectCompX').value;
+            const varY = document.getElementById('selectCompY').value;
+
+            const sEsc = getSelectedCheckboxes('escola');
+            const isVisaoEscola = sEsc.length === 0;
+
+            document.getElementById('comp-scatter-title').textContent = `Dispersão: ${varX} vs ${varY}`;
+
+            const mapaComparacao = new Map();
+
+            if (varX === 'FREQUENCIA') {
+                filteredPresencas.forEach(p => {
+                    const key = isVisaoEscola ? p.escola : p.id_turma;
+                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: isVisaoEscola ? key : `${p.turma} (${p.escola})`, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapaComparacao.get(key);
+                    item.valX_sum += p.presencaPct * p.matriculas; item.valX_w += p.matriculas;
+                });
+            } else {
+                filteredDesempenho.filter(d => d.componente === varX).forEach(d => {
+                    const key = isVisaoEscola ? d.escola : d.id_turma;
+                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: isVisaoEscola ? key : `${d.turma} (${d.escola})`, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapaComparacao.get(key);
+                    const w = d.peso * d.avaliados;
+                    item.valX_sum += d.nota * w; item.valX_w += w;
+                });
+            }
+
+            if (varY === 'FREQUENCIA') {
+                filteredPresencas.forEach(p => {
+                    const key = isVisaoEscola ? p.escola : p.id_turma;
+                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: isVisaoEscola ? key : `${p.turma} (${p.escola})`, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapaComparacao.get(key);
+                    item.valY_sum += p.presencaPct * p.matriculas; item.valY_w += p.matriculas;
+                });
+            } else {
+                filteredDesempenho.filter(d => d.componente === varY).forEach(d => {
+                    const key = isVisaoEscola ? d.escola : d.id_turma;
+                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: isVisaoEscola ? key : `${d.turma} (${d.escola})`, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapaComparacao.get(key);
+                    const w = d.peso * d.avaliados;
+                    item.valY_sum += d.nota * w; item.valY_w += w;
+                });
+            }
+
+            const pointsCustom = [];
+            mapaComparacao.forEach(item => {
+                if (item.valX_w > 0 && item.valY_w > 0) {
+                    const xVal = parseFloat((item.valX_sum / item.valX_w).toFixed(2));
+                    const yVal = parseFloat((item.valY_sum / item.valY_w).toFixed(2));
+                    pointsCustom.push({ x: xVal, y: yVal, rotulo: item.rotulo });
+                }
+            });
+
+            const corrStats = calcularPearson(pointsCustom);
+            document.getElementById('comp-correlation-value').textContent = `${corrStats.r.toFixed(2)} (${corrStats.texto})`;
+
+            const trendLinePoints = calcularRegressaoLinear(pointsCustom);
+            const isXFreq = varX === 'FREQUENCIA';
+            const isYFreq = varY === 'FREQUENCIA';
+
+            const ctxCustom = document.getElementById('chartScatterCustom').getContext('2d');
+            chartScatterCustom = new Chart(ctxCustom, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        { label: isVisaoEscola ? 'Escolas' : 'Turmas', data: pointsCustom, backgroundColor: '#2563eb', pointRadius: 7, pointHoverRadius: 10 },
+                        { label: 'Linha de Tendência', data: trendLinePoints, type: 'line', borderColor: '#e11d48', borderWidth: 2.5, borderDash: [6, 6], pointRadius: 0, fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        tooltip: { callbacks: { label: ctx => { const raw = ctx.raw; if (ctx.dataset.type === 'line') return ' Tendência Linear'; return ` ${raw.rotulo}: ${varX} ${raw.x}${isXFreq?'%':''} | ${varY} ${raw.y}${isYFreq?'%':''}`; } } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: `${varX} ${isXFreq ? '(%)' : '(0 - 10)'}`, font: { weight: 'bold' } }, min: isXFreq ? 50 : 0, max: isXFreq ? 100 : 10, grid: { color: 'rgba(0,0,0,0.05)' } },
+                        y: { title: { display: true, text: `${varY} ${isYFreq ? '(%)' : '(0 - 10)'}`, font: { weight: 'bold' } }, min: isYFreq ? 50 : 0, max: isYFreq ? 100 : 10, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        /* RENDERIZAÇÃO DA VISÃO GERAL 360º */
+        function renderCharts() {
+            [chartLineNotas, chartLinePresenca, chartRadarAreas, chartRadarComponentes, chartScatter, chartRadarPresenca, chartBarPresenca].forEach(c => {
+                if (c) c.destroy();
+            });
+
+            const sEsc = getSelectedCheckboxes('escola');
+            const isVisaoEscola = sEsc.length === 0;
+
+            // 1. Linhas: Desempenho Benchmark
             const avaliacoesSet = new Set();
             rawDesempenho.forEach(d => avaliacoesSet.add(d.id_avaliacao));
             const avalsOrdenadas = Array.from(avaliacoesSet).sort();
@@ -1023,7 +1352,7 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
             });
 
-            // 2. LINHAS: FREQUÊNCIA BENCHMARK (FILTRO vs URE)
+            // 2. Linhas: Frequência Benchmark
             const semanasSet = new Set();
             rawPresencas.forEach(p => semanasSet.add(p.semana));
             const semanasOrdenadas = Array.from(semanasSet).sort((a,b) => a - b);
@@ -1058,13 +1387,16 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 50, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
             });
 
-            // 3. RADAR: ÁREAS DO CONHECIMENTO
+            // 3. Radar: Áreas
             const mapAreas = new Map();
             Object.keys(AREAS_CONHECIMENTO).forEach(a => mapAreas.set(a, { sN: 0, sW: 0 }));
+            
             filteredDesempenho.forEach(d => {
                 if (mapAreas.has(d.area)) {
                     const obj = mapAreas.get(d.area);
-                    const w = d.peso * d.avaliados; obj.sN += d.nota * w; obj.sW += w;
+                    const w = d.peso * d.avaliados;
+                    obj.sN += d.nota * w;
+                    obj.sW += w;
                 }
             });
             const labelsAreas = [], dataAreas = [], colorsAreas = [];
@@ -1079,7 +1411,8 @@
                 data: {
                     labels: labelsAreas,
                     datasets: [{
-                        label: 'Desempenho Médio', data: dataAreas,
+                        label: 'Desempenho Médio',
+                        data: dataAreas,
                         backgroundColor: function(context) { return createHeatmapGradient(context.chart.ctx, context.chart.chartArea, true); },
                         borderColor: '#2563eb', borderWidth: 2, pointBackgroundColor: colorsAreas, pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8
                     }]
@@ -1087,13 +1420,94 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 } } }, plugins: { legend: { display: false } } }
             });
 
-            // 4. RADAR: PRESENÇA POR ANO / SÉRIE
+            // 4. Radar: Componentes
+            const mapComp = new Map();
+            filteredDesempenho.forEach(d => {
+                if (!mapComp.has(d.componente)) mapComp.set(d.componente, { sN: 0, sW: 0 });
+                const w = d.peso * d.avaliados;
+                mapComp.get(d.componente).sN += d.nota * w;
+                mapComp.get(d.componente).sW += w;
+            });
+            
+            const compsOrdenados = Array.from(mapComp.keys()).sort();
+            const dataCompsRadar = [], colorsCompsRadar = [];
+            compsOrdenados.forEach(c => {
+                const val = mapComp.get(c);
+                const m = val.sW > 0 ? parseFloat((val.sN / val.sW).toFixed(2)) : 0;
+                dataCompsRadar.push(m); colorsCompsRadar.push(getPointColorNota(m));
+            });
+
+            const ctxRadarComp = document.getElementById('chartRadarComponentes').getContext('2d');
+            chartRadarComponentes = new Chart(ctxRadarComp, {
+                type: 'radar',
+                data: {
+                    labels: compsOrdenados,
+                    datasets: [{
+                        label: 'Nota Média',
+                        data: dataCompsRadar,
+                        backgroundColor: function(context) { return createHeatmapGradient(context.chart.ctx, context.chart.chartArea, true); },
+                        borderColor: '#2563eb', borderWidth: 2, pointBackgroundColor: colorsCompsRadar, pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 } } }, plugins: { legend: { display: false } } }
+            });
+
+            // 5. Scatter Plot
+            const mapaScatter = new Map();
+            document.getElementById('scatter-title').textContent = isVisaoEscola ? 'Análise de Dispersão Por Escola: Frequência vs Desempenho' : 'Análise de Dispersão Por Turma: Frequência vs Desempenho';
+            document.getElementById('scatter-sub').textContent = isVisaoEscola ? 'Cada ponto representa uma Escola inteira da URE com linha de tendência' : 'Cada ponto representa uma Turma individual com linha de tendência';
+
+            filteredPresencas.forEach(p => {
+                const key = isVisaoEscola ? p.escola : p.id_turma;
+                if (!mapaScatter.has(key)) mapaScatter.set(key, { id: key, nome: p.turma, escola: p.escola, sP: 0, sM: 0, sN: 0, sW: 0 });
+                const obj = mapaScatter.get(key); obj.sP += p.presencaPct * p.matriculas; obj.sM += p.matriculas;
+            });
+
+            filteredDesempenho.forEach(d => {
+                const key = isVisaoEscola ? d.escola : d.id_turma;
+                if (!mapaScatter.has(key)) mapaScatter.set(key, { id: key, nome: d.turma, escola: d.escola, sP: 0, sM: 0, sN: 0, sW: 0 });
+                const obj = mapaScatter.get(key); const w = d.peso * d.avaliados; obj.sN += d.nota * w; obj.sW += w;
+            });
+
+            const pointsScatter = [];
+            mapaScatter.forEach((val, key) => {
+                if (val.sM > 0 && val.sW > 0) {
+                    const freq = parseFloat((val.sP / val.sM).toFixed(1));
+                    const nota = parseFloat((val.sN / val.sW).toFixed(2));
+                    pointsScatter.push({ x: freq, y: nota, rotulo: isVisaoEscola ? key : `${val.nome} (${val.escola})` });
+                }
+            });
+
+            const corrStats = calcularPearson(pointsScatter);
+            document.getElementById('correlation-value').textContent = `${corrStats.r.toFixed(2)} (${corrStats.texto})`;
+
+            const trendLinePoints = calcularRegressaoLinear(pointsScatter);
+
+            const ctxScatter = document.getElementById('chartScatter').getContext('2d');
+            chartScatter = new Chart(ctxScatter, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        { label: isVisaoEscola ? 'Escolas' : 'Turmas', data: pointsScatter, backgroundColor: pointsScatter.map(p => getPointColorNota(p.y)), pointRadius: isVisaoEscola ? 8 : 6, pointHoverRadius: 10 },
+                        { label: 'Linha de Tendência (Correlação)', data: trendLinePoints, type: 'line', borderColor: '#2563eb', borderWidth: 2, borderDash: [6, 6], pointRadius: 0, fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'top' }, tooltip: { callbacks: { label: ctx => { const raw = ctx.raw; if (ctx.dataset.type === 'line') return ' Tendência Linear'; return ` ${raw.rotulo}: Freq ${raw.x}% | Nota ${raw.y}`; } } } },
+                    scales: { x: { title: { display: true, text: 'Frequência Média (%)', font: { weight: 'bold' } }, min: 50, max: 100, grid: { color: 'rgba(0,0,0,0.05)' } }, y: { title: { display: true, text: 'Nota Média (0 - 10)', font: { weight: 'bold' } }, min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } } }
+                }
+            });
+
+            // 6 e 7. Presença por Ano/Série
             const mapAno = new Map();
             ORDEM_ANOS.forEach(a => mapAno.set(a, { sP: 0, sM: 0 }));
+            
             filteredPresencas.forEach(p => {
                 const a = ORDEM_ANOS.includes(p.anoSerie) ? p.anoSerie : 'Outros';
                 const obj = mapAno.get(a); obj.sP += p.presencaPct * p.matriculas; obj.sM += p.matriculas;
             });
+            
             const labelsAnos = [], dataAnos = [], colorsAnos = [];
             ORDEM_ANOS.forEach(a => {
                 const val = mapAno.get(a);
@@ -1116,454 +1530,15 @@
                 },
                 options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 60, max: 100, ticks: { stepSize: 10 } } }, plugins: { legend: { display: false } } }
             });
-        }
 
-        /* ABA 2: RENDERIZAÇÃO DA ABA DE COMPONENTES CURRICULARES */
-        function populateComponentesDropdown() {
-            const container = document.getElementById('options-compSel');
-            const compsSet = new Set(filteredDesempenho.map(d => d.componente));
-            const compsList = Array.from(compsSet).sort();
-
-            const sSelected = getSelectedCheckboxes('compSel');
-
-            let html = '';
-            compsList.forEach(c => {
-                const isChecked = sSelected.length === 0 || sSelected.includes(c);
-                html += `<label><input type="checkbox" value="${c.replace(/"/g,'&quot;')}" ${isChecked ? 'checked' : ''} onchange="updateMultiSelectDisplay('compSel'); renderComponentesTab();"> ${c}</label>`;
-            });
-            container.innerHTML = html;
-            updateMultiSelectDisplay('compSel');
-        }
-
-        function renderComponentesTab() {
-            if (chartBarCompOnly) chartBarCompOnly.destroy();
-            if (chartLineCompEvol) chartLineCompEvol.destroy();
-
-            const selectedComps = getSelectedCheckboxes('compSel');
-
-            // Filtra desempenho apenas pelos componentes marcados no filtro
-            const listDesempenhoComp = filteredDesempenho.filter(d => selectedComps.length === 0 || selectedComps.includes(d.componente));
-
-            // ====== 1. BARRAS: DESEMPENHO POR COMPONENTE ======
-            const mapComp = new Map();
-            listDesempenhoComp.forEach(d => {
-                if (!mapComp.has(d.componente)) mapComp.set(d.componente, { sN: 0, sW: 0 });
-                const w = d.peso * d.avaliados; mapComp.get(d.componente).sN += d.nota * w; mapComp.get(d.componente).sW += w;
-            });
-
-            const compsOrdenados = Array.from(mapComp.keys()).sort();
-            const dataComps = compsOrdenados.map(c => {
-                const val = mapComp.get(c); return val.sW > 0 ? parseFloat((val.sN / val.sW).toFixed(2)) : 0;
-            });
-            const bgComps = dataComps.map(n => getPointColorNota(n));
-
-            const ctxBarComp = document.getElementById('chartBarCompOnly').getContext('2d');
-            chartBarCompOnly = new Chart(ctxBarComp, {
+            const ctxBarPres = document.getElementById('chartBarPresenca').getContext('2d');
+            chartBarPresenca = new Chart(ctxBarPres, {
                 type: 'bar',
-                data: { labels: compsOrdenados, datasets: [{ label: 'Nota Média', data: dataComps, backgroundColor: bgComps, borderRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
-            });
-
-            // ====== 2. LINHAS: EVOLUÇÃO DAS NOTAS POR COMPONENTE ======
-            const avaliacoesSet = new Set();
-            rawDesempenho.forEach(d => avaliacoesSet.add(d.id_avaliacao));
-            const avalsOrdenadas = Array.from(avaliacoesSet).sort();
-            const labelsAvals = avalsOrdenadas.map(id => rawAvaliacoes.get(id) || id);
-
-            const datasetsCompLine = [];
-            compsOrdenados.forEach((cNome, idx) => {
-                const cor = PALETA_CORES[idx % PALETA_CORES.length];
-                const dataCompAvals = avalsOrdenadas.map(id => {
-                    let sN = 0, sW = 0;
-                    listDesempenhoComp.filter(d => d.componente === cNome && d.id_avaliacao === id).forEach(d => {
-                        const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
-                    });
-                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
-                });
-
-                datasetsCompLine.push({
-                    label: cNome, data: dataCompAvals, borderColor: cor, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2
-                });
-            });
-
-            const ctxLineComp = document.getElementById('chartLineCompEvol').getContext('2d');
-            chartLineCompEvol = new Chart(ctxLineComp, {
-                type: 'line',
-                data: { labels: labelsAvals, datasets: datasetsCompLine },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
-            });
-        }
-
-        /* ABA 3: RENDERIZAÇÃO DA COMPARAÇÃO DE COMPONENTES */
-        function populateCompComponentesSelectors() {
-            const selX = document.getElementById('selectCompX');
-            const selY = document.getElementById('selectCompY');
-
-            const valXAnt = selX.value; const valYAnt = selY.value;
-
-            const compsSet = new Set(filteredDesempenho.map(d => d.componente));
-            const compsList = Array.from(compsSet).sort();
-
-            let optionsX = '<option value="FREQUENCIA">Frequência Média (%)</option>';
-            let optionsY = '';
-
-            compsList.forEach(c => {
-                optionsX += `<option value="${c}">${c}</option>`;
-                optionsY += `<option value="${c}">${c}</option>`;
-            });
-
-            selX.innerHTML = optionsX; selY.innerHTML = optionsY;
-
-            if (valXAnt && selX.querySelector(`option[value="${valXAnt}"]`)) selX.value = valXAnt;
-            if (valYAnt && selY.querySelector(`option[value="${valYAnt}"]`)) selY.value = valYAnt;
-            else if (compsList.length > 1) selY.value = compsList[1];
-        }
-
-        function renderCompComponentesTab() {
-            if (chartScatterCustom) chartScatterCustom.destroy();
-            if (chartBarCompEntidade) chartBarCompEntidade.destroy();
-            if (chartLineCompEntidade) chartLineCompEntidade.destroy();
-
-            const varX = document.getElementById('selectCompX').value;
-            const varY = document.getElementById('selectCompY').value;
-
-            const sEsc = getSelectedCheckboxes('escola');
-            const isVisaoEscola = sEsc.length === 0;
-
-            // ====== 1. DISPERSÃO CUSTOMIZADA ======
-            document.getElementById('comp-scatter-title').textContent = `Dispersão: ${varX} vs ${varY} (${isVisaoEscola ? 'Por Escola' : 'Por Turma'})`;
-
-            const mapaComparacao = new Map();
-
-            if (varX === 'FREQUENCIA') {
-                filteredPresencas.forEach(p => {
-                    const key = isVisaoEscola ? p.escola : p.id_turma;
-                    const rot = isVisaoEscola ? key : `${p.turma} (${p.escola})`;
-                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: rot, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
-                    const item = mapaComparacao.get(key); item.valX_sum += p.presencaPct * p.matriculas; item.valX_w += p.matriculas;
-                });
-            } else {
-                filteredDesempenho.filter(d => d.componente === varX).forEach(d => {
-                    const key = isVisaoEscola ? d.escola : d.id_turma;
-                    const rot = isVisaoEscola ? key : `${d.turma} (${d.escola})`;
-                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: rot, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
-                    const item = mapaComparacao.get(key); const w = d.peso * d.avaliados; item.valX_sum += d.nota * w; item.valX_w += w;
-                });
-            }
-
-            if (varY === 'FREQUENCIA') {
-                filteredPresencas.forEach(p => {
-                    const key = isVisaoEscola ? p.escola : p.id_turma;
-                    const rot = isVisaoEscola ? key : `${p.turma} (${p.escola})`;
-                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: rot, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
-                    const item = mapaComparacao.get(key); item.valY_sum += p.presencaPct * p.matriculas; item.valY_w += p.matriculas;
-                });
-            } else {
-                filteredDesempenho.filter(d => d.componente === varY).forEach(d => {
-                    const key = isVisaoEscola ? d.escola : d.id_turma;
-                    const rot = isVisaoEscola ? key : `${d.turma} (${d.escola})`;
-                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: rot, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
-                    const item = mapaComparacao.get(key); const w = d.peso * d.avaliados; item.valY_sum += d.nota * w; item.valY_w += w;
-                });
-            }
-
-            const pointsCustom = [];
-            mapaComparacao.forEach(item => {
-                if (item.valX_w > 0 && item.valY_w > 0) {
-                    const xVal = parseFloat((item.valX_sum / item.valX_w).toFixed(2));
-                    const yVal = parseFloat((item.valY_sum / item.valY_w).toFixed(2));
-                    pointsCustom.push({ x: xVal, y: yVal, rotulo: item.rotulo });
-                }
-            });
-
-            const corrStats = calcularPearson(pointsCustom);
-            document.getElementById('comp-correlation-value').textContent = `${corrStats.r.toFixed(2)} (${corrStats.texto})`;
-
-            const trendLinePoints = calcularRegressaoLinear(pointsCustom);
-            const isXFreq = varX === 'FREQUENCIA';
-            const isYFreq = varY === 'FREQUENCIA';
-
-            const ctxCustom = document.getElementById('chartScatterCustom').getContext('2d');
-            chartScatterCustom = new Chart(ctxCustom, {
-                type: 'scatter',
                 data: {
-                    datasets: [
-                        { label: isVisaoEscola ? 'Escolas' : 'Turmas', data: pointsCustom, backgroundColor: '#2563eb', pointRadius: 7, pointHoverRadius: 10 },
-                        { label: 'Linha de Tendência', data: trendLinePoints, type: 'line', borderColor: '#e11d48', borderWidth: 2.5, borderDash: [6, 6], pointRadius: 0, fill: false }
-                    ]
+                    labels: labelsAnos,
+                    datasets: [{ label: 'Frequência %', data: dataAnos, backgroundColor: colorsAnos, borderRadius: 4 }]
                 },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: true, position: 'top' }, tooltip: { callbacks: { label: ctx => { const raw = ctx.raw; if (ctx.dataset.type === 'line') return ' Tendência Linear'; return ` ${raw.rotulo}: ${varX} ${raw.x}${isXFreq?'%':''} | ${varY} ${raw.y}${isYFreq?'%':''}`; } } } },
-                    scales: {
-                        x: { title: { display: true, text: `${varX} ${isXFreq ? '(%)' : '(0 - 10)'}`, font: { weight: 'bold' } }, min: isXFreq ? 50 : 0, max: isXFreq ? 100 : 10, grid: { color: 'rgba(0,0,0,0.05)' } },
-                        y: { title: { display: true, text: `${varY} ${isYFreq ? '(%)' : '(0 - 10)'}`, font: { weight: 'bold' } }, min: isYFreq ? 50 : 0, max: isYFreq ? 100 : 10, grid: { color: 'rgba(0,0,0,0.05)' } }
-                    }
-                }
-            });
-
-            // ====== 2. BARRAS POR ENTIDADE ======
-            document.getElementById('comp-bar-ent-title').textContent = `Média de Desempenho por ${isVisaoEscola ? 'Escola' : 'Turma'}`;
-            const mapEntBar = new Map();
-            filteredDesempenho.forEach(d => {
-                const key = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
-                if (!mapEntBar.has(key)) mapEntBar.set(key, { sN: 0, sW: 0 });
-                const w = d.peso * d.avaliados; mapEntBar.get(key).sN += d.nota * w; mapEntBar.get(key).sW += w;
-            });
-
-            const labelsEntBar = Array.from(mapEntBar.keys()).sort();
-            const dataEntBar = labelsEntBar.map(k => {
-                const v = mapEntBar.get(k); return v.sW > 0 ? parseFloat((v.sN / v.sW).toFixed(2)) : 0;
-            });
-            const bgEntBar = dataEntBar.map(n => getPointColorNota(n));
-
-            const ctxBarEnt = document.getElementById('chartBarCompEntidade').getContext('2d');
-            chartBarCompEntidade = new Chart(ctxBarEnt, {
-                type: 'bar',
-                data: { labels: labelsEntBar, datasets: [{ label: 'Nota Média', data: dataEntBar, backgroundColor: bgEntBar, borderRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
-            });
-
-            // ====== 3. LINHAS DE EVOLUÇÃO POR ENTIDADE ======
-            document.getElementById('comp-line-ent-title').textContent = `Evolução das Notas por ${isVisaoEscola ? 'Escola' : 'Turma'}`;
-            const avaliacoesSet = new Set();
-            rawDesempenho.forEach(d => avaliacoesSet.add(d.id_avaliacao));
-            const avalsOrdenadas = Array.from(avaliacoesSet).sort();
-            const labelsAvals = avalsOrdenadas.map(id => rawAvaliacoes.get(id) || id);
-
-            const datasetsEntLine = [];
-            labelsEntBar.slice(0, 10).forEach((entNome, idx) => {
-                const cor = PALETA_CORES[idx % PALETA_CORES.length];
-                const dataEntLine = avalsOrdenadas.map(id => {
-                    let sN = 0, sW = 0;
-                    filteredDesempenho.filter(d => {
-                        const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
-                        return chave === entNome && d.id_avaliacao === id;
-                    }).forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
-                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
-                });
-
-                datasetsEntLine.push({ label: entNome, data: dataEntLine, borderColor: cor, borderWidth: 2, pointRadius: 3, fill: false, tension: 0.2 });
-            });
-
-            const ctxLineEnt = document.getElementById('chartLineCompEntidade').getContext('2d');
-            chartLineCompEntidade = new Chart(ctxLineEnt, {
-                type: 'line',
-                data: { labels: labelsAvals, datasets: datasetsEntLine },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
-            });
-        }
-
-        /* ABA 4: RENDERIZAÇÃO DA COMPARAÇÃO DE ENTIDADES (COM MÉDIA GERAL PADRÃO) */
-        function setupCompEntidadesSidebar() {
-            const sEsc = getSelectedCheckboxes('escola');
-            const isVisaoEscola = sEsc.length === 0;
-
-            document.getElementById('comp-sidebar-title').textContent = isVisaoEscola ? 'Escolas' : 'Turmas';
-
-            if (isVisaoEscola) {
-                entAvailableEntities = Array.from(dbEscolas.values()).sort();
-            } else {
-                const turmasSet = new Set(filteredPresencas.map(p => `${p.turma} (${p.escola})`));
-                entAvailableEntities = Array.from(turmasSet).sort();
-            }
-
-            renderCompEntidadesSidebarCheckboxes();
-        }
-
-        function renderCompEntidadesSidebarCheckboxes() {
-            const container = document.getElementById('comp-entity-checkboxes');
-            let html = '';
-            entAvailableEntities.forEach(ent => {
-                const isChecked = entSelectedEntities.has(ent);
-                html += `<label>
-                    <input type="checkbox" value="${ent.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''} onchange="onEntCheckChange(this)">
-                    <span>${ent}</span>
-                </label>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function onEntCheckChange(cb) {
-            if (cb.checked) entSelectedEntities.add(cb.value);
-            else entSelectedEntities.delete(cb.value);
-            renderCompEntidadesTab();
-        }
-
-        function clearCompEntities() {
-            entSelectedEntities.clear();
-            renderCompEntidadesSidebarCheckboxes();
-            renderCompEntidadesTab();
-        }
-
-        function renderCompEntidadesTab() {
-            if (chartEntLineNotas) chartEntLineNotas.destroy();
-            if (chartEntLinePresenca) chartEntLinePresenca.destroy();
-            if (chartEntRadarAreas) chartEntRadarAreas.destroy();
-
-            const sEsc = getSelectedCheckboxes('escola');
-            const isVisaoEscola = sEsc.length === 0;
-            const selectedList = Array.from(entSelectedEntities);
-
-            // ====== 1. EVOLUÇÃO DE NOTAS POR ENTIDADE (COM MÉDIA GERAL OBRIGATÓRIA) ======
-            document.getElementById('ent-notas-title').textContent = isVisaoEscola ? 'Evolução de Notas por Escola' : 'Evolução de Notas por Turma / Sala';
-
-            const avaliacoesSet = new Set();
-            rawDesempenho.forEach(d => avaliacoesSet.add(d.id_avaliacao));
-            const avalsOrdenadas = Array.from(avaliacoesSet).sort();
-            const labelsAvals = avalsOrdenadas.map(id => rawAvaliacoes.get(id) || id);
-
-            const datasetsNotas = [];
-
-            // Média Geral da URE/Filtro (SEMPRE PRESENTE POR PADRÃO)
-            const dataUreNotas = avalsOrdenadas.map(id => {
-                let sN = 0, sW = 0;
-                filteredDesempenho.filter(d => d.id_avaliacao === id).forEach(d => {
-                    const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
-                });
-                return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
-            });
-
-            datasetsNotas.push({
-                label: 'Média Geral (URE)',
-                data: dataUreNotas,
-                borderColor: '#0f172a',
-                borderWidth: 3.5,
-                borderDash: [4, 4],
-                pointRadius: 5,
-                pointBackgroundColor: '#0f172a',
-                fill: false,
-                tension: 0.2
-            });
-
-            // Entidades adicionadas via Checkbox
-            selectedList.forEach((entNome, idx) => {
-                const cor = PALETA_CORES[idx % PALETA_CORES.length];
-                const dataEnt = avalsOrdenadas.map(id => {
-                    let sN = 0, sW = 0;
-                    const items = filteredDesempenho.filter(d => {
-                        const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
-                        return chave === entNome && d.id_avaliacao === id;
-                    });
-                    items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
-                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
-                });
-
-                if (dataEnt.some(v => v !== null)) {
-                    datasetsNotas.push({
-                        label: entNome, data: dataEnt, borderColor: cor, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2
-                    });
-                }
-            });
-
-            const ctxNotas = document.getElementById('chartEntLineNotas').getContext('2d');
-            chartEntLineNotas = new Chart(ctxNotas, {
-                type: 'line',
-                data: { labels: labelsAvals, datasets: datasetsNotas },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
-            });
-
-            // ====== 2. EVOLUÇÃO DA FREQUÊNCIA POR ENTIDADE ======
-            document.getElementById('ent-presenca-title').textContent = isVisaoEscola ? 'Evolução da Frequência por Escola' : 'Evolução da Frequência por Turma / Sala';
-
-            const semanasSet = new Set();
-            rawPresencas.forEach(p => semanasSet.add(p.semana));
-            const semanasOrdenadas = Array.from(semanasSet).sort((a,b) => a - b);
-            const labelsSemanas = semanasOrdenadas.map(s => `Semana ${s}`);
-
-            const datasetsPresenca = [];
-
-            const dataUrePresenca = semanasOrdenadas.map(s => {
-                let sP = 0, sM = 0;
-                filteredPresencas.filter(p => p.semana === s).forEach(p => {
-                    sP += p.presencaPct * p.matriculas; sM += p.matriculas;
-                });
-                return sM > 0 ? parseFloat((sP / sM).toFixed(1)) : null;
-            });
-
-            datasetsPresenca.push({
-                label: 'Média Geral (URE)',
-                data: dataUrePresenca,
-                borderColor: '#0f172a',
-                borderWidth: 3.5,
-                borderDash: [4, 4],
-                pointRadius: 4,
-                pointBackgroundColor: '#0f172a',
-                fill: false,
-                tension: 0.2
-            });
-
-            selectedList.forEach((entNome, idx) => {
-                const cor = PALETA_CORES[idx % PALETA_CORES.length];
-                const dataEnt = semanasOrdenadas.map(s => {
-                    let sP = 0, sM = 0;
-                    const items = filteredPresencas.filter(p => {
-                        const chave = isVisaoEscola ? p.escola : `${p.turma} (${p.escola})`;
-                        return chave === entNome && p.semana === s;
-                    });
-                    items.forEach(p => { sP += p.presencaPct * p.matriculas; sM += p.matriculas; });
-                    return sM > 0 ? parseFloat((sP / sM).toFixed(1)) : null;
-                });
-
-                if (dataEnt.some(v => v !== null)) {
-                    datasetsPresenca.push({
-                        label: entNome, data: dataEnt, borderColor: cor, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2
-                    });
-                }
-            });
-
-            const ctxPresenca = document.getElementById('chartEntLinePresenca').getContext('2d');
-            chartEntLinePresenca = new Chart(ctxPresenca, {
-                type: 'line',
-                data: { labels: labelsSemanas, datasets: datasetsPresenca },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 50, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
-            });
-
-            // ====== 3. RADAR ESPELHADO ======
-            const labelsAreas = Object.keys(AREAS_CONHECIMENTO);
-            const datasetsRadar = [];
-
-            const dataUreRadar = labelsAreas.map(areaKey => {
-                let sN = 0, sW = 0;
-                filteredDesempenho.filter(d => d.area === areaKey).forEach(d => {
-                    const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
-                });
-                return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : 0;
-            });
-
-            datasetsRadar.push({
-                label: 'Média Geral (URE)',
-                data: dataUreRadar,
-                borderColor: '#0f172a',
-                borderWidth: 3,
-                borderDash: [4, 4],
-                backgroundColor: 'transparent',
-                pointBackgroundColor: '#0f172a',
-                pointRadius: 5
-            });
-
-            selectedList.forEach((entNome, idx) => {
-                const cor = PALETA_CORES[idx % PALETA_CORES.length];
-                const dataRadarEnt = labelsAreas.map(areaKey => {
-                    let sN = 0, sW = 0;
-                    const items = filteredDesempenho.filter(d => {
-                        const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
-                        return chave === entNome && d.area === areaKey;
-                    });
-                    items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
-                    return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : 0;
-                });
-
-                datasetsRadar.push({
-                    label: entNome, data: dataRadarEnt, borderColor: cor, backgroundColor: 'transparent', borderWidth: 2.5, pointBackgroundColor: cor, pointRadius: 4
-                });
-            });
-
-            const ctxRadarEnt = document.getElementById('chartEntRadarAreas').getContext('2d');
-            chartEntRadarAreas = new Chart(ctxRadarEnt, {
-                type: 'radar',
-                data: { labels: labelsAreas, datasets: datasetsRadar },
-                options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 } } }, plugins: { legend: { display: true, position: 'top' } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 50, max: 100, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
             });
         }
 

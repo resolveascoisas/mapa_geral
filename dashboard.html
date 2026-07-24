@@ -126,7 +126,13 @@
         .chart-sub { font-size: 0.8rem; color: var(--muted); }
         .canvas-wrapper { position: relative; flex: 1; min-height: 320px; width: 100%; }
 
-        .correlation-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface2); border: 1px solid var(--border2); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: var(--navy); }
+        .correlation-badges-wrap { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .correlation-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--surface2); border: 1px solid var(--border2); padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: var(--navy); }
+
+        /* Painel de Interpretação Amigável */
+        .insight-panel { background: var(--surface); border-radius: var(--radius2); padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); border-left: 5px solid var(--blue2); margin-bottom: 1.5rem; }
+        .insight-panel h3 { font-size: 1rem; font-weight: 800; color: var(--navy); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .insight-panel p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
 
         /* Layout da Aba de Comparação de Entidades */
         .comparison-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; }
@@ -138,9 +144,16 @@
 
         /* Layout da Aba de Correlações */
         .correl-layout { display: flex; flex-direction: column; gap: 1.5rem; }
-        .comp-selectors { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; background: var(--surface2); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border); }
+        .comp-selectors { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; background: var(--surface2); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border); }
         .comp-select-group label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--navy); text-transform: uppercase; margin-bottom: 0.35rem; }
         .comp-select-group select { width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid var(--border2); border-radius: var(--radius); background: var(--surface); font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--navy); outline: none; }
+
+        /* Tabela Heatmap */
+        .table-container { background: var(--surface); border-radius: var(--radius2); padding: 1.4rem 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); overflow-x: auto; margin-top: 1rem; }
+        table.heatmap { width: 100%; border-collapse: collapse; font-size: .8rem; }
+        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: .55rem .45rem; text-align: center; vertical-align: middle; white-space: nowrap; }
+        table.heatmap th { background: var(--navy); color: rgba(255,255,255,.85); font-size: .72rem; font-weight: 700; letter-spacing: .05em; white-space: normal; line-height: 1.25; }
+        table.heatmap .row-header { text-align: left; background: var(--surface2); color: var(--text); font-weight: 600; font-size: .8rem; white-space: normal; }
 
         @media (max-width: 1024px) {
             .charts-container { grid-template-columns: 1fr; }
@@ -438,6 +451,19 @@
                             <select id="selectCompY" onchange="renderCorrelacoesTab()">
                             </select>
                         </div>
+                        <div class="comp-select-group">
+                            <label>Nível de Agrupamento</label>
+                            <select id="selectCorrelAgrupamento" onchange="renderCorrelacoesTab()">
+                                <option value="escola">Mostrar por Escolas</option>
+                                <option value="turma">Mostrar por Turmas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- PAINEL DE INTERPRETAÇÃO AMIGÁVEL PARA LEIGOS -->
+                    <div class="insight-panel">
+                        <h3>💡 Interpretação Pedagógica dos Dados</h3>
+                        <p id="interpretacao-texto">Carregando análise estatística automatizada...</p>
                     </div>
 
                     <div class="charts-container">
@@ -447,12 +473,77 @@
                                     <div class="chart-title" id="comp-scatter-title">Análise de Correlação Customizada</div>
                                     <div class="chart-sub">Cruzamento de quaisquer duas variáveis com linha de regressão linear</div>
                                 </div>
-                                <div class="correlation-badge">
-                                    <span>Pearson (r):</span>
-                                    <span id="comp-correlation-value" style="color:var(--blue2);">0.00</span>
+                                <div class="correlation-badges-wrap">
+                                    <div class="correlation-badge">
+                                        <span>Pearson (r):</span>
+                                        <span id="comp-correlation-value" style="color:var(--blue2);">0.00</span>
+                                    </div>
+                                    <div class="correlation-badge">
+                                        <span>Determinação (R²):</span>
+                                        <span id="comp-r2-value" style="color:var(--emerald);">0.00</span>
+                                    </div>
+                                    <div class="correlation-badge">
+                                        <span>Significância (p-value):</span>
+                                        <span id="comp-pvalue" style="color:var(--purple);">0.00</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="canvas-wrapper" style="min-height:480px;"><canvas id="chartScatterCustom"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Tabela de Correlação por Ano/Série -->
+                    <div class="chart-box full-width" style="margin-top: 1rem;">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">Correlação por Ano / Série</div>
+                                <div class="chart-sub">Análise detalhada estatística de Pearson (r), R² e significância (p-value) por etapa</div>
+                            </div>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="heatmap" id="tabelaCorrelacaoAnoSerie">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left; width: 180px;">Ano / Série</th>
+                                        <th>Entidades (N)</th>
+                                        <th>Pearson (r)</th>
+                                        <th>Determinação (R²)</th>
+                                        <th>Sig. (p-value)</th>
+                                        <th style="text-align:left;">Interpretação Estatística</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- NOVO: Tabela de Correlação da Disciplina Base com as demais -->
+                    <div class="chart-box full-width" style="margin-top: 1.5rem;">
+                        <div class="chart-header" style="align-items: center;">
+                            <div>
+                                <div class="chart-title">Matriz Cruzada com as Demais Disciplinas</div>
+                                <div class="chart-sub">Selecione uma disciplina base para ver sua correlação com cada uma das outras</div>
+                            </div>
+                            <div class="comp-select-group" style="min-width: 240px; margin-top: 0;">
+                                <label style="font-size:0.65rem;">Selecione o Componente Base (X)</label>
+                                <select id="selectMatrizBase" onchange="renderMatrizCruzadaComOutros()">
+                                </select>
+                            </div>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="heatmap" id="tabelaMatrizCruzada">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left; width: 220px;">Componente Comparado (Y)</th>
+                                        <th>Entidades (N)</th>
+                                        <th>Pearson (r)</th>
+                                        <th>Determinação (R²)</th>
+                                        <th>Sig. (p-value)</th>
+                                        <th style="text-align:left;">Interpretação</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -514,7 +605,7 @@
 
         const ORDEM_ANOS = [
             "6º ANO", "7º ANO", "8º ANO", "9º ANO",
-            "1ª SÉRIE", "2ª SÉRIE", "3ª SÉRIE", "Outros"
+            "1ª SÉRIE", "2ª SÉRIE", "3ª SÉRIE"
         ];
 
         const PALETA_CORES = [
@@ -631,13 +722,14 @@
 
         function extrairAnoSerie(nome) {
             if (!nome) return "Outros";
-            const upper = nome.toUpperCase();
-            const m = upper.match(/([1-9])[ºª°OA]?\s*(ANO|S[EÉ]RIE)/);
+            const upper = String(nome).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const m = upper.match(/([1-9])([ºª°OA]?\s*(ANO|SERIE)?)/);
             if (m) {
                 const num = m[1];
-                const tipo = m[2].startsWith('S') ? 'SÉRIE' : 'ANO';
-                const suf = tipo === 'SÉRIE' ? 'ª' : 'º';
-                return `${num}${suf} ${tipo}`;
+                if (upper.includes('SERIE') || (upper.includes('EM') && num <= 3)) {
+                    return `${num}ª SÉRIE`;
+                }
+                return `${num}º ANO`;
             }
             return "Outros";
         }
@@ -658,7 +750,12 @@
                     fetchAllData('desempenho')
                 ]);
 
-                escolas.forEach(e => dbEscolas.set(String(e.id_escola || e.id).trim(), e.nome_escola || e.escola || e.nome));
+                escolas.forEach(e => {
+                    const key = String(e.id_escola || e.id || '').trim();
+                    const nome = e.nome_escola || e.escola || e.nome;
+                    if (key && nome) dbEscolas.set(key, nome);
+                });
+
                 avaliacoes.forEach(a => rawAvaliacoes.set(String(a.id), a.nome || a.tipo || `Avaliação ${a.id}`));
 
                 turmas.forEach(t => {
@@ -669,7 +766,7 @@
                     
                     dbTurmas.set(id, {
                         id_turma: id,
-                        escola: escolaNome,
+                        escola: escolaNome !== 'undefined' ? escolaNome : 'Escola Não Identificada',
                         turmaLimpa: nomeTurma,
                         anoSerie: extrairAnoSerie(nomeTurma),
                         etapa: t.tipo_ensino || t.etapa || 'Não Informada',
@@ -678,7 +775,8 @@
                 });
 
                 rawPresencas = presencas.map(p => {
-                    const t = dbTurmas.get(String(p.id_turma).trim()) || { 
+                    const idTurmaStr = String(p.id_turma || '').trim();
+                    const t = dbTurmas.get(idTurmaStr) || { 
                         escola: p.escola || 'Escola Não Identificada', 
                         turmaLimpa: p.turma || 'Turma Não Identificada',
                         anoSerie: extrairAnoSerie(p.turma),
@@ -688,9 +786,9 @@
                     
                     let num = parseFloat(p.presenca) || 0;
                     return {
-                        id_turma: String(p.id_turma).trim(),
+                        id_turma: idTurmaStr,
                         semana: parseInt(p.semana) || 0,
-                        escola: t.escola,
+                        escola: (t.escola && t.escola !== 'undefined') ? t.escola : 'Escola Não Identificada',
                         turma: t.turmaLimpa,
                         anoSerie: t.anoSerie,
                         etapa: t.etapa,
@@ -701,10 +799,11 @@
                 });
 
                 rawDesempenho = desempenho.map(d => {
-                    const t = dbTurmas.get(String(d.id).trim()) || { 
+                    const idTurmaStr = String(d.id || '').trim();
+                    const t = dbTurmas.get(idTurmaStr) || { 
                         escola: 'Escola Não Identificada', 
                         turmaLimpa: 'Turma Não Identificada',
-                        anoSerie: 'Outros', etapa: 'Não Informada', modalidade: 'Parcial'
+                        anoSerie: extrairAnoSerie(d.turma), etapa: 'Não Informada', modalidade: 'Parcial'
                     };
                     
                     const comp = String(d.componente || '').trim().toUpperCase();
@@ -714,9 +813,9 @@
                     }
 
                     return {
-                        id_turma: String(d.id).trim(),
+                        id_turma: idTurmaStr,
                         id_avaliacao: String(d.id_avaliacao).trim(),
-                        escola: t.escola,
+                        escola: (t.escola && t.escola !== 'undefined') ? t.escola : 'Escola Não Identificada',
                         turma: t.turmaLimpa,
                         anoSerie: t.anoSerie,
                         etapa: t.etapa,
@@ -784,7 +883,7 @@
 
                 if (mTur && mAno && mEta && mMod && t.escola) setEsc.add(t.escola);
                 if (mEsc && mAno && mEta && mMod && t.turmaLimpa) setTur.add(t.turmaLimpa);
-                if (mEsc && mTur && mEta && mMod && t.anoSerie) setAno.add(t.anoSerie);
+                if (mEsc && mTur && mEta && mMod && t.anoSerie && t.anoSerie !== 'Outros') setAno.add(t.anoSerie);
                 if (mEsc && mTur && mAno && mMod && t.etapa) setEta.add(t.etapa);
                 if (mEsc && mTur && mAno && mEta && t.modalidade) setMod.add(t.modalidade);
             });
@@ -802,7 +901,7 @@
             rebuildDropdown('escola', Array.from(setEsc).sort(), sEsc);
             rebuildDropdown('turma', Array.from(setTur).sort(), sTur);
             
-            const anosOrdenados = Array.from(setAno).sort((a,b) => {
+            const anosOrdenados = Array.from(setAno).filter(a => a !== 'Outros').sort((a,b) => {
                 const idxA = ORDEM_ANOS.indexOf(a), idxB = ORDEM_ANOS.indexOf(b);
                 return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
             });
@@ -938,9 +1037,9 @@
             ];
         }
 
-        function calcularPearson(pontos) {
+        function calcularPearsonComEstatisticas(pontos) {
             const n = pontos.length;
-            if (n < 2) return { r: 0, texto: "Dados insuficientes" };
+            if (n < 2) return { r: 0, r2: 0, pValue: 1, texto: "Dados insuficientes" };
 
             let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
             pontos.forEach(p => {
@@ -951,8 +1050,12 @@
             const num = (n * sumXY) - (sumX * sumY);
             const den = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
 
-            if (den === 0) return { r: 0, texto: "Sem variação" };
+            if (den === 0) return { r: 0, r2: 0, pValue: 1, texto: "Sem variação" };
             const r = num / den;
+            const r2 = r * r;
+
+            const tStat = (r * Math.sqrt(n - 2)) / Math.sqrt(Math.max(1e-9, 1 - r2));
+            const pValue = Math.max(0.0001, 2 * (1 - normalCdf(Math.abs(tStat))));
 
             let texto = "";
             const absR = Math.abs(r);
@@ -961,10 +1064,17 @@
             else if (absR >= 0.2) texto = r > 0 ? "Fraca Positiva" : "Fraca Negativa";
             else texto = "Inexistente / Desprezível";
 
-            return { r: r, texto: texto };
+            return { r, r2, pValue, texto };
         }
 
-        /* LÓGICA DA ABA 2: COMPARAR ENTIDADES COM MÉDIA GERAL MARCAADA POR PADRÃO */
+        function normalCdf(x) {
+            const t = 1 / (1 + 0.2316419 * Math.abs(x));
+            const d = 0.3989423 * Math.exp(-x * x / 2);
+            const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+            return x >= 0 ? 1 - prob : prob;
+        }
+
+        /* LÓGICA DA ABA 2: COMPARAR ENTIDADES */
         function setupCompSidebarEntities() {
             const sEsc = getSelectedCheckboxes('escola');
             const isVisaoEscola = sEsc.length === 0;
@@ -978,9 +1088,8 @@
                 compAvailableEntities = Array.from(turmasSet).sort();
             }
 
-            // Se for inicialização, marca APENAS O PRIMEIRO ITEM (Média Geral) ou o primeiro da lista
-            if (compSelectedEntities.size === 0 && compAvailableEntities.length > 0) {
-                compSelectedEntities = new Set(["MÉDIA GERAL"]);
+            if (compSelectedEntities.size === 0) {
+                compSelectedEntities = new Set(compAvailableEntities);
             }
 
             renderCompSidebarCheckboxes();
@@ -989,14 +1098,6 @@
         function renderCompSidebarCheckboxes() {
             const container = document.getElementById('comp-entity-checkboxes');
             let html = '';
-            
-            // Adiciona a "Média Geral" fixa no topo da lista lateral
-            const isMGChecked = compSelectedEntities.has("MÉDIA GERAL");
-            html += `<label style="border-bottom: 2px solid var(--border); padding-bottom: 6px; margin-bottom: 6px; font-weight:700; color:var(--blue2);">
-                <input type="checkbox" value="MÉDIA GERAL" ${isMGChecked ? 'checked' : ''} onchange="onCompEntityCheckChange(this)">
-                <span>MÉDIA GERAL</span>
-            </label>`;
-
             compAvailableEntities.forEach(ent => {
                 const isChecked = compSelectedEntities.has(ent);
                 html += `<label>
@@ -1014,11 +1115,10 @@
         }
 
         function toggleAllCompEntities() {
-            const allItems = ["MÉDIA GERAL", ...compAvailableEntities];
-            if (compSelectedEntities.size === allItems.length) {
+            if (compSelectedEntities.size === compAvailableEntities.length) {
                 compSelectedEntities.clear();
             } else {
-                compSelectedEntities = new Set(allItems);
+                compSelectedEntities = new Set(compAvailableEntities);
             }
             renderCompSidebarCheckboxes();
             renderEntidadesTab();
@@ -1034,7 +1134,6 @@
             const isVisaoEscola = sEsc.length === 0;
             const selectedList = Array.from(compSelectedEntities);
 
-            // 1. Evolução de Notas por Entidade (ou Média Geral)
             document.getElementById('comp-notas-title').textContent = isVisaoEscola ? 'Evolução de Notas por Escola' : 'Evolução de Notas por Turma / Sala';
             
             const avaliacoesSet = new Set();
@@ -1047,22 +1146,16 @@
                 const cor = PALETA_CORES[idx % PALETA_CORES.length];
                 const dataEnt = avalsOrdenadas.map(id => {
                     let sN = 0, sW = 0;
-                    if (entNome === "MÉDIA GERAL") {
-                        filteredDesempenho.filter(d => d.id_avaliacao === id).forEach(d => {
-                            const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
-                        });
-                    } else {
-                        const items = filteredDesempenho.filter(d => {
-                            const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
-                            return chave === entNome && d.id_avaliacao === id;
-                        });
-                        items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
-                    }
+                    const items = filteredDesempenho.filter(d => {
+                        const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                        return chave === entNome && d.id_avaliacao === id;
+                    });
+                    items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
                     return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : null;
                 });
 
                 if (dataEnt.some(v => v !== null)) {
-                    datasetsNotas.push({ label: entNome, data: dataEnt, borderColor: cor, borderWidth: entNome === "MÉDIA GERAL" ? 3.5 : 2.5, borderDash: entNome === "MÉDIA GERAL" ? [4,4] : [], pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2 });
+                    datasetsNotas.push({ label: entNome, data: dataEnt, borderColor: cor, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2 });
                 }
             });
 
@@ -1073,7 +1166,6 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
             });
 
-            // 2. Evolução da Frequência por Entidade (ou Média Geral)
             document.getElementById('comp-presenca-title').textContent = isVisaoEscola ? 'Evolução da Frequência por Escola' : 'Evolução da Frequência por Turma / Sala';
 
             const semanasSet = new Set();
@@ -1086,22 +1178,16 @@
                 const cor = PALETA_CORES[idx % PALETA_CORES.length];
                 const dataEnt = semanasOrdenadas.map(s => {
                     let sP = 0, sM = 0;
-                    if (entNome === "MÉDIA GERAL") {
-                        filteredPresencas.filter(p => p.semana === s).forEach(p => {
-                            sP += p.presencaPct * p.matriculas; sM += p.matriculas;
-                        });
-                    } else {
-                        const items = filteredPresencas.filter(p => {
-                            const chave = isVisaoEscola ? p.escola : `${p.turma} (${p.escola})`;
-                            return chave === entNome && p.semana === s;
-                        });
-                        items.forEach(p => { sP += p.presencaPct * p.matriculas; sM += p.matriculas; });
-                    }
+                    const items = filteredPresencas.filter(p => {
+                        const chave = isVisaoEscola ? p.escola : `${p.turma} (${p.escola})`;
+                        return chave === entNome && p.semana === s;
+                    });
+                    items.forEach(p => { sP += p.presencaPct * p.matriculas; sM += p.matriculas; });
                     return sM > 0 ? parseFloat((sP / sM).toFixed(1)) : null;
                 });
 
                 if (dataEnt.some(v => v !== null)) {
-                    datasetsPresenca.push({ label: entNome, data: dataEnt, borderColor: cor, borderWidth: entNome === "MÉDIA GERAL" ? 3.5 : 2.5, borderDash: entNome === "MÉDIA GERAL" ? [4,4] : [], pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2 });
+                    datasetsPresenca.push({ label: entNome, data: dataEnt, borderColor: cor, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: cor, fill: false, tension: 0.2 });
                 }
             });
 
@@ -1112,7 +1198,6 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 50, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, plugins: { legend: { display: true, position: 'top' } } }
             });
 
-            // 3. Radar por Área de Conhecimento
             const labelsAreas = Object.keys(AREAS_CONHECIMENTO);
             const datasetsRadarAreas = [];
 
@@ -1120,17 +1205,11 @@
                 const cor = PALETA_CORES[idx % PALETA_CORES.length];
                 const dataRadarEnt = labelsAreas.map(areaKey => {
                     let sN = 0, sW = 0;
-                    if (entNome === "MÉDIA GERAL") {
-                        filteredDesempenho.filter(d => d.area === areaKey).forEach(d => {
-                            const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
-                        });
-                    } else {
-                        const items = filteredDesempenho.filter(d => {
-                            const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
-                            return chave === entNome && d.area === areaKey;
-                        });
-                        items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
-                    }
+                    const items = filteredDesempenho.filter(d => {
+                        const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                        return chave === entNome && d.area === areaKey;
+                    });
+                    items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
                     return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : 0;
                 });
 
@@ -1139,7 +1218,7 @@
                     data: dataRadarEnt,
                     borderColor: cor,
                     backgroundColor: 'transparent',
-                    borderWidth: entNome === "MÉDIA GERAL" ? 3.5 : 2.5,
+                    borderWidth: 2.5,
                     pointBackgroundColor: cor,
                     pointRadius: 4
                 });
@@ -1152,7 +1231,6 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 } } }, plugins: { legend: { display: true, position: 'top' } } }
             });
 
-            // 4. Radar por Componente Curricular Individual
             const mapComp = new Map();
             filteredDesempenho.forEach(d => mapComp.set(d.componente, true));
             const labelsComps = Array.from(mapComp.keys()).sort();
@@ -1162,17 +1240,11 @@
                 const cor = PALETA_CORES[idx % PALETA_CORES.length];
                 const dataRadarCompEnt = labelsComps.map(compKey => {
                     let sN = 0, sW = 0;
-                    if (entNome === "MÉDIA GERAL") {
-                        filteredDesempenho.filter(d => d.componente === compKey).forEach(d => {
-                            const w = d.peso * d.avaliados; sN += d.nota * w; sW += w;
-                        });
-                    } else {
-                        const items = filteredDesempenho.filter(d => {
-                            const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
-                            return chave === entNome && d.componente === compKey;
-                        });
-                        items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
-                    }
+                    const items = filteredDesempenho.filter(d => {
+                        const chave = isVisaoEscola ? d.escola : `${d.turma} (${d.escola})`;
+                        return chave === entNome && d.componente === compKey;
+                    });
+                    items.forEach(d => { const w = d.peso * d.avaliados; sN += d.nota * w; sW += w; });
                     return sW > 0 ? parseFloat((sN / sW).toFixed(2)) : 0;
                 });
 
@@ -1181,7 +1253,7 @@
                     data: dataRadarCompEnt,
                     borderColor: cor,
                     backgroundColor: 'transparent',
-                    borderWidth: entNome === "MÉDIA GERAL" ? 3.5 : 2.5,
+                    borderWidth: 2.5,
                     pointBackgroundColor: cor,
                     pointRadius: 4
                 });
@@ -1199,9 +1271,11 @@
         function populateCorrelacaoSelectors() {
             const selX = document.getElementById('selectCompX');
             const selY = document.getElementById('selectCompY');
+            const selBase = document.getElementById('selectMatrizBase');
 
             const valXAnt = selX.value;
             const valYAnt = selY.value;
+            const valBaseAnt = selBase.value;
 
             const compsSet = new Set();
             filteredDesempenho.forEach(d => compsSet.add(d.componente));
@@ -1209,18 +1283,77 @@
 
             let optionsX = '<option value="FREQUENCIA">Frequência Média (%)</option>';
             let optionsY = '';
+            let optionsBase = '<option value="FREQUENCIA">Frequência Média (%)</option>';
 
             compsList.forEach(c => {
                 optionsX += `<option value="${c}">${c}</option>`;
                 optionsY += `<option value="${c}">${c}</option>`;
+                optionsBase += `<option value="${c}">${c}</option>`;
             });
 
             selX.innerHTML = optionsX;
             selY.innerHTML = optionsY;
+            selBase.innerHTML = optionsBase;
 
             if (valXAnt && selX.querySelector(`option[value="${valXAnt}"]`)) selX.value = valXAnt;
             if (valYAnt && selY.querySelector(`option[value="${valYAnt}"]`)) selY.value = valYAnt;
             else if (compsList.length > 1) selY.value = compsList[1];
+
+            if (valBaseAnt && selBase.querySelector(`option[value="${valBaseAnt}"]`)) selBase.value = valBaseAnt;
+        }
+
+        // Helper genérico para construir pontos X vs Y por entidade (escola ou turma)
+        function construirPontosPorEntidadeEspecifica(dadosPres, dadosDesem, varX, varY, agrupamento) {
+            const mapa = new Map();
+
+            if (varX === 'FREQUENCIA') {
+                dadosPres.forEach(p => {
+                    const key = agrupamento === 'escola' ? p.escola : p.id_turma;
+                    const rot = agrupamento === 'escola' ? p.escola : `${p.turma} (${p.escola})`;
+                    if (!mapa.has(key)) mapa.set(key, { rotulo: rot, anoSerie: p.anoSerie || 'Outros', valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapa.get(key);
+                    item.valX_sum += p.presencaPct * p.matriculas; item.valX_w += p.matriculas;
+                });
+            } else {
+                dadosDesem.filter(d => d.componente === varX).forEach(d => {
+                    const key = agrupamento === 'escola' ? d.escola : d.id_turma;
+                    const rot = agrupamento === 'escola' ? d.escola : `${d.turma} (${d.escola})`;
+                    if (!mapa.has(key)) mapa.set(key, { rotulo: rot, anoSerie: d.anoSerie || 'Outros', valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapa.get(key);
+                    const w = d.peso * d.avaliados;
+                    item.valX_sum += d.nota * w; item.valX_w += w;
+                });
+            }
+
+            if (varY === 'FREQUENCIA') {
+                dadosPres.forEach(p => {
+                    const key = agrupamento === 'escola' ? p.escola : p.id_turma;
+                    if (!mapa.has(key)) mapa.set(key, { rotulo: agrupamento === 'escola' ? p.escola : `${p.turma} (${p.escola})`, anoSerie: p.anoSerie || 'Outros', valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapa.get(key);
+                    item.valY_sum += p.presencaPct * p.matriculas; item.valY_w += p.matriculas;
+                });
+            } else {
+                dadosDesem.filter(d => d.componente === varY).forEach(d => {
+                    const keyReal = agrupamento === 'escola' ? d.escola : d.id_turma;
+                    if (!mapa.has(keyReal)) mapa.set(keyReal, { rotulo: agrupamento === 'escola' ? d.escola : `${d.turma} (${d.escola})`, anoSerie: d.anoSerie || 'Outros', valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
+                    const item = mapa.get(keyReal);
+                    const w = d.peso * d.avaliados;
+                    item.valY_sum += d.nota * w; item.valY_w += w;
+                });
+            }
+
+            const pts = [];
+            mapa.forEach(item => {
+                if (item.valX_w > 0 && item.valY_w > 0) {
+                    pts.push({
+                        x: parseFloat((item.valX_sum / item.valX_w).toFixed(2)),
+                        y: parseFloat((item.valY_sum / item.valY_w).toFixed(2)),
+                        rotulo: item.rotulo,
+                        anoSerie: item.anoSerie
+                    });
+                }
+            });
+            return pts;
         }
 
         function renderCorrelacoesTab() {
@@ -1228,61 +1361,37 @@
 
             const varX = document.getElementById('selectCompX').value;
             const varY = document.getElementById('selectCompY').value;
+            const agrupamento = document.getElementById('selectCorrelAgrupamento').value; // 'escola' ou 'turma'
 
-            const sEsc = getSelectedCheckboxes('escola');
-            const isVisaoEscola = sEsc.length === 0;
+            document.getElementById('comp-scatter-title').textContent = `Dispersão (${agrupamento === 'escola' ? 'Por Escolas' : 'Por Turmas'}): ${varX} vs ${varY}`;
 
-            document.getElementById('comp-scatter-title').textContent = `Dispersão: ${varX} vs ${varY}`;
+            const pontosGerais = construirPontosPorEntidadeEspecifica(filteredPresencas, filteredDesempenho, varX, varY, agrupamento);
 
-            const mapaComparacao = new Map();
+            const statsGeral = calcularPearsonComEstatisticas(pontosGerais);
+            document.getElementById('comp-correlation-value').textContent = `${statsGeral.r.toFixed(2)} (${statsGeral.texto})`;
+            document.getElementById('comp-r2-value').textContent = statsGeral.r2.toFixed(3);
+            document.getElementById('comp-pvalue').textContent = statsGeral.pValue < 0.001 ? '< 0.001' : statsGeral.pValue.toFixed(3);
 
-            if (varX === 'FREQUENCIA') {
-                filteredPresencas.forEach(p => {
-                    const key = isVisaoEscola ? p.escola : p.id_turma;
-                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: isVisaoEscola ? key : `${p.turma} (${p.escola})`, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
-                    const item = mapaComparacao.get(key);
-                    item.valX_sum += p.presencaPct * p.matriculas; item.valX_w += p.matriculas;
-                });
+            let interpretacaoHTML = `Com base em <strong>${pontosGerais.length} unidades analisadas</strong>, o cruzamento entre <strong>${varX}</strong> e <strong>${varY}</strong> revela uma correlação <strong>${statsGeral.texto.toLowerCase()}</strong> (coeficiente de Pearson de <strong>${statsGeral.r.toFixed(2)}</strong>). `;
+            
+            if (statsGeral.pValue < 0.05) {
+                interpretacaoHTML += `Este resultado é <strong>estatisticamente muito confiável</strong> (p-value &lt; 0.05), o que significa que o padrão observado não é obra do acaso. `;
             } else {
-                filteredDesempenho.filter(d => d.componente === varX).forEach(d => {
-                    const key = isVisaoEscola ? d.escola : d.id_turma;
-                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: isVisaoEscola ? key : `${d.turma} (${d.escola})`, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
-                    const item = mapaComparacao.get(key);
-                    const w = d.peso * d.avaliados;
-                    item.valX_sum += d.nota * w; item.valX_w += w;
-                });
+                interpretacaoHTML += `Porém, estatisticamente, o valor de p (p-value = ${statsGeral.pValue.toFixed(3)}) indica que a relação não é totalmente conclusiva e pode variar com novas amostras. `;
             }
 
-            if (varY === 'FREQUENCIA') {
-                filteredPresencas.forEach(p => {
-                    const key = isVisaoEscola ? p.escola : p.id_turma;
-                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: isVisaoEscola ? key : `${p.turma} (${p.escola})`, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
-                    const item = mapaComparacao.get(key);
-                    item.valY_sum += p.presencaPct * p.matriculas; item.valY_w += p.matriculas;
-                });
+            const pctExpl = (statsGeral.r2 * 100).toFixed(1);
+            if (statsGeral.r > 0.2) {
+                interpretacaoHTML += `Além disso, o coeficiente de determinação (R² = ${statsGeral.r2.toFixed(3)}) mostra que cerca de <strong>${pctExpl}% da variação em ${varY}</strong> pode ser explicada diretamente pelas mudanças em ${varX}.`;
+            } else if (statsGeral.r < -0.2) {
+                interpretacaoHTML += `Nota-se uma oposição clara: unidades com maior índice em ${varX} tendem a registrar menor desempenho em ${varY}.`;
             } else {
-                filteredDesempenho.filter(d => d.componente === varY).forEach(d => {
-                    const key = isVisaoEscola ? d.escola : d.id_turma;
-                    if (!mapaComparacao.has(key)) mapaComparacao.set(key, { rotulo: isVisaoEscola ? key : `${d.turma} (${d.escola})`, valX_sum: 0, valX_w: 0, valY_sum: 0, valY_w: 0 });
-                    const item = mapaComparacao.get(key);
-                    const w = d.peso * d.avaliados;
-                    item.valY_sum += d.nota * w; item.valY_w += w;
-                });
+                interpretacaoHTML += `Não há evidência de forte influência mútua direta entre estas duas variáveis no formato linear atual.`;
             }
 
-            const pointsCustom = [];
-            mapaComparacao.forEach(item => {
-                if (item.valX_w > 0 && item.valY_w > 0) {
-                    const xVal = parseFloat((item.valX_sum / item.valX_w).toFixed(2));
-                    const yVal = parseFloat((item.valY_sum / item.valY_w).toFixed(2));
-                    pointsCustom.push({ x: xVal, y: yVal, rotulo: item.rotulo });
-                }
-            });
+            document.getElementById('interpretacao-texto').innerHTML = interpretacaoHTML;
 
-            const corrStats = calcularPearson(pointsCustom);
-            document.getElementById('comp-correlation-value').textContent = `${corrStats.r.toFixed(2)} (${corrStats.texto})`;
-
-            const trendLinePoints = calcularRegressaoLinear(pointsCustom);
+            const trendLinePoints = calcularRegressaoLinear(pontosGerais);
             const isXFreq = varX === 'FREQUENCIA';
             const isYFreq = varY === 'FREQUENCIA';
 
@@ -1291,7 +1400,7 @@
                 type: 'scatter',
                 data: {
                     datasets: [
-                        { label: isVisaoEscola ? 'Escolas' : 'Turmas', data: pointsCustom, backgroundColor: '#2563eb', pointRadius: 7, pointHoverRadius: 10 },
+                        { label: agrupamento === 'escola' ? 'Escolas' : 'Turmas', data: pontosGerais, backgroundColor: '#2563eb', pointRadius: 7, pointHoverRadius: 10 },
                         { label: 'Linha de Tendência', data: trendLinePoints, type: 'line', borderColor: '#e11d48', borderWidth: 2.5, borderDash: [6, 6], pointRadius: 0, fill: false }
                     ]
                 },
@@ -1307,6 +1416,81 @@
                     }
                 }
             });
+
+            // Tabela por Ano/Série
+            const tabelaTbody = document.querySelector('#tabelaCorrelacaoAnoSerie tbody');
+            tabelaTbody.innerHTML = '';
+
+            const seriesDisponiveis = ORDEM_ANOS;
+            let tabelaHtml = '';
+
+            seriesDisponiveis.forEach(serieNome => {
+                const normalizaStr = s => String(s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const targetNorm = normalizaStr(serieNome);
+
+                const presSerie = filteredPresencas.filter(p => normalizaStr(p.anoSerie || 'Outros') === targetNorm);
+                const desSerie = filteredDesempenho.filter(d => normalizaStr(d.anoSerie || 'Outros') === targetNorm);
+
+                const pontosSerie = construirPontosPorEntidadeEspecifica(presSerie, desSerie, varX, varY, agrupamento);
+                if (pontosSerie.length > 0) {
+                    const statsSerie = calcularPearsonComEstatisticas(pontosSerie);
+                    const pValFormatted = statsSerie.pValue < 0.001 ? '< 0.001' : statsSerie.pValue.toFixed(3);
+                    const sigClass = statsSerie.pValue < 0.05 ? 'color:var(--emerald); font-weight:800;' : 'color:var(--muted);';
+
+                    tabelaHtml += `<tr>
+                        <td class="row-header" style="font-weight:700;">${serieNome}</td>
+                        <td style="font-family:'Geist Mono', monospace; font-weight:600;">${pontosSerie.length}</td>
+                        <td style="font-family:'Geist Mono', monospace; font-weight:800; color:${statsSerie.r >= 0 ? 'var(--blue)' : 'var(--rose)'};">${statsSerie.r.toFixed(2)}</td>
+                        <td style="font-family:'Geist Mono', monospace; font-weight:700; color:var(--emerald);">${statsSerie.r2.toFixed(3)}</td>
+                        <td style="font-family:'Geist Mono', monospace; ${sigClass}">${pValFormatted}</td>
+                        <td style="font-weight:600; color:var(--muted);">${statsSerie.texto}</td>
+                    </tr>`;
+                }
+            });
+
+            tabelaTbody.innerHTML = tabelaHtml || '<tr><td colspan="6" style="text-align:center; color:var(--muted);">Nenhum dado segmentado por série para esta correlação.</td></tr>';
+
+            // Atualiza também a tabela de Matriz Cruzada com as Demais Disciplinas
+            renderMatrizCruzadaComOutros();
+        }
+
+        // NOVO: Renderiza a tabela cruzando o componente base selecionado com todas as outras variáveis/componentes
+        function renderMatrizCruzadaComOutros() {
+            const baseSelect = document.getElementById('selectMatrizBase');
+            const varBase = baseSelect ? baseSelect.value : 'FREQUENCIA';
+            const agrupamento = document.getElementById('selectCorrelAgrupamento').value;
+
+            const tbody = document.querySelector('#tabelaMatrizCruzada tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            // Coleta todas as opções possíveis de Y (Frequência + todos os componentes)
+            const compsSet = new Set();
+            filteredDesempenho.forEach(d => compsSet.add(d.componente));
+            const todasVariaveis = ['FREQUENCIA', ...Array.from(compsSet).sort()];
+
+            let html = '';
+            todasVariaveis.forEach(varComparada => {
+                if (varComparada === varBase) return; // Evita cruzar consigo mesmo
+
+                const pontosMatriz = construirPontosPorEntidadeEspecifica(filteredPresencas, filteredDesempenho, varBase, varComparada, agrupamento);
+                if (pontosMatriz.length > 0) {
+                    const stats = calcularPearsonComEstatisticas(pontosMatriz);
+                    const pValFormatted = stats.pValue < 0.001 ? '< 0.001' : stats.pValue.toFixed(3);
+                    const sigClass = stats.pValue < 0.05 ? 'color:var(--emerald); font-weight:800;' : 'color:var(--muted);';
+
+                    html += `<tr>
+                        <td class="row-header" style="font-weight:700; color:var(--navy);">${varComparada}</td>
+                        <td style="font-family:'Geist Mono', monospace; font-weight:600;">${pontosMatriz.length}</td>
+                        <td style="font-family:'Geist Mono', monospace; font-weight:800; color:${stats.r >= 0 ? 'var(--blue)' : 'var(--rose)'};">${stats.r.toFixed(2)}</td>
+                        <td style="font-family:'Geist Mono', monospace; font-weight:700; color:var(--emerald);">${stats.r2.toFixed(3)}</td>
+                        <td style="font-family:'Geist Mono', monospace; ${sigClass}">${pValFormatted}</td>
+                        <td style="font-weight:600; color:var(--muted);">${stats.texto}</td>
+                    </tr>`;
+                }
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center; color:var(--muted);">Nenhum dado cruzado disponível para esta disciplina base.</td></tr>';
         }
 
         /* RENDERIZAÇÃO DA VISÃO GERAL 360º */
@@ -1479,8 +1663,8 @@
                 }
             });
 
-            const corrStats = calcularPearson(pointsScatter);
-            document.getElementById('correlation-value').textContent = `${corrStats.r.toFixed(2)} (${corrStats.texto})`;
+            const statsGlobal = calcularPearsonComEstatisticas(pointsScatter);
+            document.getElementById('correlation-value').textContent = `${statsGlobal.r.toFixed(2)} (${statsGlobal.texto})`;
 
             const trendLinePoints = calcularRegressaoLinear(pointsScatter);
 

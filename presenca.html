@@ -169,6 +169,7 @@
         .card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2.5px; background: var(--grad-blue); }
         .card h3 { font-size: .68rem; font-weight: 800; color: var(--light); text-transform: uppercase; margin-bottom: .65rem; }
         .card .value { font-size: 2.1rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; line-height: 1; }
+        .card .desc { font-size: .75rem; color: var(--muted); margin-top: .4rem; font-weight: 500; }
 
         /* Tabela Heatmap */
         .table-container {
@@ -196,11 +197,17 @@
             color: var(--blue); text-decoration: underline;
         }
 
-        /* Cores do Semáforo */
+        /* Cores do Semáforo e Badges */
         .bg-green { background: var(--emerald) !important; color: #fff !important; font-weight: 700; }
         .bg-yellow { background: #fef08a !important; color: #78350f !important; font-weight: 700; }
         .bg-red { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
         .bg-empty { background: var(--bg) !important; color: var(--light) !important; }
+
+        .badge { padding: .25rem .55rem; border-radius: 99px; font-size: .72rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+        .badge-success { background: rgba(5,150,105,.1); color: var(--emerald); border: 1px solid rgba(5,150,105,.2); }
+        .badge-warning { background: rgba(217,119,6,.1); color: var(--amber); border: 1px solid rgba(217,119,6,.2); }
+        .badge-danger { background: rgba(225,29,72,.1); color: var(--rose); border: 1px solid rgba(225,29,72,.2); }
+        .badge-blue { background: rgba(37,99,235,.1); color: var(--blue2); border: 1px solid rgba(37,99,235,.2); }
 
         /* Legenda */
         .legend { display: flex; gap: 1rem; align-items: center; font-size: .75rem; font-weight: 600; color: var(--muted); margin-top: .4rem; }
@@ -215,7 +222,7 @@
         }
         .modal-content {
             background: var(--surface); padding: 2rem;
-            border-radius: var(--radius2); width: 100%; max-width: 900px;
+            border-radius: var(--radius2); width: 100%; max-width: 1000px;
             max-height: 90vh; overflow-y: auto; position: relative;
             box-shadow: 0 40px 80px rgba(0,0,0,.28); animation: scaleIn .18s cubic-bezier(.22,1,.36,1);
         }
@@ -234,6 +241,9 @@
             border-radius: var(--radius); padding: 1rem; height: 320px; margin-bottom: 1.5rem;
         }
 
+        #view-tabela-principal, #view-insights { animation: fadeIn 0.25s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
         #dashboard-section { display: none; }
     </style>
 </head>
@@ -244,19 +254,17 @@
         <div id="loading-text">Sincronizando frequências...</div>
     </div>
 
-    <!-- MODAL DE PROGRESSÃO ANUAL -->
+    <!-- MODAL DE PROGRESSÃO ANUAL DA FREQUÊNCIA -->
     <div id="modal-progressao" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="closeModalProgressao()">&times;</span>
             <h2 id="modal-entidade-nome">Progressão Anual de Frequência</h2>
             <div id="modal-entidade-sub" class="modal-subtitle">Evolução detalhada ao longo das semanas do ano</div>
             
-            <!-- Gráfico de Linhas -->
             <div class="chart-box">
                 <canvas id="chartProgressao"></canvas>
             </div>
 
-            <!-- Tabela Detalhada -->
             <div style="overflow-x: auto;">
                 <table class="heatmap" id="modal-tabela-detalhada">
                     <thead>
@@ -267,9 +275,35 @@
                             <th>Frequência</th>
                         </tr>
                     </thead>
-                    <tbody id="modal-tabela-body">
-                        <!-- Preenchido via JavaScript -->
-                    </tbody>
+                    <tbody id="modal-tabela-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE INSIGHTS DAS TURMAS DA ESCOLA -->
+    <div id="modal-insights-turmas" class="modal-overlay">
+        <div class="modal-content" style="max-width: 1100px;">
+            <span class="modal-close" onclick="closeModalInsightsTurmas()">&times;</span>
+            <h2 id="modal-escola-nome">Insights das Turmas</h2>
+            <div id="modal-escola-sub" class="modal-subtitle">Detalhamento de consistência e regularidade das turmas desta escola</div>
+
+            <div style="overflow-x: auto;">
+                <table class="heatmap" id="tabelaModalInsightsTurmas">
+                    <thead>
+                        <tr>
+                            <th onclick="toggleSortModalTurmas('entidade')" style="text-align:left; width:220px; cursor:pointer;">Turma / Sala <span id="sort-mod-entidade"></span></th>
+                            <th onclick="toggleSortModalTurmas('totalSemanas')" style="cursor:pointer;">Semanas Analisadas <span id="sort-mod-totalSemanas"></span></th>
+                            <th onclick="toggleSortModalTurmas('semanasG5')" style="cursor:pointer;">Semanas Top 5 <span id="sort-mod-semanasG5"></span></th>
+                            <th onclick="toggleSortModalTurmas('semanasZ5')" style="cursor:pointer;">Semanas Bottom 5 <span id="sort-mod-semanasZ5"></span></th>
+                            <th onclick="toggleSortModalTurmas('semanasVerde')" style="cursor:pointer;">Farol Verde (&ge;90%) <span id="sort-mod-semanasVerde"></span></th>
+                            <th onclick="toggleSortModalTurmas('semanasAmarelo')" style="cursor:pointer;">Farol Amarelo (85%-89%) <span id="sort-mod-semanasAmarelo"></span></th>
+                            <th onclick="toggleSortModalTurmas('semanasVermelho')" style="cursor:pointer;">Farol Vermelho (&lt;85%) <span id="sort-mod-semanasVermelho"></span></th>
+                            <th onclick="toggleSortModalTurmas('semanasAcimaMedia')" style="cursor:pointer;">Acima da Média <span id="sort-mod-semanasAcimaMedia"></span></th>
+                            <th onclick="toggleSortModalTurmas('semanasAbaixoMedia')" style="cursor:pointer;">Abaixo da Média <span id="sort-mod-semanasAbaixoMedia"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -311,9 +345,10 @@
             <div class="view-tabs">
                 <button class="btn-toggle active" id="btn-view-escola" onclick="switchViewMode('escola')">Visão por Escola</button>
                 <button class="btn-toggle" id="btn-view-turma" onclick="switchViewMode('turma')">Visão por Turma</button>
+                <button class="btn-toggle" id="btn-view-insights" onclick="switchViewMode('insights')">💡 Painel de Insights</button>
             </div>
 
-            <!-- FILTROS -->
+            <!-- FILTROS DE SEGMENTAÇÃO -->
             <div class="filters-wrapper">
                 <div class="filters-label">Filtros Adaptativos</div>
                 <div class="filters-grid">
@@ -351,47 +386,92 @@
                 </div>
             </div>
 
-            <!-- CARDS DE RESUMO -->
-            <div class="cards-grid">
-                <div class="card">
-                    <h3>Frequência Média Geral</h3>
-                    <div class="value" id="card-media-geral">0.0%</div>
+            <!-- VISÃO 1: TABELA HEATMAP PRINCIPAL -->
+            <div id="view-tabela-principal">
+                <div class="cards-grid">
+                    <div class="card">
+                        <h3>Frequência Média Geral</h3>
+                        <div class="value" id="card-media-geral">0.0%</div>
+                    </div>
+                    <div class="card">
+                        <h3 id="card-label-entidades">Escolas Acompanhadas</h3>
+                        <div class="value" id="card-total-entidades">0</div>
+                    </div>
+                    <div class="card">
+                        <h3>Total de Matrículas</h3>
+                        <div class="value" id="card-total-matriculas">0</div>
+                    </div>
                 </div>
-                <div class="card">
-                    <h3 id="card-label-entidades">Escolas Acompanhadas</h3>
-                    <div class="value" id="card-total-entidades">0</div>
-                </div>
-                <div class="card">
-                    <h3>Total de Matrículas</h3>
-                    <div class="value" id="card-total-matriculas">0</div>
+
+                <div class="table-container">
+                    <div class="table-toolbar">
+                        <div>
+                            <div class="table-title" id="table-title-context">Acompanhamento Semanal por Escola</div>
+                            <div class="legend">
+                                <span>Semáforo:</span>
+                                <div class="legend-item"><span class="dot" style="background:var(--emerald);"></span> &gt; 90% (Excelente)</div>
+                                <div class="legend-item"><span class="dot" style="background:#fef08a;border:1px solid #d97706;"></span> 85% a 90% (Atenção)</div>
+                                <div class="legend-item"><span class="dot" style="background:var(--rose);"></span> &lt; 85% (Crítico)</div>
+                            </div>
+                        </div>
+                        <button class="btn-excel" onclick="exportarExcel()">📥 Exportar Excel</button>
+                    </div>
+                    <div id="heatmap-container">
+                        <table class="heatmap">
+                            <thead><tr><th>Carregando...</th></tr></thead>
+                            <tbody><tr><td>Aguarde a sincronização dos dados.</td></tr></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- TABELA DINÂMICA -->
-            <div class="table-container">
-                <div class="table-toolbar">
-                    <div>
-                        <div class="table-title" id="table-title-context">Acompanhamento Semanal por Escola</div>
-                        <div class="legend">
-                            <span>Semáforo:</span>
-                            <div class="legend-item"><span class="dot" style="background:var(--emerald);"></span> &gt; 90% (Excelente)</div>
-                            <div class="legend-item"><span class="dot" style="background:#fef08a;border:1px solid #d97706;"></span> 85% a 90% (Atenção)</div>
-                            <div class="legend-item"><span class="dot" style="background:var(--rose);"></span> &lt; 85% (Crítico)</div>
+            <!-- VISÃO 2: PAINEL DE INSIGHTS E CONSISTÊNCIA -->
+            <div id="view-insights" style="display:none;">
+                <div class="cards-grid">
+                    <div class="card" style="border-top: 3px solid var(--emerald);">
+                        <h3>Destaque em Engajamento</h3>
+                        <div class="value" id="kpi-top-g4" style="font-size:1.35rem;">-</div>
+                        <div class="desc">Entidade com maior presença no Top 5 das semanas.</div>
+                    </div>
+                    <div class="card" style="border-top: 3px solid var(--rose);">
+                        <h3>Acompanhamento Prioritário</h3>
+                        <div class="value" id="kpi-top-z4" style="font-size:1.35rem;">-</div>
+                        <div class="desc">Entidade com mais registros no Bottom 5.</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-toolbar">
+                        <div>
+                            <div class="table-title" id="insights-table-title">Análise de Consistência e Regularidade</div>
+                            <div class="legend">
+                                <span>Categorias:</span>
+                                <div class="legend-item"><span class="dot" style="background:var(--emerald);"></span> Top 5</div>
+                                <div class="legend-item"><span class="dot" style="background:var(--rose);"></span> Bottom 5</div>
+                            </div>
                         </div>
                     </div>
-                    <button class="btn-excel" onclick="exportarExcel()">📥 Exportar Excel</button>
-                </div>
-                <div id="heatmap-container">
-                    <table class="heatmap">
-                        <thead>
-                            <tr><th>Carregando...</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>Aguarde a sincronização dos dados.</td></tr>
-                        </tbody>
-                    </table>
+                    <div id="insights-table-container">
+                        <table class="heatmap" id="tabelaInsights">
+                            <thead>
+                                <tr>
+                                    <th onclick="toggleSortInsights('entidade')" style="text-align:left; width:220px; cursor:pointer;">Unidade / Turma <span id="sort-ins-entidade"></span></th>
+                                    <th onclick="toggleSortInsights('totalSemanas')" style="cursor:pointer;">Semanas Analisadas <span id="sort-ins-totalSemanas"></span></th>
+                                    <th onclick="toggleSortInsights('semanasG5')" style="cursor:pointer;">Top 5 <span id="sort-ins-semanasG5"></span></th>
+                                    <th onclick="toggleSortInsights('semanasZ5')" style="cursor:pointer;">Bottom 5 <span id="sort-ins-semanasZ5"></span></th>
+                                    <th onclick="toggleSortInsights('semanasVerde')" style="cursor:pointer;">Farol Verde (&ge;90%) <span id="sort-ins-semanasVerde"></span></th>
+                                    <th onclick="toggleSortInsights('semanasAmarelo')" style="cursor:pointer;">Farol Amarelo (85%-89%) <span id="sort-ins-semanasAmarelo"></span></th>
+                                    <th onclick="toggleSortInsights('semanasVermelho')" style="cursor:pointer;">Farol Vermelho (&lt;85%) <span id="sort-ins-semanasVermelho"></span></th>
+                                    <th onclick="toggleSortInsights('semanasAcimaMedia')" style="cursor:pointer;">Acima da Média <span id="sort-ins-semanasAcimaMedia"></span></th>
+                                    <th onclick="toggleSortInsights('semanasAbaixoMedia')" style="cursor:pointer;">Abaixo da Média <span id="sort-ins-semanasAbaixoMedia"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -406,10 +486,18 @@
 
         let globalData = [];
         let filteredData = [];
-        let currentView = 'escola';
+        let currentView = 'escola'; // 'escola', 'turma' ou 'insights'
 
         let sortColumn = 'entidade';
         let sortDirection = 'asc';
+
+        let insightsSortColumn = 'semanasG5';
+        let insightsSortDirection = 'desc';
+
+        let modalTurmasSortColumn = 'semanasG5';
+        let modalTurmasSortDirection = 'desc';
+        let activeEscolaModalTurmas = '';
+
         let chartInstance = null;
 
         const mesesNomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -518,7 +606,7 @@
                     const idTurmaStr = String(p.id_turma || '').trim();
                     const turmaInfo = turmasMap.get(idTurmaStr) || {};
                     
-                    const nomeEscola = turmaInfo.nomeEscola || p.escola || 'Escola Não Identificada';
+                    const nomeEscola = turmaInfo.nomeEscola || p.escola || p.nome_escola || 'Escola Não Identificada';
                     const nomeTurmaLimpa = turmaInfo.nomeLimpo || p.turma || 'Turma Não Identificada';
                     const tipoEnsino = turmaInfo.tipoEnsino || 'Etapa Não Informada';
 
@@ -544,7 +632,7 @@
                         mesNome: mesNome,
                         turmaOriginal: p.turma,
                         turmaLimpa: nomeTurmaLimpa,
-                        escola: nomeEscola,
+                        escola: (nomeEscola && nomeEscola !== 'undefined') ? nomeEscola : 'Escola Não Identificada',
                         tipoEnsino: tipoEnsino,
                         id_turma: idTurmaStr,
                         matriculas: parseInt(p.matriculas) || 0,
@@ -565,14 +653,22 @@
             currentView = mode;
             document.getElementById('btn-view-escola').classList.toggle('active', mode === 'escola');
             document.getElementById('btn-view-turma').classList.toggle('active', mode === 'turma');
+            document.getElementById('btn-view-insights').classList.toggle('active', mode === 'insights');
             
-            document.getElementById('table-title-context').textContent = mode === 'escola' ? 'Acompanhamento Semanal por Escola' : 'Acompanhamento Semanal por Turma';
-            document.getElementById('card-label-entidades').textContent = mode === 'escola' ? 'Escolas Acompanhadas' : 'Turmas Acompanhadas';
+            if (mode === 'insights') {
+                document.getElementById('view-tabela-principal').style.display = 'none';
+                document.getElementById('view-insights').style.display = 'block';
+                renderInsights();
+            } else {
+                document.getElementById('view-tabela-principal').style.display = 'block';
+                document.getElementById('view-insights').style.display = 'none';
+                document.getElementById('table-title-context').textContent = mode === 'escola' ? 'Acompanhamento Semanal por Escola' : 'Acompanhamento Semanal por Turma';
+                document.getElementById('card-label-entidades').textContent = mode === 'escola' ? 'Escolas Acompanhadas' : 'Turmas Acompanhadas';
 
-            sortColumn = 'entidade';
-            sortDirection = 'asc';
-            updateAllFiltersOptions();
-            applyFilters();
+                sortColumn = 'entidade';
+                sortDirection = 'asc';
+                renderDashboard();
+            }
         }
 
         function toggleDropdown(el) {
@@ -668,7 +764,11 @@
                 return matchEscola && matchEtapa && matchMes && matchSemana;
             });
 
-            renderDashboard();
+            if (currentView === 'insights') {
+                renderInsights();
+            } else {
+                renderDashboard();
+            }
         }
 
         window.toggleSort = (col) => {
@@ -679,6 +779,26 @@
                 sortDirection = 'asc';
             }
             renderDashboard();
+        };
+
+        window.toggleSortInsights = (col) => {
+            if (insightsSortColumn === col) {
+                insightsSortDirection = insightsSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                insightsSortColumn = col;
+                insightsSortDirection = 'desc';
+            }
+            renderInsights();
+        };
+
+        window.toggleSortModalTurmas = (col) => {
+            if (modalTurmasSortColumn === col) {
+                modalTurmasSortDirection = modalTurmasSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                modalTurmasSortColumn = col;
+                modalTurmasSortDirection = 'desc';
+            }
+            renderModalInsightsTurmas(activeEscolaModalTurmas);
         };
 
         function getSemaforoClass(pct) {
@@ -709,7 +829,7 @@
         }
 
         window.openModalProgressao = (chaveUnica) => {
-            const isEscolaView = currentView === 'escola';
+            const isEscolaView = currentView === 'escola' || currentView === 'insights';
             
             const dadosEntidade = filteredData.filter(d => {
                 if (isEscolaView) return d.escola === chaveUnica;
@@ -821,6 +941,300 @@
             document.getElementById('modal-progressao').style.display = 'none';
         };
 
+        window.closeModalInsightsTurmas = () => {
+            document.getElementById('modal-insights-turmas').style.display = 'none';
+        };
+
+        // Função para tratar o clique na entidade no Painel de Insights
+        window.handleInsightEntityClick = (entidadeNome) => {
+            const isEscolaView = currentView === 'escola' || currentView === 'insights';
+            if (isEscolaView) {
+                openModalInsightsTurmas(entidadeNome);
+            } else {
+                openModalProgressao(entidadeNome);
+            }
+        };
+
+        /* MODAL DE INSIGHTS DAS TURMAS DE UMA ESCOLA */
+        function openModalInsightsTurmas(nomeEscola) {
+            activeEscolaModalTurmas = nomeEscola;
+            document.getElementById('modal-escola-nome').textContent = `Insights das Turmas — ${nomeEscola}`;
+            document.getElementById('modal-escola-sub').textContent = `Consistência de frequência semanal de cada sala da escola`;
+
+            renderModalInsightsTurmas(nomeEscola);
+            document.getElementById('modal-insights-turmas').style.display = 'flex';
+        }
+
+        function renderModalInsightsTurmas(nomeEscola) {
+            const dadosEscola = filteredData.filter(d => d.escola === nomeEscola);
+            if (!dadosEscola.length) return;
+
+            // Mapeia médias por semana de TODAS as turmas do filtro atual para determinar a média global e os rankings por semana
+            const semanasGlobalMap = new Map();
+            filteredData.forEach(d => {
+                const sem = d.semana;
+                if (!sem) return;
+                if (!semanasGlobalMap.has(sem)) semanasGlobalMap.set(sem, { somaProd: 0, totalMat: 0 });
+                const item = semanasGlobalMap.get(sem);
+                item.somaProd += d.presencaPct * d.matriculas;
+                item.totalMat += d.matriculas;
+            });
+
+            // Mapeia presenças semanais por turma da escola escolhida
+            const semanasTurmasMap = new Map(); // semana -> Map(turma -> { somaProd, totalMat })
+            dadosEscola.forEach(d => {
+                const sem = d.semana;
+                if (!sem) return;
+                const turma = d.turmaLimpa;
+
+                if (!semanasTurmasMap.has(sem)) semanasTurmasMap.set(sem, new Map());
+                const semTurmas = semanasTurmasMap.get(sem);
+
+                if (!semTurmas.has(turma)) semTurmas.set(turma, { somaProd: 0, totalMat: 0 });
+                const item = semTurmas.get(turma);
+                item.somaProd += d.presencaPct * d.matriculas;
+                item.totalMat += d.matriculas;
+            });
+
+            const statsMap = new Map();
+
+            semanasTurmasMap.forEach((semTurmas, sem) => {
+                const globalSemData = semanasGlobalMap.get(sem);
+                const mediaRedeSemana = (globalSemData && globalSemData.totalMat > 0) ? (globalSemData.somaProd / globalSemData.totalMat) : 0;
+
+                const rankingSemana = [];
+                semTurmas.forEach((val, turma) => {
+                    if (val.totalMat > 0) {
+                        const pct = val.somaProd / val.totalMat;
+                        rankingSemana.push({ turma: turma, pct: pct });
+                    }
+                });
+
+                rankingSemana.sort((a, b) => b.pct - a.pct);
+                const totalInSemana = rankingSemana.length;
+
+                rankingSemana.forEach((item, pos) => {
+                    const turma = item.turma;
+                    if (!statsMap.has(turma)) {
+                        statsMap.set(turma, {
+                            entidade: turma,
+                            totalSemanas: 0,
+                            semanasG5: 0,
+                            semanasZ5: 0,
+                            semanasVerde: 0,
+                            semanasAmarelo: 0,
+                            semanasVermelho: 0,
+                            semanasAcimaMedia: 0,
+                            semanasAbaixoMedia: 0
+                        });
+                    }
+
+                    const st = statsMap.get(turma);
+                    st.totalSemanas++;
+
+                    if (item.pct >= 90) st.semanasVerde++;
+                    else if (item.pct >= 85) st.semanasAmarelo++;
+                    else st.semanasVermelho++;
+
+                    if (pos < 5) st.semanasG5++;
+                    if (pos >= Math.max(0, totalInSemana - 5)) st.semanasZ5++;
+
+                    if (mediaRedeSemana > 0) {
+                        if (item.pct >= mediaRedeSemana) st.semanasAcimaMedia++;
+                        else st.semanasAbaixoMedia++;
+                    }
+                });
+            });
+
+            let listaStats = Array.from(statsMap.values());
+
+            listaStats.sort((a, b) => {
+                let vA = a[modalTurmasSortColumn];
+                let vB = b[modalTurmasSortColumn];
+
+                if (typeof vA === 'string') {
+                    vA = vA.toLowerCase();
+                    vB = vB.toLowerCase();
+                }
+
+                if (vA < vB) return modalTurmasSortDirection === 'asc' ? -1 : 1;
+                if (vA > vB) return modalTurmasSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            ['entidade', 'totalSemanas', 'semanasG5', 'semanasZ5', 'semanasVerde', 'semanasAmarelo', 'semanasVermelho', 'semanasAcimaMedia', 'semanasAbaixoMedia'].forEach(col => {
+                const span = document.getElementById(`sort-mod-${col}`);
+                if (span) {
+                    span.textContent = col === modalTurmasSortColumn ? (modalTurmasSortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+                }
+            });
+
+            const tbody = document.querySelector('#tabelaModalInsightsTurmas tbody');
+            let html = '';
+
+            listaStats.forEach(st => {
+                html += `<tr>
+                    <td class="row-header" style="font-weight:700;">${st.entidade}</td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:600;">${st.totalSemanas}</td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:800; color:var(--emerald);">${st.semanasG5}</td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:800; color:var(--amber);">${st.semanasZ5}</td>
+                    <td><span class="badge badge-success">${st.semanasVerde} sem</span></td>
+                    <td><span class="badge badge-warning">${st.semanasAmarelo} sem</span></td>
+                    <td><span class="badge badge-danger">${st.semanasVermelho} sem</span></td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:700; color:var(--emerald);">${st.semanasAcimaMedia}</td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:700; color:var(--rose);">${st.semanasAbaixoMedia}</td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="9">Nenhum dado de turma encontrado para esta escola.</td></tr>';
+        }
+
+        /* LÓGICA DO PAINEL DE INSIGHTS GERAL */
+        function renderInsights() {
+            if (!filteredData.length) {
+                document.getElementById('kpi-top-g4').textContent = '-';
+                document.getElementById('kpi-top-z4').textContent = '-';
+                document.querySelector('#tabelaInsights tbody').innerHTML = '<tr><td colspan="9">Nenhum dado encontrado para os filtros.</td></tr>';
+                return;
+            }
+
+            const isEscolaView = currentView === 'escola' || currentView === 'insights';
+            document.getElementById('insights-table-title').textContent = isEscolaView ? 'Análise de Consistência e Regularidade por Escola (Clique na escola para ver as turmas)' : 'Análise de Consistência e Regularidade por Turma';
+
+            // Mapeia média geral da rede em cada semana para o cálculo de "Acima/Abaixo da Média"
+            const semanasMediaRedeMap = new Map();
+            filteredData.forEach(d => {
+                const sem = d.semana;
+                if (!sem) return;
+
+                if (!semanasMediaRedeMap.has(sem)) semanasMediaRedeMap.set(sem, { somaProd: 0, totalMat: 0 });
+                const item = semanasMediaRedeMap.get(sem);
+                item.somaProd += d.presencaPct * d.matriculas;
+                item.totalMat += d.matriculas;
+            });
+
+            // Agrupa presenças por Semana e por Entidade
+            const semanasMap = new Map(); // semana -> Map(entidade -> { somaProd, totalMat })
+
+            filteredData.forEach(d => {
+                const sem = d.semana;
+                if (!sem) return;
+
+                const ent = isEscolaView ? ((d.escola && d.escola !== 'undefined') ? d.escola : 'Escola Não Identificada') : d.turmaLimpa;
+                if (!semanasMap.has(sem)) semanasMap.set(sem, new Map());
+                const semEntidades = semanasMap.get(sem);
+
+                if (!semEntidades.has(ent)) semEntidades.set(ent, { somaProd: 0, totalMat: 0 });
+                const item = semEntidades.get(ent);
+                item.somaProd += d.presencaPct * d.matriculas;
+                item.totalMat += d.matriculas;
+            });
+
+            const statsMap = new Map();
+
+            semanasMap.forEach((semEntidades, sem) => {
+                const redeData = semanasMediaRedeMap.get(sem);
+                const mediaRedeSemana = (redeData && redeData.totalMat > 0) ? (redeData.somaProd / redeData.totalMat) : 0;
+
+                const rankingSemana = [];
+
+                semEntidades.forEach((val, ent) => {
+                    if (val.totalMat > 0) {
+                        const pct = val.somaProd / val.totalMat;
+                        rankingSemana.push({ entidade: ent, pct: pct });
+                    }
+                });
+
+                rankingSemana.sort((a, b) => b.pct - a.pct);
+                const totalInSemana = rankingSemana.length;
+
+                rankingSemana.forEach((item, pos) => {
+                    const ent = item.entidade;
+                    if (!statsMap.has(ent)) {
+                        statsMap.set(ent, {
+                            entidade: ent,
+                            totalSemanas: 0,
+                            semanasG5: 0,
+                            semanasZ5: 0,
+                            semanasVerde: 0,
+                            semanasAmarelo: 0,
+                            semanasVermelho: 0,
+                            semanasAcimaMedia: 0,
+                            semanasAbaixoMedia: 0
+                        });
+                    }
+
+                    const st = statsMap.get(ent);
+                    st.totalSemanas++;
+
+                    if (item.pct >= 90) st.semanasVerde++;
+                    else if (item.pct >= 85) st.semanasAmarelo++;
+                    else st.semanasVermelho++;
+
+                    if (pos < 5) st.semanasG5++; // Top 5
+                    if (pos >= Math.max(0, totalInSemana - 5)) st.semanasZ5++; // Bottom 5
+
+                    if (mediaRedeSemana > 0) {
+                        if (item.pct >= mediaRedeSemana) st.semanasAcimaMedia++;
+                        else st.semanasAbaixoMedia++;
+                    }
+                });
+            });
+
+            let listaStats = Array.from(statsMap.values());
+
+            listaStats.sort((a, b) => {
+                let vA = a[insightsSortColumn];
+                let vB = b[insightsSortColumn];
+
+                if (typeof vA === 'string') {
+                    vA = vA.toLowerCase();
+                    vB = vB.toLowerCase();
+                }
+
+                if (vA < vB) return insightsSortDirection === 'asc' ? -1 : 1;
+                if (vA > vB) return insightsSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            ['entidade', 'totalSemanas', 'semanasG5', 'semanasZ5', 'semanasVerde', 'semanasAmarelo', 'semanasVermelho', 'semanasAcimaMedia', 'semanasAbaixoMedia'].forEach(col => {
+                const span = document.getElementById(`sort-ins-${col}`);
+                if (span) {
+                    span.textContent = col === insightsSortColumn ? (insightsSortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+                }
+            });
+
+            if (listaStats.length > 0) {
+                const topG5 = [...listaStats].sort((a, b) => b.semanasG5 - a.semanasG5)[0];
+                const topZ5 = [...listaStats].sort((a, b) => b.semanasZ5 - a.semanasZ5)[0];
+
+                document.getElementById('kpi-top-g4').textContent = `${topG5.entidade} (${topG5.semanasG5} sem)`;
+                document.getElementById('kpi-top-z4').textContent = `${topZ5.entidade} (${topZ5.semanasZ5} sem)`;
+            } else {
+                document.getElementById('kpi-top-g4').textContent = '-';
+                document.getElementById('kpi-top-z4').textContent = '-';
+            }
+
+            const tbody = document.querySelector('#tabelaInsights tbody');
+            let html = '';
+
+            listaStats.forEach(st => {
+                html += `<tr>
+                    <td class="row-header row-clickable" style="font-weight:700;" onclick="handleInsightEntityClick('${st.entidade.replace(/'/g, "\\'")}')" title="Clique para abrir detalhamento">${st.entidade}</td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:600;">${st.totalSemanas}</td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:800; color:var(--emerald);">${st.semanasG5}</td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:800; color:var(--amber);">${st.semanasZ5}</td>
+                    <td><span class="badge badge-success">${st.semanasVerde} sem</span></td>
+                    <td><span class="badge badge-warning">${st.semanasAmarelo} sem</span></td>
+                    <td><span class="badge badge-danger">${st.semanasVermelho} sem</span></td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:700; color:var(--emerald);">${st.semanasAcimaMedia}</td>
+                    <td style="font-family:'Geist Mono', monospace; font-weight:700; color:var(--rose);">${st.semanasAbaixoMedia}</td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="9">Nenhum dado para exibir.</td></tr>';
+        }
+
         function renderDashboard() {
             const container = document.getElementById('heatmap-container');
             if (filteredData.length === 0) {
@@ -848,13 +1262,14 @@
             });
 
             filteredData.forEach(d => {
-                const chaveUnica = currentView === 'escola' ? d.escola : `${d.id_turma}___${d.turmaLimpa}`;
+                const nomeEscolaTratado = (d.escola && d.escola !== 'undefined') ? d.escola : 'Escola Não Identificada';
+                const chaveUnica = currentView === 'escola' ? nomeEscolaTratado : `${d.id_turma}___${d.turmaLimpa}`;
                 
                 if (!mapaEntidades.has(chaveUnica)) {
                     mapaEntidades.set(chaveUnica, {
                         chave: chaveUnica,
-                        entidadeRotulo: currentView === 'escola' ? d.escola : d.turmaLimpa,
-                        escolaPai: d.escola,
+                        entidadeRotulo: currentView === 'escola' ? nomeEscolaTratado : d.turmaLimpa,
+                        escolaPai: nomeEscolaTratado,
                         idTurma: d.id_turma,
                         semanas: {},
                         somaProdutoTotal: 0,

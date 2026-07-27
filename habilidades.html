@@ -208,6 +208,7 @@
 
     <div id="loading-overlay"><div class="spinner"></div><div id="loading-text">Calculando habilidades...</div></div>
 
+    <!-- PREVIEW FLUTUANTE DE PÁGINA -->
     <div id="preview-popover">
         <div id="preview-popover-header">
             <span>Pré-visualização Rápida</span>
@@ -571,9 +572,10 @@
                     <table id="tabelaAnaliseDet">
                         <thead>
                             <tr>
-                                <th onclick="ordenarTabelaDet(0)">Bimestre</th>
-                                <th onclick="ordenarTabelaDet(1)">Descritor / Habilidade</th>
-                                <th onclick="ordenarTabelaDet(2)">% Acertos</th>
+                                <th onclick="ordenarTabelaDet(0)">Ano/Série</th>
+                                <th onclick="ordenarTabelaDet(1)">Bimestre</th>
+                                <th onclick="ordenarTabelaDet(2)">Descritor / Habilidade</th>
+                                <th onclick="ordenarTabelaDet(3)">% Acertos</th>
                                 <th>Material (Aula)</th>
                                 <th>Avaliação (Questão)</th>
                             </tr>
@@ -637,7 +639,6 @@
         function showLoading(t='Calculando habilidades...') { document.getElementById('loading-text').textContent = t; document.getElementById('loading-overlay').style.display = 'flex'; }
         function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
 
-        // BUSCA PAGINADA EXAUSTIVA NO SUPABASE (Busca sem parar de 1000 em 1000 até trazer 100%)
         async function fetchAllFilteredData(table, column, filterValues) {
             let all = [], limit = 1000, start = 0, hasMore = true;
             while (hasMore) {
@@ -653,7 +654,6 @@
             return { data: all };
         }
 
-        // BUSCA EXAUSTIVA PARA LISTAR TODOS OS NOMES DAS ESCOLAS
         async function fetchListaCompletaEscolas() {
             let escolasSet = new Set();
             let limit = 1000, start = 0, hasMore = true;
@@ -785,7 +785,7 @@
                 document.getElementById('filtro-disciplina-bimestre').value = 'TODAS';
             } else if (aba === 'escola') {
                 document.querySelectorAll('.multi-select[data-filter="escola_aba"] input[type="checkbox"]').forEach(c => c.checked = false);
-                updateMultiSelectDisplay('escola_aba', 'Selecione uma Escola...');
+                updateMultiSelectDisplay('escola_aba', 'Todas as Escolas');
                 document.getElementById('filtro-serie-escola').value = 'TODAS';
                 document.getElementById('filtro-bimestre-escola').value = 'TODOS';
                 document.getElementById('filtro-disciplina-escola').value = 'TODAS';
@@ -813,7 +813,7 @@
             const c = document.querySelector(`.multi-select[data-filter="${k}"]`); if (!c) return;
             const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
             const span = c.querySelector('.select-display span');
-            span.textContent = cbs.length === 0 ? defaultLabel : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionados`;
+            span.textContent = cbs.length === 0 ? defaultLabel : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionadas`;
         }
 
         function getSelectedCheckboxes(k) {
@@ -873,6 +873,15 @@
             document.getElementById('login-section').style.display = 'flex'; hideLoading();
         };
 
+        async function fetchAllData(table) {
+            let all = [], limit = 1000, start = 0, hasMore = true;
+            while (hasMore) {
+                const { data, error } = await supabaseClient.from(table).select('*').range(start, start + limit - 1);
+                if (error) return { error }; all.push(...data);
+                if (data.length < limit) hasMore = false; else start += limit;
+            } return { data: all };
+        }
+
         const getClassificacaoAcertos = (pct) => {
             if (pct < 50) return { text: 'Crítico (<50%)', cellClass: 'cell-danger' };
             if (pct < 65) return { text: 'Abaixo do Esperado', cellClass: 'cell-warning' };
@@ -903,14 +912,14 @@
         };
 
         async function loadData() {
-            showLoading('Carregando descritores e lista completa de escolas...');
+            showLoading('Carregando descritores e escolas...');
             try {
                 document.getElementById('login-section').style.display='none';
                 document.getElementById('dashboard-section').style.display='block';
 
-                const [resDesc, escolasArray] = await Promise.all([
-                    fetchAllFilteredData('desempenho_descritor'),
-                    fetchListaCompletaEscolas()
+                const [resDesc, resEscola] = await Promise.all([
+                    fetchAllData('desempenho_descritor'),
+                    fetchAllData('desempenho_escola')
                 ]);
 
                 if (resDesc.error) throw resDesc.error;
@@ -929,10 +938,25 @@
                     };
                 });
 
-                listaEscolasExistentes = escolasArray;
+                escolaData = (resEscola.data || []).map(d => {
+                    let rawPct = parseFloat(d.percentual_acertos) || 0;
+                    let pctCorrigido = rawPct <= 1.0 ? rawPct * 100 : rawPct;
+                    return {
+                        id_escola: d.id_escola,
+                        escola: d.escola || 'N/A',
+                        bimestre: normalizarBimestre(d.bimestre),
+                        serie: d.serie || 'N/A',
+                        percentual_acertos: pctCorrigido,
+                        descritor: d.descritor || 'N/A',
+                        disciplina: d.disciplina || 'N/A',
+                        aula_url: d.aula_url || 'N/A',
+                        questao_url: d.questao_url || 'N/A'
+                    };
+                });
 
                 let bimsPresentes = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
-                let seriesPresentes = [...new Set(globalData.map(d => d.serie))].sort();
+                let seriesPresentes = [...new Set([...globalData.map(d => d.serie), ...escolaData.map(d => d.serie)])].sort();
+                let escolasPresentes = [...new Set(escolaData.map(d => d.escola))].sort();
 
                 const optsBimAba = document.getElementById('options-bimestre-aba'); optsBimAba.innerHTML = '';
                 bimsPresentes.forEach(b => {
@@ -940,12 +964,11 @@
                 });
                 updateMultiSelectDisplay('bimestre_aba', 'Todos os Bimestres');
 
-                // Preenche o dropdown de escolas com TODAS as escolas encontradas no banco
                 const optsEscAba = document.getElementById('options-escola-aba'); optsEscAba.innerHTML = '';
-                listaEscolasExistentes.forEach(e => {
-                    optsEscAba.innerHTML += `<label><input type="checkbox" value="${e}" onchange="updateMultiSelectDisplay('escola_aba', 'Selecione uma Escola...'); window.processarVisaoEscola();"> ${e}</label>`;
+                escolasPresentes.forEach(e => {
+                    optsEscAba.innerHTML += `<label><input type="checkbox" value="${e}" onchange="updateMultiSelectDisplay('escola_aba', 'Todas as Escolas'); window.processarVisaoEscola();"> ${e}</label>`;
                 });
-                updateMultiSelectDisplay('escola_aba', 'Selecione uma Escola...');
+                updateMultiSelectDisplay('escola_aba', 'Todas as Escolas');
 
                 ['options-serie-global', 'options-serie-bimestre'].forEach(id => {
                     const container = document.getElementById(id); container.innerHTML = '';
@@ -957,7 +980,7 @@
                     updateMultiSelectDisplay(filterName, 'Todas as Séries');
                 });
 
-                const avalsDisc = [...new Set(globalData.map(d => d.disciplina))].sort();
+                const avalsDisc = [...new Set([...globalData.map(d => d.disciplina), ...escolaData.map(d => d.disciplina)])].sort();
                 ['filtro-disciplina-global', 'filtro-disciplina-bimestre', 'filtro-disciplina-escola'].forEach(id => {
                     const s = document.getElementById(id); s.innerHTML = '<option value="TODAS">Todas as Disciplinas</option>';
                     avalsDisc.forEach(c => s.innerHTML += `<option value="${c}">${c}</option>`);
@@ -1129,7 +1152,7 @@
             });
         }
 
-        // VISÃO POR BIMESTRE
+        // VISÃO POR BIMESTRE (COM A COLUNA DE SÉRIE/ANO)
         window.ordenarTabelaBimestre = (colIndex) => {
             if (sortBimCol === colIndex) sortBimAsc = !sortBimAsc;
             else { sortBimCol = colIndex; sortBimAsc = true; }
@@ -1158,49 +1181,86 @@
                 return;
             }
 
-            let descritoresUnicos = [...new Set(dataView.map(d => d.descritor))];
+            // Mapeia agrupando por (Descritor + Série) para mostrar o Ano/Série em coluna dedicada
+            let mapaLinhas = {};
+            dataView.forEach(d => {
+                let chaveUnica = `${d.descritor}___${d.serie}`;
+                if (!mapaLinhas[chaveUnica]) {
+                    mapaLinhas[chaveUnica] = { descritor: d.descritor, serie: d.serie, valores: {} };
+                }
+            });
+
             let colunasBim = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
             if (bimsSelecionados.length > 0) colunasBim = colunasBim.filter(b => bimsSelecionados.includes(b));
 
-            let tabelaMatriz = descritoresUnicos.map(desc => {
-                let linhaObj = { descritor: desc, valores: {} };
+            let tabelaMatriz = Object.keys(mapaLinhas).map(k => {
+                let obj = mapaLinhas[k];
                 colunasBim.forEach(col => {
-                    let itens = dataView.filter(d => d.descritor === desc && d.bimestre === col);
+                    let itens = dataView.filter(d => d.descritor === obj.descritor && d.serie === obj.serie && d.bimestre === col);
                     if (itens.length > 0) {
                         let pctMed = itens.reduce((a, b) => a + b.percentual_acertos, 0) / itens.length;
-                        linhaObj.valores[col] = { pctMed, itemRef: itens[0] };
-                    } else { linhaObj.valores[col] = null; }
+                        obj.valores[col] = { pctMed, itemRef: itens[0] };
+                    } else {
+                        obj.valores[col] = null;
+                    }
                 });
-                return linhaObj;
+                return obj;
             });
 
-            ordenarMatrizComNulosNoFim(tabelaMatriz, colunasBim, sortBimCol, sortBimAsc);
+            // Ordenação personalizada (Coluna 0 = Série, 1 = Descritor, 2+ = Bimestres)
+            if (sortBimCol !== null) {
+                tabelaMatriz.sort((a, b) => {
+                    let vA, vB;
+                    if (sortBimCol === 0) {
+                        vA = a.serie; vB = b.serie;
+                        return sortBimAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+                    } else if (sortBimCol === 1) {
+                        vA = a.descritor; vB = b.descritor;
+                        return sortBimAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+                    } else {
+                        let colKey = colunasBim[sortBimCol - 2];
+                        let hasA = a.valores[colKey] !== null;
+                        let hasB = b.valores[colKey] !== null;
+                        if (!hasA && !hasB) return 0;
+                        if (!hasA) return 1;
+                        if (!hasB) return -1;
+                        valA = a.valores[colKey].pctMed;
+                        valB = b.valores[colKey].pctMed;
+                        return sortBimAsc ? valA - valB : valB - valA;
+                    }
+                });
+            }
 
             atualizarControlesPaginacao('bimestre', tabelaMatriz.length);
             const state = paginationState.bimestre;
             const matrizPaginada = tabelaMatriz.slice((state.currentPage - 1) * state.pageSize, state.currentPage * state.pageSize);
 
-            let theadHTML = `<tr><th onclick="ordenarTabelaBimestre(0)" class="${sortBimCol === 0 ? (sortBimAsc ? 'sort-asc' : 'sort-desc') : ''}" style="max-width:340px;">Descritor / Habilidade</th>`;
+            let theadHTML = `<tr>
+                <th onclick="ordenarTabelaBimestre(0)" class="${sortBimCol === 0 ? (sortBimAsc ? 'sort-asc' : 'sort-desc') : ''}" style="width:110px;">Ano / Série</th>
+                <th onclick="ordenarTabelaBimestre(1)" class="${sortBimCol === 1 ? (sortBimAsc ? 'sort-asc' : 'sort-desc') : ''}" style="max-width:300px;">Descritor / Habilidade</th>`;
+            
             colunasBim.forEach((col, idx) => {
-                let colClass = sortBimCol === (idx + 1) ? (sortBimAsc ? 'sort-asc' : 'sort-desc') : '';
-                theadHTML += `<th onclick="ordenarTabelaBimestre(${idx + 1})" class="${colClass}">${col}</th>`;
+                let colClass = sortBimCol === (idx + 2) ? (sortBimAsc ? 'sort-asc' : 'sort-desc') : '';
+                theadHTML += `<th onclick="ordenarTabelaBimestre(${idx + 2})" class="${colClass}">${col}</th>`;
             });
             theadHTML += `</tr>`; thead.innerHTML = theadHTML;
 
             let tbodyRows = [];
             matrizPaginada.forEach(row => {
                 let emRef = Object.values(row.valores).find(v => v !== null);
-                let itemRefObj = emRef ? emRef.itemRef : { disciplina: 'N/A', serie: 'N/A', bimestre: 'Geral', aula_url: 'N/A', questao_url: 'N/A' };
+                let itemRefObj = emRef ? emRef.itemRef : { disciplina: 'N/A', serie: row.serie, bimestre: 'Geral', aula_url: 'N/A', questao_url: 'N/A' };
                 let avgRowPct = emRef ? emRef.pctMed : 0;
 
                 let escDescritor = String(row.descritor).replace(/'/g, "\\'");
                 let escDisc = String(itemRefObj.disciplina).replace(/'/g, "\\'");
-                let escSerie = String(itemRefObj.serie).replace(/'/g, "\\'");
+                let escSerie = String(row.serie).replace(/'/g, "\\'");
                 let escBim = String(itemRefObj.bimestre).replace(/'/g, "\\'");
                 let escAula = String(itemRefObj.aula_url).replace(/'/g, "\\'");
                 let escQuestao = String(itemRefObj.questao_url).replace(/'/g, "\\'");
 
-                let rowHtml = `<tr><td class="td-descritor" title="${row.descritor}" onclick="abrirModalDescritor('${escDescritor}', ${avgRowPct}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${row.descritor}</td>`;
+                let rowHtml = `<tr>
+                    <td style="background:#f8fafc; font-weight:700; color:var(--navy);">${row.serie}</td>
+                    <td class="td-descritor" title="${row.descritor}" onclick="abrirModalDescritor('${escDescritor}', ${avgRowPct}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${row.descritor}</td>`;
                 
                 colunasBim.forEach(col => {
                     let cellData = row.valores[col];
@@ -1219,7 +1279,7 @@
             tbody.innerHTML = tbodyRows.join('');
         };
 
-        // VISÃO POR ESCOLA (BUSCA COMPLETA SEM TRUNCAR DADOS)
+        // VISÃO POR ESCOLA (COM A COLUNA DE SÉRIE/ANO)
         window.ordenarTabelaEscola = (colIndex) => {
             if (sortEscCol === colIndex) sortEscAsc = !sortEscAsc;
             else { sortEscCol = colIndex; sortEscAsc = true; }
@@ -1242,7 +1302,6 @@
                 return;
             }
 
-            // Busca paginada completa no Supabase sem travar na barreira de 1000 registros
             showLoading('Buscando 100% dos dados da(s) escola(s) selecionada(s)...');
             try {
                 let escolasParaBuscar = escolasSelecionadas.filter(e => !escolaDataCache.some(d => d.escola === e));
@@ -1302,54 +1361,89 @@
                 return;
             }
 
-            let descritoresUnicos = [...new Set(dataView.map(d => d.descritor))];
+            // Mapeia por (Descritor + Série) para mostrar o Ano/Série na primeira coluna
+            let mapaLinhasEscola = {};
+            dataView.forEach(d => {
+                let chaveUnica = `${d.descritor}___${d.serie}`;
+                if (!mapaLinhasEscola[chaveUnica]) {
+                    mapaLinhasEscola[chaveUnica] = { descritor: d.descritor, serie: d.serie, valores: {} };
+                }
+            });
+
             let colunas = modoVisaoEscola === 'geral'
                 ? [...new Set(dataView.map(d => d.escola))].sort()
                 : ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
 
-            let tabelaMatriz = descritoresUnicos.map(desc => {
-                let linhaObj = { descritor: desc, valores: {} };
+            let tabelaMatriz = Object.keys(mapaLinhasEscola).map(k => {
+                let obj = mapaLinhasEscola[k];
                 colunas.forEach(col => {
                     let itens = modoVisaoEscola === 'geral'
-                        ? dataView.filter(d => d.descritor === desc && d.escola === col)
-                        : dataView.filter(d => d.descritor === desc && d.bimestre === col);
+                        ? dataView.filter(d => d.descritor === obj.descritor && d.serie === obj.serie && d.escola === col)
+                        : dataView.filter(d => d.descritor === obj.descritor && d.serie === obj.serie && d.bimestre === col);
 
                     if (itens.length > 0) {
                         let pctMed = itens.reduce((a, b) => a + b.percentual_acertos, 0) / itens.length;
-                        linhaObj.valores[col] = { pctMed, itemRef: itens[0] };
-                    } else { linhaObj.valores[col] = null; }
+                        obj.valores[col] = { pctMed, itemRef: itens[0] };
+                    } else { obj.valores[col] = null; }
                 });
-                return linhaObj;
+                return obj;
             });
 
-            ordenarMatrizComNulosNoFim(tabelaMatriz, colunas, sortEscCol, sortEscAsc);
+            // Ordenação Escola (Coluna 0 = Série, 1 = Descritor, 2+ = Escolas/Bimestres)
+            if (sortEscCol !== null) {
+                tabelaMatriz.sort((a, b) => {
+                    let vA, vB;
+                    if (sortEscCol === 0) {
+                        vA = a.serie; vB = b.serie;
+                        return sortEscAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+                    } else if (sortEscCol === 1) {
+                        vA = a.descritor; vB = b.descritor;
+                        return sortEscAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+                    } else {
+                        let colKey = colunas[sortEscCol - 2];
+                        let hasA = a.valores[colKey] !== null;
+                        let hasB = b.valores[colKey] !== null;
+                        if (!hasA && !hasB) return 0;
+                        if (!hasA) return 1;
+                        if (!hasB) return -1;
+                        valA = a.valores[colKey].pctMed;
+                        valB = b.valores[colKey].pctMed;
+                        return sortEscAsc ? valA - valB : valB - valA;
+                    }
+                });
+            }
 
             atualizarControlesPaginacao('escola', tabelaMatriz.length);
             const state = paginationState.escola;
             const matrizPaginada = tabelaMatriz.slice((state.currentPage - 1) * state.pageSize, state.currentPage * state.pageSize);
 
-            let theadHTML = `<tr><th onclick="ordenarTabelaEscola(0)" class="${sortEscCol === 0 ? (sortEscAsc ? 'sort-asc' : 'sort-desc') : ''}" style="max-width:340px;">Descritor / Habilidade</th>`;
+            let theadHTML = `<tr>
+                <th onclick="ordenarTabelaEscola(0)" class="${sortEscCol === 0 ? (sortEscAsc ? 'sort-asc' : 'sort-desc') : ''}" style="width:110px;">Ano / Série</th>
+                <th onclick="ordenarTabelaEscola(1)" class="${sortEscCol === 1 ? (sortEscAsc ? 'sort-asc' : 'sort-desc') : ''}" style="max-width:300px;">Descritor / Habilidade</th>`;
+            
             colunas.forEach((col, idx) => {
-                let colClass = sortEscCol === (idx + 1) ? (sortEscAsc ? 'sort-asc' : 'sort-desc') : '';
+                let colClass = sortEscCol === (idx + 2) ? (sortEscAsc ? 'sort-asc' : 'sort-desc') : '';
                 let nomeCurto = col.length > 20 ? col.substring(0, 18) + '...' : col;
-                theadHTML += `<th onclick="ordenarTabelaEscola(${idx + 1})" class="${colClass}" title="${col}">${nomeCurto}</th>`;
+                theadHTML += `<th onclick="ordenarTabelaEscola(${idx + 2})" class="${colClass}" title="${col}">${nomeCurto}</th>`;
             });
             theadHTML += `</tr>`; thead.innerHTML = theadHTML;
 
             let tbodyRows = [];
             matrizPaginada.forEach(row => {
                 let emRef = Object.values(row.valores).find(v => v !== null);
-                let itemRefObj = emRef ? emRef.itemRef : { disciplina: 'N/A', serie: 'N/A', bimestre: 'Geral', escola: 'N/A', aula_url: 'N/A', questao_url: 'N/A' };
+                let itemRefObj = emRef ? emRef.itemRef : { disciplina: 'N/A', serie: row.serie, bimestre: 'Geral', escola: 'N/A', aula_url: 'N/A', questao_url: 'N/A' };
                 let avgRowPct = emRef ? emRef.pctMed : 0;
 
                 let escDescritor = String(row.descritor).replace(/'/g, "\\'");
                 let escDisc = String(itemRefObj.disciplina).replace(/'/g, "\\'");
-                let escSerie = String(itemRefObj.serie).replace(/'/g, "\\'");
+                let escSerie = String(row.serie).replace(/'/g, "\\'");
                 let escBim = String(itemRefObj.bimestre).replace(/'/g, "\\'");
                 let escAula = String(itemRefObj.aula_url).replace(/'/g, "\\'");
                 let escQuestao = String(itemRefObj.questao_url).replace(/'/g, "\\'");
 
-                let rowHtml = `<tr><td class="td-descritor" title="${row.descritor}" onclick="abrirModalDescritor('${escDescritor}', ${avgRowPct}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${row.descritor}</td>`;
+                let rowHtml = `<tr>
+                    <td style="background:#f8fafc; font-weight:700; color:var(--navy);">${row.serie}</td>
+                    <td class="td-descritor" title="${row.descritor}" onclick="abrirModalDescritor('${escDescritor}', ${avgRowPct}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${row.descritor}</td>`;
                 
                 colunas.forEach(col => {
                     let cellData = row.valores[col];
@@ -1360,14 +1454,14 @@
                         let escCellQuestao = String(itemCell.questao_url).replace(/'/g, "\\'");
                         let ctxCol = modoVisaoEscola === 'geral' ? col : itemCell.escola;
 
-                        rowHtml += `<td class="cell-perf ${infoClass.cellClass}" onclick="abrirModalDescritor('${escDescritor}', ${cellData.pctMed}, '${escDisc}', '${escSerie} - ${ctxCol}', '${col}', '${escCellAula}', '${escCellQuestao}')">${cellData.pctMed.toFixed(1).replace('.',',')}%</td>`;
+                        rowHtml += `<td class="cell-perf ${infoClass.cellClass}" onclick="abrirModalDescritor('${escDescritor}', ${cellData.pctMed}, '${escDisc}', '${row.serie} - ${ctxCol}', '${col}', '${escCellAula}', '${escCellQuestao}')">${cellData.pctMed.toFixed(1).replace('.',',')}%</td>`;
                     } else { rowHtml += `<td style="color:var(--muted); background:#ffffff;">-</td>`; }
                 });
                 rowHtml += `</tr>`;
                 tbodyRows.push(rowHtml);
             });
             tbody.innerHTML = tbodyRows.join('');
-        }
+        };
 
         // TABELA DETALHADA
         window.ordenarTabelaDet = (colIndex) => {
@@ -1399,9 +1493,10 @@
             document.getElementById('texto-leitura-executiva').textContent = `Para ${selSerie} (${selComp || 'Todas Disciplinas'}), os alunos obtiveram um percentual médio de acertos de ${avgPct.toFixed(1).replace('.',',')}% nas habilidades avaliadas.`;
 
             dados.sort((a, b) => {
-                if (sortDetCol === 0) return sortDetAsc ? a.bimestre.localeCompare(b.bimestre) : b.bimestre.localeCompare(a.bimestre);
-                if (sortDetCol === 1) return sortDetAsc ? a.descritor.localeCompare(b.descritor) : b.descritor.localeCompare(a.descritor);
-                if (sortDetCol === 2) return sortDetAsc ? a.percentual_acertos - b.percentual_acertos : b.percentual_acertos - a.percentual_acertos;
+                if (sortDetCol === 0) return sortDetAsc ? a.serie.localeCompare(b.serie) : b.serie.localeCompare(a.serie);
+                if (sortDetCol === 1) return sortDetAsc ? a.bimestre.localeCompare(b.bimestre) : b.bimestre.localeCompare(a.bimestre);
+                if (sortDetCol === 2) return sortDetAsc ? a.descritor.localeCompare(b.descritor) : b.descritor.localeCompare(a.descritor);
+                if (sortDetCol === 3) return sortDetAsc ? a.percentual_acertos - b.percentual_acertos : b.percentual_acertos - a.percentual_acertos;
                 return a.percentual_acertos - b.percentual_acertos;
             });
 
@@ -1436,7 +1531,8 @@
 
                 tbodyRows.push(`
                     <tr>
-                        <td style="background:#f8fafc; font-weight:700; color:var(--navy);">${d.bimestre}</td>
+                        <td style="background:#f8fafc; font-weight:700; color:var(--navy);">${d.serie}</td>
+                        <td style="font-weight:600; color:var(--muted);">${d.bimestre}</td>
                         <td class="td-descritor" title="${d.descritor}" onclick="abrirModalDescritor('${escDesc}', ${d.percentual_acertos}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${d.descritor}</td>
                         <td class="cell-perf ${infoClass.cellClass}" onclick="abrirModalDescritor('${escDesc}', ${d.percentual_acertos}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${d.percentual_acertos.toFixed(1).replace('.',',')}%</td>
                         <td style="background:#fff;">${linkAula}</td>

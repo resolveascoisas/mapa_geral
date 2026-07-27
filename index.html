@@ -110,20 +110,32 @@
         .header-brand-text h1 { font-size: .9rem; font-weight: 800; color: #fff; line-height: 1.2; letter-spacing: -.01em; margin: 0;}
         .header-brand-text span { font-size: .65rem; color: rgba(255,255,255,.38); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
 
-        .header-actions { display: flex; gap: .45rem; align-items: center; margin-left: auto; }
-        .user-chip { display: flex; align-items: center; gap: .55rem; }
+        .header-actions { display: flex; gap: .55rem; align-items: center; margin-left: auto; }
+        .user-chip { display: flex; align-items: center; gap: .55rem; margin-right: .5rem; }
         .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #0284c7); display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 800; color: #fff; }
         .user-info strong { display: block; font-size: .75rem; color: #fff; font-weight: 700; line-height: 1.1; }
         .user-info span { font-size: .65rem; color: rgba(255,255,255,.7); font-weight: 600; text-transform: uppercase; }
 
-        .btn-logout {
-            background: transparent; color: rgba(255,255,255,.55);
+        .btn-header {
+            display: inline-flex; align-items: center; gap: .4rem;
+            background: transparent; color: rgba(255,255,255,.75);
             border: 1px solid rgba(255,255,255,.15);
             padding: .4rem .8rem; border-radius: var(--radius);
             font-family: inherit; font-size: .75rem; font-weight: 700;
-            cursor: pointer; transition: all .2s; margin-left: .5rem;
+            text-decoration: none; cursor: pointer; transition: all .2s;
         }
-        .btn-logout:hover { background: rgba(225,29,72,.15); color: #fca5a5; border-color: rgba(225,29,72,.3); }
+        .btn-header img {
+            height: 14px; width: 14px; object-fit: contain;
+            filter: brightness(0) invert(1); opacity: .8;
+        }
+        .btn-header:hover {
+            background: rgba(255,255,255,.1); color: #fff;
+            border-color: rgba(255,255,255,.3);
+        }
+        .btn-logout:hover {
+            background: rgba(225,29,72,.15); color: #fca5a5;
+            border-color: rgba(225,29,72,.3);
+        }
 
         /* ─── CONTAINER PRINCIPAL ─── */
         .container {
@@ -337,7 +349,15 @@
                         <span id="user-role-label">Gestão</span>
                     </div>
                 </div>
-                <button class="btn-logout" onclick="window.handleLogout()">Sair</button>
+                
+                <a href="tutorial.html" class="btn-header">
+                    <img src="./imagens/help.png" alt="" onerror="this.style.display='none'">
+                    Tutorial
+                </a>
+                <button class="btn-header btn-logout" onclick="window.handleLogout()">
+                    <img src="./imagens/logout.png" alt="" onerror="this.style.display='none'">
+                    Sair
+                </button>
             </div>
         </header>
 
@@ -355,6 +375,16 @@
                     <div class="panel-text">
                         <h3>Monitor de Avaliações</h3>
                         <p>Histórico completo de notas, cálculo do Índice de Prioridade Pedagógica (IPP) e diagnóstico detalhado por escola ou turma.</p>
+                    </div>
+                    <div class="panel-arrow">›</div>
+                </a>
+
+                <!-- Análise de Habilidades (LOGO PENCIL) -->
+                <a href="habilidades.html" class="panel-card">
+                    <div class="panel-icon-wrap"><img src="./imagens/pencil.png" alt=""></div>
+                    <div class="panel-text">
+                        <h3>Análise de Habilidades</h3>
+                        <p>Acompanhamento de desempenho por descritor, evolução por bimestre e diagnóstico de assimilação por escola.</p>
                     </div>
                     <div class="panel-arrow">›</div>
                 </a>

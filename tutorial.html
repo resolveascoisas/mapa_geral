@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial e Documentação — Portal URE Avaré</title>
+    <link rel="icon" type="image/png" href="./imagens/icone.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy:    #0c1a35; --navy2:   #142040;
+            --blue:    #1d4ed8; --blue2:   #2563eb;
+            --sky:     #0284c7; --teal:    #0f766e;
+            --emerald: #059669; --amber:   #d97706;
+            --rose:    #e11d48; --orange:  #c2410c;
+            --purple:  #6d28d9;
+            --bg:      #f1f5fb; --surface: #ffffff; --surface2:#f8fafd;
+            --border:  #dbe3f0; --border2: #c9d5e8;
+            --text:    #0d1829; --muted:   #5a6e8a; --light:   #8fa3bc;
+            --radius:  8px; --radius2: 12px;
+            --shadow:  0 1px 2px rgba(0,0,0,.04), 0 4px 20px rgba(12,26,53,.06);
+            --grad-blue: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+            --grad-header: linear-gradient(160deg, #0c1a35 0%, #0f2a52 60%, #1a3d72 100%);
+
+            --cell-danger-bg: #fca5a5; --cell-danger-text: #7f1d1d;
+            --cell-warning-bg: #fde047; --cell-warning-text: #713f12;
+            --cell-success-bg: #059669; --cell-success-text: #ffffff;
+            --cell-purple-bg: #047857; --cell-purple-text: #ffffff;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14.5px; line-height: 1.55; display: flex; flex-direction: column; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+        header { background: var(--grad-header); padding: .85rem 2rem; display: flex; align-items: center; gap: 1.5rem; box-shadow: 0 2px 24px rgba(0,0,0,.22); position: sticky; top: 0; z-index: 200; }
+        .header-brand { display: flex; align-items: center; gap: .75rem; flex-shrink: 0; }
+        .header-brand img { max-height: 36px; object-fit: contain; filter: brightness(0) invert(1); opacity: .88; }
+        .header-brand-text h1 { font-size: .9rem; font-weight: 800; color: #fff; line-height: 1.2; letter-spacing: -.01em; margin: 0;}
+        .header-brand-text span { font-size: .65rem; color: rgba(255,255,255,.38); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+        .header-actions { display: flex; gap: .45rem; align-items: center; margin-left: auto; }
+        
+        .btn-header { display: inline-flex; align-items: center; gap: .4rem; background: transparent; color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.15); padding: .4rem .8rem; border-radius: var(--radius); font-family: inherit; font-size: .75rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: all .2s; }
+        .btn-header img { height: 14px; width: 14px; object-fit: contain; filter: brightness(0) invert(1); opacity: .8; }
+        .btn-header:hover { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.3); }
+
+        .container { display: flex; max-width: 1400px; margin: 0 auto; width: 100%; flex: 1; padding: 2rem; gap: 2rem; }
+
+        /* Sidebar Navigation */
+        .sidebar { width: 280px; flex-shrink: 0; background: var(--surface); border-radius: var(--radius2); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 1.5rem; position: sticky; top: calc(2rem + 60px); height: max-content; }
+        .sidebar-title { font-size: .8rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: .25rem; }
+        .nav-item a { display: flex; align-items: center; gap: .5rem; padding: .65rem .85rem; text-decoration: none; color: var(--text); font-weight: 600; font-size: .85rem; border-radius: var(--radius); transition: all .2s; border: 1px solid transparent; }
+        .nav-item a img { height: 16px; width: 16px; object-fit: contain; filter: opacity(0.6); transition: filter .2s; }
+        .nav-item a:hover { background: var(--bg); color: var(--blue); }
+        .nav-item a:hover img { filter: brightness(0) saturate(100%) invert(24%) sepia(85%) saturate(2083%) hue-rotate(218deg) brightness(96%) contrast(97%); }
+        .nav-item a.active { background: var(--blue); color: #fff; box-shadow: 0 2px 8px rgba(29, 78, 216, 0.25); }
+        .nav-item a.active img { filter: brightness(0) invert(1); }
+
+        /* Main Content Area */
+        .content { flex: 1; background: var(--surface); border-radius: var(--radius2); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 2.5rem; overflow-y: auto; }
+        .section-block { display: none; animation: fadeIn .3s ease; }
+        .section-block.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Content Typography & Styling */
+        .content h2 { font-size: 1.8rem; font-weight: 800; color: var(--navy); margin-bottom: .5rem; display: flex; align-items: center; gap: .75rem; letter-spacing: -.02em; }
+        .content h2 img { height: 28px; }
+        .content p.lead { font-size: 1.05rem; color: var(--muted); margin-bottom: 2rem; line-height: 1.6; }
+        .content h3 { font-size: 1.2rem; font-weight: 800; color: var(--navy); margin: 2.5rem 0 1rem; border-bottom: 2px solid var(--bg); padding-bottom: .5rem; }
+        .content p { font-size: .95rem; color: var(--text); line-height: 1.65; margin-bottom: 1rem; }
+        .content ul { margin-bottom: 1.5rem; padding-left: 1.5rem; }
+        .content li { font-size: .95rem; color: var(--text); margin-bottom: .5rem; line-height: 1.6; }
+        .content strong { color: var(--navy); font-weight: 700; }
+
+        .feature-box { background: var(--surface2); border-left: 4px solid var(--blue); padding: 1.25rem; border-radius: 0 var(--radius) var(--radius) 0; margin-bottom: 1.5rem; }
+        .feature-box h4 { font-size: 1rem; font-weight: 800; color: var(--navy); margin-top: 0; margin-bottom: .5rem; }
+        .feature-box p { font-size: .9rem; color: var(--muted); margin-bottom: 0; }
+
+        .alert-box { background: rgba(225,29,72,.05); border: 1px solid rgba(225,29,72,.2); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start; }
+        .alert-box img { height: 20px; flex-shrink: 0; margin-top: .15rem; }
+        .alert-box div h4 { font-size: .95rem; font-weight: 800; color: var(--rose); margin-top: 0; margin-bottom: .25rem; }
+        .alert-box div p { font-size: .85rem; color: #881337; margin-bottom: 0; }
+
+        .tutorial-table { width: 100%; border-collapse: separate; border-spacing: 1px; margin-bottom: 1.5rem; font-size: 0.85rem; background: var(--border); }
+        .tutorial-table th, .tutorial-table td { padding: 0.65rem 0.85rem; text-align: left; }
+        .tutorial-table th { background: var(--navy); color: #fff; font-weight: 800; }
+        .tutorial-table td { background: #fff; }
+
+        .formula-card { background: var(--navy); color: #fff; padding: 1.5rem; border-radius: var(--radius); text-align: center; margin: 1.5rem 0; box-shadow: 0 4px 12px rgba(12,26,53,.2); }
+        .formula-card code { font-family: 'Geist Mono', monospace; font-size: 1.05rem; color: var(--sky); background: rgba(255,255,255,.1); padding: .4rem .8rem; border-radius: 6px; display: inline-block; margin-bottom: .75rem; }
+        .formula-card p { font-size: .85rem; color: rgba(255,255,255,.7); margin: 0; }
+
+        .cell-demo { font-family: 'Geist Mono', monospace; font-size: .85rem; font-weight: 700; padding: 0.3rem 0.6rem; border-radius: 4px; display: inline-block; }
+        .cell-danger { background-color: var(--cell-danger-bg); color: var(--cell-danger-text); }
+        .cell-warning { background-color: var(--cell-warning-bg); color: var(--cell-warning-text); }
+        .cell-success { background-color: var(--cell-success-bg); color: var(--cell-success-text); }
+        .cell-purple { background-color: var(--cell-purple-bg); color: var(--cell-purple-text); }
+
+        .dashboard-footer { text-align: center; padding: 1.5rem 1rem; border-top: 1px solid var(--border); color: var(--light); font-size: .76rem; background: var(--surface); margin-top: auto; }
+        .dashboard-footer strong { color: var(--muted); font-weight: 700; }
+        .dashboard-footer a { color: var(--blue); text-decoration: none; font-weight: 600; }
+
+        @media (max-width: 900px) {
+            .container { flex-direction: column; padding: 1rem; }
+            .sidebar { width: 100%; position: static; margin-bottom: 1rem; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-brand">
+            <img src="./imagens/logo.png" alt="Logo" onerror="this.style.display='none'">
+            <div class="header-brand-text">
+                <h1>Portal URE Avaré</h1>
+                <span>Manual Analítico e Guia do Usuário</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-header" onclick="history.back()"><img src="./imagens/logout.png" alt="" onerror="this.style.display='none'"> Voltar ao Portal</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-title">Índice da Documentação</div>
+            <ul class="nav-list">
+                <li class="nav-item"><a href="#" data-target="visao-geral" class="active"><img src="./imagens/help.png" alt=""> Visão Geral</a></li>
+                <li class="nav-item"><a href="#" data-target="monitor-avaliacoes"><img src="./imagens/memo-pad.png" alt=""> Monitor de Avaliações</a></li>
+                <li class="nav-item"><a href="#" data-target="analise-habilidades"><img src="./imagens/pencil.png" alt=""> Análise de Habilidades</a></li>
+                <li class="nav-item"><a href="#" data-target="dashboard-360"><img src="./imagens/chart-line-up.png" alt=""> Dashboard 360º</a></li>
+                <li class="nav-item"><a href="#" data-target="analise-dificuldades"><img src="./imagens/microscope-bacteria.png" alt=""> Análise de Dificuldades</a></li>
+                <li class="nav-item"><a href="#" data-target="painel-frequencia"><img src="./imagens/memo-pad.png" alt=""> Painel de Frequência</a></li>
+                <li class="nav-item"><a href="#" data-target="painel-atribuicao"><img src="./imagens/school.png" alt=""> Painel de Atribuição</a></li>
+                <li class="nav-item"><a href="#" data-target="metodologia-calculo"><img src="./imagens/calculator-simple.png" alt=""> Metodologia de Cálculo</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="content">
+            
+            <!-- 1. Visão Geral -->
+            <div id="visao-geral" class="section-block active">
+                <h2><img src="./imagens/logo.png" alt="" style="filter: brightness(0) saturate(100%) invert(13%) sepia(48%) saturate(1915%) hue-rotate(204deg) brightness(97%) contrast(97%);"> Visão Geral da Plataforma</h2>
+                <p class="lead">Este manual descreve a navegação estrutural do portal e detalha a interpretação das tabelas, índices e faróis de cada módulo.</p>
+                
+                <div class="alert-box">
+                    <img src="./imagens/thumbtack.png" alt="">
+                    <div>
+                        <h4>Aviso Importante: Ferramenta de Apoio em Fase Beta</h4>
+                        <p style="margin-bottom: 0.5rem;"><strong>Este portal não substitui nenhuma planilha ou sistema oficial da SED.</strong> Seu objetivo é fornecer insights analíticos e dados traduzidos para facilitar a leitura gerencial.</p>
+                        <p style="margin-bottom: 0.5rem;">As informações contidas neste portal são compiladas a partir de dados da <strong>Sala do Futuro</strong>, da <strong>SED (Secretaria Escolar Digital)</strong> e do <strong>BI Escola Total</strong>, consolidadas em faróis, tabelas e gráficos.</p>
+                        <p>Por se tratar de uma versão em desenvolvimento (fase beta/produção), a base de dados pode conter erros ocasionais, variações de arredondamento ou inconsistências pontuais.</p>
+                    </div>
+                </div>
+
+                <h3>Estrutura Geral de Navegação e Filtros</h3>
+                <ul>
+                    <li><strong>Filtros Adaptativos (Topo):</strong> Menus suspensos que ajustam a exibição por Escola, Disciplina, Ano/Série ou Bimestre. O botão <strong>"Limpar Filtros"</strong> restaura o estado inicial.</li>
+                    <li><strong>Abas Principais (Views):</strong> Alternam o nível de agrupamento dos dados (ex.: visão consolidada da rede vs. detalhamento por escola ou turma).</li>
+                    <li><strong>Ordenação nos Cabeçalhos:</strong> O clique sobre o título de qualquer coluna reordena os dados em ordem crescente ou decrescente (com indicação pelas setas ▲ e ▼). Registros nulos ou sem informação ("-") são posicionados automaticamente no final da tabela.</li>
+                    <li><strong>PAGINAÇÃO E LIMITE DE LINHAS:</strong> Para garantir maior fluidez na leitura, as tabelas grandes possuem um seletor no rodapé permitindo limitar a exibição (25, 50, 100 linhas ou "Todos") acompanhado dos botões <strong>◀ Anterior</strong> e <strong>Próximo ▶</strong>.</li>
+                    <li><strong>Exportação para Excel:</strong> As tabelas contam com um botão dedicado para baixar a matriz visível diretamente em formato `.xlsx`.</li>
+                </ul>
+            </div>
+
+            <!-- 2. Monitor de Avaliações -->
+            <div id="monitor-avaliacoes" class="section-block">
+                <h2><img src="./imagens/memo-pad.png" alt=""> Monitor de Avaliações</h2>
+                <p class="lead">Módulo que organiza os registros históricos de notas e disponibiliza a matriz do Índice de Prioridade Pedagógica (IPP).</p>
+
+                <h3>Navegação entre Abas</h3>
+                <ul>
+                    <li><strong>Histórico:</strong> Exibe a evolução de notas das avaliações ao longo do tempo.</li>
+                    <li><strong>Componentes:</strong> Apresenta o desempenho transversal agrupado pelas disciplinas.</li>
+                    <li><strong>Único Componente / Única Avaliação:</strong> Restringe a visualização e foca em uma disciplina ou prova específica.</li>
+                    <li><strong>Comparativo / Comparativo Geral:</strong> Confronta duas avaliações para apontar aumentos ou quedas de notas e variação da taxa de participação.</li>
+                    <li><strong>Prioridades SARESP:</strong> Apresenta o ranking de urgência e impacto pedagógico.</li>
+                </ul>
+
+                <h3>Como Ler a Tabela de Notas</h3>
+                <p>O mapa de notas adota faróis de cor baseados nas médias ponderadas obtidas:</p>
+                <table class="tutorial-table">
+                    <thead>
+                        <tr>
+                            <th>Faixa de Nota</th>
+                            <th>Farol / Cor</th>
+                            <th>Interpretação do Índice</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Abaixo de 3.0</strong></td>
+                            <td><span class="cell-demo cell-danger">Nota &lt; 3.0</span></td>
+                            <td>Desempenho baixo / Nível crítico.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>3.0 a 5.0</strong></td>
+                            <td><span class="cell-demo cell-warning">3.0 - 5.0</span></td>
+                            <td>Desempenho intermediário / Nível de atenção.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Acima de 5.0</strong></td>
+                            <td><span class="cell-demo cell-success">Nota &gt; 5.0</span></td>
+                            <td>Desempenho adequado / Nível satisfatório.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Como Ler as Prioridades SARESP e o IPP</h3>
+                <p>O <strong>Índice de Prioridade Pedagógica (IPP)</strong> padroniza a nota da escola/turma em uma escala estatística onde o valor <strong>100 representa a média exata da rede</strong>:</p>
+                <ul>
+                    <li><strong>IPP &lt; 100 (Fundo Vermelho):</strong> Indica desempenho abaixo da média da URE.</li>
+                    <li><strong>IPP entre 100 e 119 (Fundo Amarelo):</strong> Desempenho dentro do patamar médio.</li>
+                    <li><strong>IPP entre 120 e 140 (Fundo Verde) e &gt; 140 (Fundo Azul):</strong> Desempenho superior à média da rede.</li>
+                </ul>
+                <p>O <strong>Índice de Prioridade Final</strong> combina o IPP com a quantidade de alunos avaliados e o peso oficial da matéria na matriz do SARESP. A classificação final é lida nas faixas: <strong>Baixa (≤0)</strong>, <strong>Moderada (>0)</strong>, <strong>Alta (≥2)</strong>, <strong>Muito Alta (≥4)</strong> e <strong>Altíssima (≥6)</strong>.</p>
+            </div>
+
+            <!-- 3. Análise de Habilidades -->
+            <div id="analise-habilidades" class="section-block">
+                <h2><img src="./imagens/pencil.png" alt=""> Análise de Habilidades</h2>
+                <p class="lead">Exibe a taxa percentual de acertos dos estudantes por descritor/habilidade avaliada.</p>
+
+                <h3>Navegação e Atalhos</h3>
+                <ul>
+                    <li><strong>Atalhos por Componente (Pills):</strong> Botões superiores que filtram a tela instantaneamente para a matéria desejada (Língua Portuguesa, Matemática, História, Geografia, Ciências, Biologia, Física, Química, Filosofia, Sociologia, Tecnologia e Inovação e Educação Financeira).</li>
+                    <li><strong>Visão Geral (Consolidado):</strong> Agrupa a média dos acertos dos descritores por Série nas colunas.</li>
+                    <li><strong>Visão por Bimestre:</strong> Organiza a evolução do percentual de acertos do 1º ao 4º Bimestre.</li>
+                    <li><strong>Visão por Escola:</strong> Exibe a matriz de acertos comparando as unidades escolares. O carregamento dos dados ocorre após a seleção de uma ou mais escolas no filtro.</li>
+                    <li><strong>Análise Detalhada:</strong> Exibe a listagem completa com links para materiais de apoio.</li>
+                </ul>
+
+                <h3>Como Ler o Farol do Percentual de Acertos</h3>
+                <p>A taxa de acerto em cada descritor é apresentada diretamente no formato de bloco colorido (estilo matriz de calor):</p>
+                <table class="tutorial-table">
+                    <thead>
+                        <tr>
+                            <th>Faixa de Acertos</th>
+                            <th>Estilo da Célula</th>
+                            <th>Classificação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Abaixo de 50.0%</strong></td>
+                            <td><span class="cell-demo cell-danger">42.5%</span></td>
+                            <td><strong>Crítico:</strong> Grande parte da turma errou a habilidade.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>50.0% a 64.9%</strong></td>
+                            <td><span class="cell-demo cell-warning">58.0%</span></td>
+                            <td><strong>Abaixo do Esperado:</strong> Compreensão parcial do descritor.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>65.0% a 79.9%</strong></td>
+                            <td><span class="cell-demo cell-success">72.1%</span></td>
+                            <td><strong>Adequado:</strong> Acompanha a expectativa para o período.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>80.0% ou mais</strong></td>
+                            <td><span class="cell-demo cell-purple">88.4%</span></td>
+                            <td><strong>Avançado:</strong> Domínio consolidado da habilidade.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Interação com o Descritor e Preview de Links</h3>
+                <p>Ao clicar no texto do descritor em qualquer tabela, abre-se um modal contendo a transcrição da habilidade e os botões <strong>📖 Material da Aula</strong> e <strong>📝 Ver Questão</strong>. Ao passar o ponteiro do mouse sobre esses botões, uma janela flutuante exibe a pré-visualização da página cadastrada sem necessidade de sair da tela.</p>
+            </div>
+
+            <!-- 4. Dashboard 360 -->
+            <div id="dashboard-360" class="section-block">
+                <h2><img src="./imagens/chart-line-up.png" alt=""> Dashboard Analítico 360º</h2>
+                <p class="lead">Consolida o cruzamento entre dados de desempenho e frequência escolar em uma única visualização.</p>
+
+                <h3>Navegação entre Abas</h3>
+                <ul>
+                    <li><strong>Visão Geral 360º:</strong> Gráficos de evolução linear e gráficos de radar (perfis por área e por disciplina).</li>
+                    <li><strong>Comparar Entidades:</strong> Seleção lateral para sobrepor e comparar o gráfico de várias escolas ou turmas.</li>
+                    <li><strong>Comparação de Correlações:</strong> Análise estatística de dispersão cruzando duas variáveis.</li>
+                </ul>
+
+                <h3>Como Ler a Aba Comparação de Correlações</h3>
+                <ul>
+                    <li><strong>Pearson (r):</strong> Varia de -1 a +1. Indica a força da relação. Valores próximos de +1.0 mostram que quando a variável X aumenta (ex: Frequência), a variável Y (ex: Nota) também aumenta.</li>
+                    <li><strong>Determinação (R²):</strong> Varia de 0 a 1. Indica a proporção da variação em Y que é explicada por X (ex: R² = 0.40 significa que 40% da variação na nota é explicada pela presença).</li>
+                    <li><strong>p-value (Significância):</strong> Valores menores que 0.05 atestam estatisticamente que a relação observada é significativa.</li>
+                </ul>
+            </div>
+
+            <!-- 5. Análise de Dificuldades -->
+            <div id="analise-dificuldades" class="section-block">
+                <h2><img src="./imagens/microscope-bacteria.png" alt=""> Análise de Dificuldades</h2>
+                <p class="lead">Módulo focado na medição da calibragem, rigor e nível de exigência das provas aplicadas.</p>
+
+                <h3>Como Ler o Índice de Retenção (IR)</h3>
+                <p>O IR mede a relação entre o desempenho atual e a nota central histórica da série:</p>
+                <ul>
+                    <li><strong>IR &lt; 0.85 (Muito Difícil - Vermelho):</strong> O desempenho atual ficou bastante abaixo da referência histórica.</li>
+                    <li><strong>0.85 ≤ IR &lt; 0.95 (Difícil - Amarelo):</strong> Desempenho moderadamente abaixo do histórico.</li>
+                    <li><strong>0.95 ≤ IR ≤ 1.05 (Dentro do Esperado - Verde):</strong> Prova calibrada exatamente ao padrão histórico.</li>
+                    <li><strong>1.05 &lt; IR ≤ 1.15 (Fácil) e IR &gt; 1.15 (Muito Fácil - Roxo):</strong> Desempenho superior à média histórica.</li>
+                </ul>
+
+                <h3>Como Ler o Fator de Disparidade (DP)</h3>
+                <p>O Desvio Padrão (DP) mede a variação entre as notas das unidades:</p>
+                <ul>
+                    <li><strong>DP &lt; 0.40 (Muito Uniforme):</strong> Comportamento homogêneo na rede.</li>
+                    <li><strong>DP ≥ 1.20 (Alta Disparidade):</strong> Grande diferença nos resultados entre diferentes escolas/turmas.</li>
+                </ul>
+            </div>
+
+            <!-- 6. Painel de Frequência -->
+            <div id="painel-frequencia" class="section-block">
+                <h2><img src="./imagens/memo-pad.png" alt=""> Painel de Frequência Escolar</h2>
+                <p class="lead">Acompanhamento semanal da taxa de assiduidade dos estudantes.</p>
+
+                <h3>Como Ler a Tabela de Frequência</h3>
+                <ul>
+                    <li><span class="cell-demo cell-success">&ge; 90.0%</span> <strong>Farol Verde:</strong> Frequência excelente.</li>
+                    <li><span class="cell-demo cell-warning">85.0% - 89.9%</span> <strong>Farol Amarelo:</strong> Zona de atenção.</li>
+                    <li><span class="cell-demo cell-danger">&lt; 85.0%</span> <strong>Farol Vermelho:</strong> Nível crítico de assiduidade.</li>
+                </ul>
+                <p>O clique sobre o nome da escola/turma abre o gráfico da <strong>Progressão Anual da Frequência</strong>. Na aba <strong>Painel de Insights</strong>, as colunas contabilizam quantas vezes no ano a entidade esteve entre as 5 melhores da rede ("Semanas Top 5") ou entre as 5 menores ("Semanas Bottom 5").</p>
+            </div>
+
+            <!-- 7. Painel de Atribuição -->
+            <div id="painel-atribuicao" class="section-block">
+                <h2><img src="./imagens/school.png" alt=""> Painel de Atribuição</h2>
+                <p class="lead">Módulo de acompanhamento do quadro docente e turmas atribuídas.</p>
+
+                <div class="alert-box">
+                    <img src="./imagens/thumbtack.png" alt="">
+                    <div>
+                        <h4>Regra de Leitura do Painel de Atribuição</h4>
+                        <p style="margin-bottom: 0.5rem;">A tabela associa a turma e o componente ao docente que possui a atribuição registrada <strong>na data de hoje</strong>.</p>
+                        <p style="margin-bottom: 0.5rem;"><strong>Os índices e notas apresentados NÃO avaliam o desempenho do professor.</strong> As notas representam o histórico e o momento da turma atribuída a ele. O professor atualmente listado pode não ter sido o responsável pela sala no período em que as avaliações foram aplicadas.</p>
+                        <p>Células preenchidas com hífen (<strong>-</strong>) indicam que não há registros de notas para aquela prova no período filtrado.</p>
+                    </div>
+                </div>
+
+                <h3>Navegação</h3>
+                <ul>
+                    <li><strong>Visão Completa:</strong> Listagem detalhada relacionando Professor, Escola, Turma e Disciplina.</li>
+                    <li><strong>Resumo por Professor e Componente:</strong> Agrupa as turmas do mesmo professor em uma linha consolidada.</li>
+                    <li><strong>Educação Especial (AEE / LIBRAS):</strong> Filtra apenas professores e turmas vinculados a AEE ou interpretação de LIBRAS.</li>
+                </ul>
+            </div>
+
+            <!-- 8. Metodologia de Cálculo -->
+            <div id="metodologia-calculo" class="section-block">
+                <h2><img src="./imagens/calculator-simple.png" alt=""> Metodologia de Cálculo</h2>
+                <p class="lead">Fórmulas e convenções matemáticas aplicadas nos cálculos do portal.</p>
+
+                <h3>1. Média Ponderada Bidimensional</h3>
+                <p>Para evitar distorções decorrentes do tamanho das turmas ou do peso da prova, o sistema aplica ponderação por alunos avaliados e peso do componente:</p>
+                <div class="formula-card">
+                    <code>Média Final = &Sigma; (Nota × Alunos Avaliados × Peso Curricular) <br>──────────────────────────────────────────────<br> &Sigma; (Alunos Avaliados × Peso Curricular)</code>
+                </div>
+
+                <h3>2. Normalização IPP (Z-Score)</h3>
+                <p>A escala do IPP utiliza a padronização Z centrométrica com base 100:</p>
+                <div class="formula-card">
+                    <code>Z = (Média_Obtida − Média_Geral_Rede) / Desvio_Padrão_Rede</code><br>
+                    <code>IPP = 100 + (Z × 20)</code>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <footer class="dashboard-footer">
+        Desenvolvido por <strong>Juliano Curto</strong>. <br>
+        Ícones utilizados com atribuição ao <a href="https://www.flaticon.com/" target="_blank" rel="noopener noreferrer">Flaticon</a>.
+    </footer>
+
+    <script>
+        // Navegação da Sidebar
+        document.querySelectorAll('.nav-item a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                document.querySelectorAll('.nav-item a').forEach(l => l.classList.remove('active'));
+                document.querySelectorAll('.section-block').forEach(s => s.classList.remove('active'));
+
+                this.classList.add('active');
+                const targetId = this.getAttribute('data-target');
+                document.getElementById(targetId).classList.add('active');
+
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -47,6 +47,7 @@
         .input-group label { display: block; font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.5); margin-bottom: .45rem; text-transform: uppercase; }
         .input-group input { width: 100%; padding: .75rem 1rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.11); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .925rem; outline: none; }
         .login-btn { width: 100%; padding: .875rem; background: var(--grad-blue); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .925rem; font-weight: 700; border: none; cursor: pointer; margin-top: .5rem; }
+        #login-error { color: #fca5a5; font-size: .8rem; margin-top: .75rem; text-align: center; display: none; }
 
         /* CABEÇALHO E ESTRUTURA */
         #dashboard-section { display: none; }
@@ -69,6 +70,11 @@
         .btn-toggle:hover { background: var(--surface2); color: var(--navy); }
         .btn-toggle.active { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 4px 12px rgba(12,26,53,.2); }
 
+        /* SUB-ABAS DE TABELA */
+        .sub-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; }
+        .btn-sub-tab { padding: .4rem .9rem; border-radius: 6px; font-family: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); transition: all .15s; }
+        .btn-sub-tab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
         .toolbar { background: var(--surface); padding: 1.25rem 2rem; border-radius: var(--radius2); border: 1px solid var(--border); display: flex; align-items: center; gap: 1.5rem; box-shadow: var(--shadow); margin-bottom: 1.5rem; flex-wrap: wrap; }
         .filter-group { display: flex; flex-direction: column; gap: .4rem; }
         .filter-group label { font-size: .75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
@@ -80,7 +86,7 @@
         .select-display:hover { border-color: var(--blue2); }
         .select-display span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
         .select-display::after { content: '▾'; font-size: .8rem; color: var(--light); margin-left: .5rem; }
-        .select-options { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); max-height: 240px; overflow-y: auto; z-index: 100; display: none; box-shadow: var(--shadow2, 0 8px 32px rgba(12,26,53,.12)); }
+        .select-options { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); max-height: 240px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 8px 32px rgba(12,26,53,.12); }
         .select-options.show { display: block; }
         .select-options label { display: flex; align-items: center; gap: .6rem; padding: .6rem .85rem; cursor: pointer; font-size: .85rem; font-weight: 500; color: var(--text); border-bottom: 1px solid var(--bg); transition: background .15s; }
         .select-options label:hover { background: var(--bg); color: var(--blue); }
@@ -116,11 +122,13 @@
         th { background: var(--surface2); color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: .72rem; letter-spacing: .05em; }
         tbody tr:hover { background: var(--surface2); }
         
-        .badge { padding: .25rem .5rem; border-radius: 99px; font-size: .7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; width: max-content; }
+        .badge { padding: .25rem .5rem; border-radius: 99px; font-size: .7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; width: max-content; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+        .badge:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .badge-danger { background: rgba(225,29,72,.1); color: var(--rose); border: 1px solid rgba(225,29,72,.2); }
         .badge-warning { background: rgba(217,119,6,.1); color: var(--amber); border: 1px solid rgba(217,119,6,.2); }
         .badge-success { background: rgba(5,150,105,.1); color: var(--emerald); border: 1px solid rgba(5,150,105,.2); }
         .badge-purple { background: rgba(109,40,217,.1); color: var(--purple); border: 1px solid rgba(109,40,217,.2); }
+        .badge-neutral { background: rgba(90,110,138,.1); color: var(--muted); border: 1px solid rgba(90,110,138,.2); }
 
         .metric-mono { font-family: 'Geist Mono', monospace; font-weight: 600; }
         
@@ -130,15 +138,30 @@
         .cell-diagnostico { display: flex; flex-direction: column; align-items: center; gap: 4px; justify-content: center; }
         .cell-diagnostico span.idr-label { font-size: 0.68rem; color: var(--muted); font-family: 'Geist Mono', monospace; font-weight: 600; }
 
-        /* MODAL DE METODOLOGIA */
+        /* MODAIS */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(12,26,53,.65); backdrop-filter: blur(6px); z-index: 10000; justify-content: center; align-items: center; padding: 1rem; }
-        .modal-content { background: var(--surface); padding: 2rem; border-radius: var(--radius2); width: 100%; max-width: 750px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 40px 80px rgba(0,0,0,.28); }
+        .modal-content { background: var(--surface); padding: 2rem; border-radius: var(--radius2); width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 40px 80px rgba(0,0,0,.28); }
         .modal-close { position: absolute; top: 1rem; right: 1rem; cursor: pointer; width: 28px; height: 28px; background: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .95rem; color: var(--muted); font-weight: 700; border: 1px solid var(--border); }
         .modal-close:hover { background: var(--border); color: var(--text); }
-        .modal-content h2 { margin-bottom: 1rem; color: var(--navy); font-size: 1.25rem; font-weight: 800; }
-        .modal-content h3 { color: var(--navy); font-size: 1rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.4rem; }
+        .modal-content h2 { margin-bottom: 0.5rem; color: var(--navy); font-size: 1.25rem; font-weight: 800; }
+        .modal-content h3 { color: var(--navy); font-size: 0.95rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.03em; }
         .modal-content p, .modal-content li { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.5rem; }
         .modal-content ul { padding-left: 1.25rem; margin-bottom: 0.75rem; }
+
+        .diag-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1rem 0; }
+        @media (max-width: 600px) { .diag-grid { grid-template-columns: repeat(2, 1fr); } }
+        .diag-item { background: var(--surface2); padding: 0.85rem; border-radius: var(--radius); border: 1px solid var(--border); }
+        .diag-item label { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 0.2rem; }
+        .diag-item span { font-size: 1.05rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; }
+
+        .pedagogical-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; margin-bottom: 0.85rem; }
+        .pedagogical-card.danger { border-left: 4px solid var(--rose); }
+        .pedagogical-card.warning { border-left: 4px solid var(--amber); }
+        .pedagogical-card.success { border-left: 4px solid var(--emerald); }
+        .pedagogical-card.purple { border-left: 4px solid var(--purple); }
+        .pedagogical-card.info { border-left: 4px solid var(--blue); }
+        .pedagogical-card h4 { font-size: 0.88rem; font-weight: 800; color: var(--navy); margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem; }
+        .pedagogical-card p { font-size: 0.85rem; color: var(--text); line-height: 1.55; margin-bottom: 0; }
     </style>
 </head>
 <body>
@@ -188,6 +211,50 @@
         </div>
     </div>
 
+    <!-- MODAL ORIENTATIVO PEDAGÓGICO (ACIONADO AO CLICAR NA DIFICULDADE) -->
+    <div id="modal-explicacao-dificuldade" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('modal-explicacao-dificuldade').style.display='none'">&times;</span>
+            <h2 id="modal-diag-titulo">Relatório de Diagnóstico Pedagógico</h2>
+            <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom: 1.25rem;">
+                <span id="modal-diag-badge" class="badge">-</span>
+                <span id="modal-diag-sub" style="font-size:0.85rem; font-weight:600; color:var(--muted);">Análise Técnica</span>
+            </div>
+
+            <!-- Métricas Rápidas -->
+            <div class="diag-grid">
+                <div class="diag-item">
+                    <label>Índice Retenção (IR)</label>
+                    <span id="modal-diag-ir">-</span>
+                </div>
+                <div class="diag-item">
+                    <label>Nota Atual / Histórico</label>
+                    <span id="modal-diag-mediana">-</span>
+                </div>
+                <div class="diag-item">
+                    <label>Disparidade (DP)</label>
+                    <span id="modal-diag-dp">-</span>
+                </div>
+                <div class="diag-item">
+                    <label>Confiabilidade (FC)</label>
+                    <span id="modal-diag-fc">-</span>
+                </div>
+            </div>
+
+            <h3>1. Leitura Diagnóstica (O que os números indicam)</h3>
+            <div id="card-pedagogico-status" class="pedagogical-card danger">
+                <h4>📌 Diagnóstico da Aprendizagem</h4>
+                <p id="modal-pedagogico-diagnostico">Analisando...</p>
+            </div>
+
+            <h3>2. Análise de Equidade e Disparidade na Rede</h3>
+            <div id="card-pedagogico-equidade" class="pedagogical-card info">
+                <h4>⚖️ Comportamento das Unidades / Turmas</h4>
+                <p id="modal-pedagogico-equidade">Analisando...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- LOGIN -->
     <div id="login-section">
         <div class="login-box">
@@ -223,7 +290,7 @@
         </header>
 
         <div class="container">
-            <!-- NAVEGAÇÃO -->
+            <!-- NAVEGAÇÃO PRINCIPAL -->
             <div class="view-tabs">
                 <button class="btn-toggle active" id="btn-tab-global" onclick="setTab('global')">Visão Geral das Provas</button>
                 <button class="btn-toggle" id="btn-tab-detalhe" onclick="setTab('detalhe')">Análise por Escola / Turma</button>
@@ -232,6 +299,13 @@
             <!-- VISÃO GERAL -->
             <div id="view-global">
                 <div class="toolbar">
+                    <div class="filter-group">
+                        <label>Filtrar por Avaliação (Múltipla Seleção)</label>
+                        <div class="multi-select" data-filter="aval_global">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas as Avaliações</span></div>
+                            <div class="select-options" id="options-aval-global"></div>
+                        </div>
+                    </div>
                     <div class="filter-group">
                         <label>Filtrar por Série (Múltipla Seleção)</label>
                         <div class="multi-select" data-filter="serie_global">
@@ -273,12 +347,19 @@
 
                 <!-- Matriz: Prova x Componente -->
                 <div class="table-container">
-                    <div class="chart-header">
+                    <div class="chart-header" style="flex-direction: column; gap: 0.75rem;">
                         <div>
                             <h2>Mapa de Calor: Provas vs. Disciplinas</h2>
-                            <p>Nível de dificuldade identificado em cada componente para as séries selecionadas.</p>
+                            <p>Análise consolidada por disciplina. Clique no rótulo para ver o diagnóstico pedagógico completo.</p>
+                        </div>
+                        
+                        <!-- BOTÕES / ABAS DE DIFICULDADE VS DISPARIDADE -->
+                        <div class="sub-tabs">
+                            <button class="btn-sub-tab active" id="btn-sub-dificuldade" onclick="setSubTabVisaoGlobal('dificuldade')">Visão Geral por Dificuldade (IR)</button>
+                            <button class="btn-sub-tab" id="btn-sub-disparidade" onclick="setSubTabVisaoGlobal('disparidade')">Visão Geral por Disparidade (DP)</button>
                         </div>
                     </div>
+
                     <table id="tabelaComponentesGlobal">
                         <thead></thead>
                         <tbody></tbody>
@@ -361,7 +442,7 @@
                     <div class="chart-header">
                         <div>
                             <h2>Detalhamento por Unidade / Turma</h2>
-                            <p id="tabela-subtitulo">Visão aprofundada por escola ou classe.</p>
+                            <p id="tabela-subtitulo">Visão aprofundada por escola ou classe. Clique no rótulo de classificação para entender a causa.</p>
                         </div>
                     </div>
                     <table id="tabelaAnalise">
@@ -396,6 +477,7 @@
         let historicoPorSerie = {}; 
         let mediaPorSerie = {};     
         let chartsInstance = {};
+        let subTabVisaoGlobal = 'dificuldade'; // 'dificuldade' ou 'disparidade'
 
         function showLoading(t='Calculando dados...') { document.getElementById('loading-text').textContent = t; document.getElementById('loading-overlay').style.display = 'flex'; }
         function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
@@ -419,7 +501,7 @@
             }
         }
 
-        // Funções de Dropdown para Checkbox Multi-Select
+        // Dropdown Multi-Select
         window.toggleDropdown = (el) => {
             const opts = el.nextElementSibling;
             const showing = opts.classList.contains('show');
@@ -433,11 +515,11 @@
             }
         });
 
-        function updateMultiSelectDisplay(k) {
+        function updateMultiSelectDisplay(k, defaultLabel) {
             const c = document.querySelector(`.multi-select[data-filter="${k}"]`); if (!c) return;
             const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
             const span = c.querySelector('.select-display span');
-            span.textContent = cbs.length === 0 ? 'Todas as Séries' : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionadas`;
+            span.textContent = cbs.length === 0 ? defaultLabel : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionadas`;
         }
 
         function getSelectedCheckboxes(k) {
@@ -451,6 +533,13 @@
             document.getElementById('view-detalhada').style.display = tab === 'detalhe' ? 'block' : 'none';
             if (tab === 'global') processarVisaoGlobal();
             else window.processarEstatisticas();
+        };
+
+        window.setSubTabVisaoGlobal = (modo) => {
+            subTabVisaoGlobal = modo;
+            document.getElementById('btn-sub-dificuldade').classList.toggle('active', modo === 'dificuldade');
+            document.getElementById('btn-sub-disparidade').classList.toggle('active', modo === 'disparidade');
+            processarVisaoGlobal();
         };
 
         window.handleLogin = async () => {
@@ -510,18 +599,69 @@
         };
 
         const getClassificacaoIR = (ir) => {
-            if (ir < 0.85) return { text: 'Muito Difícil', badge: 'badge-danger' };
-            if (ir < 0.95) return { text: 'Difícil', badge: 'badge-warning' };
-            if (ir <= 1.05) return { text: 'Dentro do Esperado', badge: 'badge-success' };
-            if (ir <= 1.15) return { text: 'Fácil', badge: 'badge-purple' };
-            return { text: 'Muito Fácil', badge: 'badge-purple' };
+            if (ir < 0.85) return { text: 'Muito Difícil', badge: 'badge-danger', cardClass: 'danger' };
+            if (ir < 0.95) return { text: 'Difícil', badge: 'badge-warning', cardClass: 'warning' };
+            if (ir <= 1.05) return { text: 'Dentro do Esperado', badge: 'badge-success', cardClass: 'success' };
+            if (ir <= 1.15) return { text: 'Fácil', badge: 'badge-purple', cardClass: 'purple' };
+            return { text: 'Muito Fácil', badge: 'badge-purple', cardClass: 'purple' };
         };
 
         const getEstabilidadeDP = (dp) => {
-            if (dp < 0.40) return 'Muito Uniforme';
-            if (dp < 0.80) return 'Uniforme';
-            if (dp < 1.20) return 'Com Variação Moderada';
-            return 'Alta Disparidade';
+            if (dp < 0.40) return { text: 'Muito Uniforme', badge: 'badge-success' };
+            if (dp < 0.80) return { text: 'Uniforme', badge: 'badge-success' };
+            if (dp < 1.20) return { text: 'Com Variação Moderada', badge: 'badge-warning' };
+            return { text: 'Alta Disparidade', badge: 'badge-danger' };
+        };
+
+        // EXPLICADOR PEDAGÓGICO DE SUBSÍDIO
+        window.abrirModalDificuldade = (itemContexto, ir, medAtual, medHist, dp, fc) => {
+            document.getElementById('modal-diag-titulo').textContent = `Análise Pedagógica: ${itemContexto}`;
+            
+            const classObj = getClassificacaoIR(ir);
+            const badgeEl = document.getElementById('modal-diag-badge');
+            badgeEl.className = `badge ${classObj.badge}`;
+            badgeEl.textContent = classObj.text;
+            
+            document.getElementById('modal-diag-sub').textContent = `IR Ajustado: ${ir.toFixed(2)}`;
+            document.getElementById('modal-diag-ir').textContent = ir.toFixed(2);
+            document.getElementById('modal-diag-fc').textContent = fc.toFixed(2);
+            document.getElementById('modal-diag-mediana').textContent = `${medAtual.toFixed(2).replace('.',',')} / ${medHist.toFixed(2).replace('.',',')}`;
+            document.getElementById('modal-diag-dp').textContent = `${dp.toFixed(2)}`;
+
+            const statusCard = document.getElementById('card-pedagogico-status');
+            statusCard.className = `pedagogical-card ${classObj.cardClass}`;
+
+            let diffPercent = (((medAtual - medHist) / (medHist || 1)) * 100).toFixed(1);
+            let textoDiag = "";
+            let textoEquidade = "";
+
+            // 1. DIAGNÓSTICO DO IR
+            if (ir < 0.85) {
+                textoDiag = `<strong>Retenção Crítica na Aprendizagem:</strong> Os estudantes obtiveram nota central de <strong>${medAtual.toFixed(2).replace('.',',')}</strong>, ficando <strong>${Math.abs(diffPercent)}% abaixo</strong> do padrão histórico esperado (mediana de ${medHist.toFixed(2).replace('.',',')}). Este cenário aponta que a avaliação exigiu habilidades não consolidadas ou que a complexidade dos itens superou a fluência atual dos estudantes. Não se trata apenas de 'nota baixa', mas de retenção de conceitos essenciais.`;
+            } 
+            else if (ir < 0.95) {
+                textoDiag = `<strong>Dificuldade Moderada:</strong> A nota central de <strong>${medAtual.toFixed(2).replace('.',',')}</strong> ficou ligeiramente abaixo da expectativa histórica (${medHist.toFixed(2).replace('.',',')}). Indica que a maior parte da rede acompanhou a prova, mas encontrou barreiras em itens de maior profundidade cognitiva (análise, aplicação ou síntese).`;
+            } 
+            else if (ir <= 1.05) {
+                textoDiag = `<strong>Desempenho Calibrado e Esperado:</strong> A nota atual de <strong>${medAtual.toFixed(2).replace('.',',')}</strong> está totalmente alinhada com o histórico da rede (${medHist.toFixed(2).replace('.',',')}). Significa que a avaliação mediu com precisão o nível em que os alunos se encontram, demonstrando estabilidade no processo de ensino-aprendizagem.`;
+            } 
+            else {
+                textoDiag = `<strong>Desempenho Superior/Acessível:</strong> A nota central obtida (<strong>${medAtual.toFixed(2).replace('.',',')}</strong>) superou a referência histórica (${medHist.toFixed(2).replace('.',',')}) em <strong>+${diffPercent}%</strong>. O resultado demonstra forte domínio dos itens cobrados ou que a avaliação apresentou um grau de exigência mais brando em relação a anos/edições anteriores.`;
+            }
+
+            // 2. EQUIDADE (DESVIO PADRÃO)
+            if (dp >= 1.20) {
+                textoEquidade = `<strong>Alerta de Alta Disparidade (DP: ${dp.toFixed(2)}):</strong> Há uma grande distância entre os melhores e os piores desempenhos dentro deste segmento. O problema <em>não é homogêneo</em>; enquanto algumas unidades/turmas dominam os conteúdos, outras estão em defasagem severa. O foco da gestão deve ser a equidade e direcionamento focalizado de recursos.`;
+            } else if (dp < 0.60) {
+                textoEquidade = `<strong>Comportamento Homogêneo na Rede (DP: ${dp.toFixed(2)}):</strong> A variação entre as notas é baixa. O resultado afeta praticamente todas as turmas/escolas da mesma maneira, indicando um comportamento generalizado em toda a rede.`;
+            } else {
+                textoEquidade = `<strong>Disparidade Moderada (DP: ${dp.toFixed(2)}):</strong> A variação de notas está dentro dos padrões normais de flutuação de turmas em avaliações de larga escala.`;
+            }
+
+            document.getElementById('modal-pedagogico-diagnostico').innerHTML = textoDiag;
+            document.getElementById('modal-pedagogico-equidade').innerHTML = textoEquidade;
+
+            document.getElementById('modal-explicacao-dificuldade').style.display = 'flex';
         };
 
         async function loadAndJoinData() {
@@ -554,18 +694,28 @@
                     };
                 }).filter(d => d.escola !== 'Desconhecida' && d.nota > 0 && !d.serie.includes('Outros'));
 
+                // Popular Checkbox de Avaliações com Prova Paulista e SARESP Selecionados como Padrão
+                const containerOptsAval = document.getElementById('options-aval-global');
+                containerOptsAval.innerHTML = '';
+                let avalsPresentes = [...new Set(globalData.map(d => d.aval_nome))].sort();
+                avalsPresentes.forEach(av => {
+                    let isDefault = /prova\s*paulista|saresp/i.test(av);
+                    containerOptsAval.innerHTML += `<label><input type="checkbox" value="${av}" ${isDefault ? 'checked' : ''} onchange="updateMultiSelectDisplay('aval_global', 'Todas as Avaliações'); window.processarVisaoGlobal();"> ${av}</label>`;
+                });
+                updateMultiSelectDisplay('aval_global', 'Todas as Avaliações');
+
                 // Popular Checkbox de Séries
                 const containerOpts = document.getElementById('options-serie-global');
                 containerOpts.innerHTML = '';
                 const ordemSeries = ['6º Ano EF', '7º Ano EF', '8º Ano EF', '9º Ano EF', '1ª Série EM', '2ª Série EM', '3ª Série EM'];
                 let seriesPresentes = [...new Set(globalData.map(d => d.serie))];
                 ordemSeries.filter(s => seriesPresentes.includes(s)).forEach(s => {
-                    containerOpts.innerHTML += `<label><input type="checkbox" value="${s}" onchange="updateMultiSelectDisplay('serie_global'); window.processarVisaoGlobal();"> ${s}</label>`;
+                    containerOpts.innerHTML += `<label><input type="checkbox" value="${s}" onchange="updateMultiSelectDisplay('serie_global', 'Todas as Séries'); window.processarVisaoGlobal();"> ${s}</label>`;
                 });
-                updateMultiSelectDisplay('serie_global');
+                updateMultiSelectDisplay('serie_global', 'Todas as Séries');
 
                 const sAval = document.getElementById('filtro-aval'); sAval.innerHTML = '';
-                [...new Set(globalData.map(d => d.aval_nome))].sort().forEach(av => sAval.innerHTML += `<option value="${av}">${av}</option>`);
+                avalsPresentes.forEach(av => sAval.innerHTML += `<option value="${av}">${av}</option>`);
 
                 const sEnt = document.getElementById('filtro-entidade'); sEnt.innerHTML = '<option value="GERAL">Visão Geral (Rede Inteira)</option>';
                 [...new Set(globalData.map(d => d.escola))].sort().forEach(e => sEnt.innerHTML += `<option value="${e}">${e}</option>`);
@@ -604,8 +754,13 @@
         window.processarVisaoGlobal = () => {
             if (!globalData.length) return;
 
+            const avalsSelecionadas = getSelectedCheckboxes('aval_global');
             const seriesSelecionadas = getSelectedCheckboxes('serie_global');
+            
             let dataView = globalData;
+            if (avalsSelecionadas.length > 0) {
+                dataView = dataView.filter(d => avalsSelecionadas.includes(d.aval_nome));
+            }
             if (seriesSelecionadas.length > 0) {
                 dataView = dataView.filter(d => seriesSelecionadas.includes(d.serie));
             }
@@ -615,7 +770,7 @@
                 document.getElementById('kpi-g-comp-facil').textContent = '-';
                 document.getElementById('kpi-g-polarizada').textContent = '-';
                 document.querySelector('#tabelaComponentesGlobal thead').innerHTML = '';
-                document.querySelector('#tabelaComponentesGlobal tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;">Sem dados para as séries selecionadas.</td></tr>';
+                document.querySelector('#tabelaComponentesGlobal tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;">Sem dados para os filtros selecionados.</td></tr>';
                 if(chartsInstance.ranking) chartsInstance.ranking.destroy();
                 return;
             }
@@ -663,7 +818,7 @@
                 compVal[d.componente].push(d.nota); compPes[d.componente].push(d.avaliados * d.peso);
             });
             let compFacilStr = '-'; let maxIrComp = 0;
-            let refMediana = seriesSelecionadas.length === 1 && mediaPorSerie[seriesSelecionadas[0]] ? mediaPorSerie[seriesSelecionadas[0]] : Object.values(baselineHistorico).reduce((a,b)=>a+b,0)/Object.keys(baselineHistorico).length;
+            let refMediana = seriesSelecionadas.length === 1 && mediaPorSerie[seriesSelecionadas[0]] ? mediaPorSerie[seriesSelecionadas[0]] : Object.values(baselineHistorico).reduce((a,b)=>a+b,0)/(Object.keys(baselineHistorico).length||1);
 
             for (let c in compVal) {
                 let medC = calcMedianaPonderada(compVal[c], compPes[c]);
@@ -709,14 +864,25 @@
                         let irCell = idrB * (0.7 + 0.3 * fcC);
 
                         let infoClass = getClassificacaoIR(irCell);
+                        let infoDisp = getEstabilidadeDP(dpC);
 
-                        tbodyHTML += `
-                            <td style="text-align: center; border-right: 1px dashed var(--border);">
-                                <div class="cell-diagnostico">
-                                    <span class="badge ${infoClass.badge}">${infoClass.text}</span>
-                                    <span class="idr-label">IR: ${irCell.toFixed(2)}</span>
-                                </div>
-                            </td>`;
+                        if (subTabVisaoGlobal === 'dificuldade') {
+                            tbodyHTML += `
+                                <td style="text-align: center; border-right: 1px dashed var(--border);">
+                                    <div class="cell-diagnostico">
+                                        <span class="badge ${infoClass.badge}" onclick="abrirModalDificuldade('${p} - ${c}', ${irCell}, ${medCell}, ${medHist}, ${dpC}, ${fcC})">${infoClass.text}</span>
+                                        <span class="idr-label">IR: ${irCell.toFixed(2)}</span>
+                                    </div>
+                                </td>`;
+                        } else {
+                            tbodyHTML += `
+                                <td style="text-align: center; border-right: 1px dashed var(--border);">
+                                    <div class="cell-diagnostico">
+                                        <span class="badge ${infoDisp.badge}" onclick="abrirModalDificuldade('${p} - ${c}', ${irCell}, ${medCell}, ${medHist}, ${dpC}, ${fcC})">${infoDisp.text}</span>
+                                        <span class="idr-label">DP: ${dpC.toFixed(2)}</span>
+                                    </div>
+                                </td>`;
+                        }
                     } else {
                         tbodyHTML += `<td style="text-align: center; color:var(--muted); border-right: 1px dashed var(--border);">-</td>`;
                     }
@@ -860,8 +1026,8 @@
                         <td class="metric-mono">${d.medianaAtual.toFixed(2).replace('.',',')} <span style="font-size:.7rem;color:var(--muted)">/ ${d.medianaHist.toFixed(2).replace('.',',')}</span></td>
                         <td class="metric-mono">${d.dp.toFixed(2)}</td>
                         <td class="metric-mono">${d.fc.toFixed(2)}</td>
-                        <td><span style="font-size:0.78rem; font-weight:600; color:var(--muted);">${d.estabilidade}</span></td>
-                        <td><span class="badge ${d.classObj.badge}">${d.classObj.text}</span></td>
+                        <td><span style="font-size:0.78rem; font-weight:600; color:var(--muted);">${d.estabilidade.text}</span></td>
+                        <td><span class="badge ${d.classObj.badge}" onclick="abrirModalDificuldade('${d.chave}', ${d.ir}, ${d.medianaAtual}, ${d.medianaHist}, ${d.dp}, ${d.fc})">${d.classObj.text}</span></td>
                     </tr>
                 `;
             });

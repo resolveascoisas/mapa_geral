@@ -162,7 +162,7 @@
         .link-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.78rem; font-weight: 700; text-decoration: none; color: #ffffff; background: var(--blue); transition: all 0.15s; cursor: pointer; }
         .link-btn:hover { background: var(--navy); transform: translateY(-1px); }
 
-        /* BARRA DE PAGINAÇÃO */
+        /* PAGINAÇÃO */
         .pagination-bar { display: flex; justify-content: space-between; align-items: center; margin-top: .75rem; padding-top: .5rem; border-top: 1px solid var(--border); font-size: .75rem; color: var(--muted); flex-wrap: wrap; gap: .5rem; }
         .pagination-controls { display: flex; align-items: center; gap: .4rem; }
         .btn-page { padding: .28rem .65rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--navy); font-weight: 700; cursor: pointer; transition: all .15s; font-size: .72rem; }
@@ -208,7 +208,6 @@
 
     <div id="loading-overlay"><div class="spinner"></div><div id="loading-text">Calculando habilidades...</div></div>
 
-    <!-- PREVIEW FLUTUANTE DE PÁGINA -->
     <div id="preview-popover">
         <div id="preview-popover-header">
             <span>Pré-visualização Rápida</span>
@@ -376,7 +375,6 @@
                         <tbody></tbody>
                     </table>
 
-                    <!-- BARRA DE PAGINAÇÃO GLOBAL -->
                     <div class="pagination-bar" id="pag-global">
                         <div>
                             <span>Exibir </span>
@@ -438,7 +436,6 @@
                         <tbody></tbody>
                     </table>
 
-                    <!-- BARRA DE PAGINAÇÃO BIMESTRE -->
                     <div class="pagination-bar" id="pag-bimestre">
                         <div>
                             <span>Exibir </span>
@@ -466,7 +463,7 @@
                     <div class="filter-group" style="flex: 2 1 240px;">
                         <label>Escola (Múltipla Seleção)</label>
                         <div class="multi-select" data-filter="escola_aba">
-                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas as Escolas</span></div>
+                            <div class="select-display" onclick="toggleDropdown(this)"><span id="display-escola-span">Selecione uma Escola...</span></div>
                             <div class="select-options" id="options-escola-aba"></div>
                         </div>
                     </div>
@@ -497,7 +494,7 @@
                     <div class="table-header-bar">
                         <div>
                             <h2 id="titulo-matriz-escola" style="font-size: 0.92rem; font-weight: 800; color: var(--navy);">Matriz Comparativa por Unidade Escolar</h2>
-                            <p id="subtitulo-matriz-escola" style="font-size: .72rem; color: var(--muted);">Acompanhamento do percentual de acertos dos descritores escola por escola.</p>
+                            <p id="subtitulo-matriz-escola" style="font-size: .72rem; color: var(--muted);">Escolha uma escola no filtro acima para carregar 100% dos dados.</p>
                             
                             <div class="sub-tabs">
                                 <button class="btn-sub-tab active" id="btn-sub-escola-geral" onclick="setModoVisaoEscola('geral')">Visão Geral (Consolidado)</button>
@@ -512,7 +509,6 @@
                         <tbody></tbody>
                     </table>
 
-                    <!-- BARRA DE PAGINAÇÃO ESCOLA -->
                     <div class="pagination-bar" id="pag-escola">
                         <div>
                             <span>Exibir </span>
@@ -585,7 +581,6 @@
                         <tbody></tbody>
                     </table>
 
-                    <!-- BARRA DE PAGINAÇÃO DETALHE -->
                     <div class="pagination-bar" id="pag-detalhe">
                         <div>
                             <span>Exibir </span>
@@ -619,13 +614,14 @@
 
         let currentUser = null;
         let globalData = [];
-        let escolaData = [];
+        let escolaDataCache = [];
+        let listaEscolasExistentes = [];
+
         let chartsInstance = {};
         let activeTab = 'global';
         let modoVisaoEscola = 'geral';
         let componenteAtualSelecionado = 'TODAS';
 
-        // ORDENAÇÃO E PAGINAÇÃO POR TABELA
         let paginationState = {
             global: { currentPage: 1, pageSize: 100 },
             bimestre: { currentPage: 1, pageSize: 100 },
@@ -641,7 +637,39 @@
         function showLoading(t='Calculando habilidades...') { document.getElementById('loading-text').textContent = t; document.getElementById('loading-overlay').style.display = 'flex'; }
         function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
 
-        // MUDANÇA DE PÁGINA
+        // BUSCA PAGINADA EXAUSTIVA NO SUPABASE (Busca sem parar de 1000 em 1000 até trazer 100%)
+        async function fetchAllFilteredData(table, column, filterValues) {
+            let all = [], limit = 1000, start = 0, hasMore = true;
+            while (hasMore) {
+                let query = supabaseClient.from(table).select('*').range(start, start + limit - 1);
+                if (column && filterValues && filterValues.length > 0) {
+                    query = query.in(column, filterValues);
+                }
+                const { data, error } = await query;
+                if (error) return { error };
+                all.push(...data);
+                if (data.length < limit) hasMore = false; else start += limit;
+            }
+            return { data: all };
+        }
+
+        // BUSCA EXAUSTIVA PARA LISTAR TODOS OS NOMES DAS ESCOLAS
+        async function fetchListaCompletaEscolas() {
+            let escolasSet = new Set();
+            let limit = 1000, start = 0, hasMore = true;
+            while (hasMore) {
+                const { data, error } = await supabaseClient
+                    .from('desempenho_escola')
+                    .select('escola')
+                    .range(start, start + limit - 1);
+                
+                if (error || !data) break;
+                data.forEach(e => { if (e.escola) escolasSet.add(e.escola); });
+                if (data.length < limit) hasMore = false; else start += limit;
+            }
+            return Array.from(escolasSet).sort();
+        }
+
         window.mudarPagina = (aba, delta) => {
             paginationState[aba].currentPage += delta;
             reprocessarTelaAtual();
@@ -673,7 +701,6 @@
             if (btnNext) btnNext.disabled = state.currentPage >= totalPages;
         }
 
-        // PREVIEW DE LINKS
         window.mostrarPreviewLink = (e, url) => {
             if (!url || url === 'N/A' || url.trim() === '') return;
             const popover = document.getElementById('preview-popover');
@@ -700,7 +727,6 @@
             iframe.src = 'about:blank';
         };
 
-        // EXPORTAÇÃO EXCEL
         window.exportarTabelaParaExcel = (tableId, filename) => {
             const table = document.getElementById(tableId);
             if (!table) return;
@@ -759,7 +785,7 @@
                 document.getElementById('filtro-disciplina-bimestre').value = 'TODAS';
             } else if (aba === 'escola') {
                 document.querySelectorAll('.multi-select[data-filter="escola_aba"] input[type="checkbox"]').forEach(c => c.checked = false);
-                updateMultiSelectDisplay('escola_aba', 'Todas as Escolas');
+                updateMultiSelectDisplay('escola_aba', 'Selecione uma Escola...');
                 document.getElementById('filtro-serie-escola').value = 'TODAS';
                 document.getElementById('filtro-bimestre-escola').value = 'TODOS';
                 document.getElementById('filtro-disciplina-escola').value = 'TODAS';
@@ -847,15 +873,6 @@
             document.getElementById('login-section').style.display = 'flex'; hideLoading();
         };
 
-        async function fetchAllData(table) {
-            let all = [], limit = 1000, start = 0, hasMore = true;
-            while (hasMore) {
-                const { data, error } = await supabaseClient.from(table).select('*').range(start, start + limit - 1);
-                if (error) return { error }; all.push(...data);
-                if (data.length < limit) hasMore = false; else start += limit;
-            } return { data: all };
-        }
-
         const getClassificacaoAcertos = (pct) => {
             if (pct < 50) return { text: 'Crítico (<50%)', cellClass: 'cell-danger' };
             if (pct < 65) return { text: 'Abaixo do Esperado', cellClass: 'cell-warning' };
@@ -886,14 +903,14 @@
         };
 
         async function loadData() {
-            showLoading('Carregando descritores e escolas...');
+            showLoading('Carregando descritores e lista completa de escolas...');
             try {
                 document.getElementById('login-section').style.display='none';
                 document.getElementById('dashboard-section').style.display='block';
 
-                const [resDesc, resEscola] = await Promise.all([
-                    fetchAllData('desempenho_descritor'),
-                    fetchAllData('desempenho_escola')
+                const [resDesc, escolasArray] = await Promise.all([
+                    fetchAllFilteredData('desempenho_descritor'),
+                    fetchListaCompletaEscolas()
                 ]);
 
                 if (resDesc.error) throw resDesc.error;
@@ -912,25 +929,10 @@
                     };
                 });
 
-                escolaData = (resEscola.data || []).map(d => {
-                    let rawPct = parseFloat(d.percentual_acertos) || 0;
-                    let pctCorrigido = rawPct <= 1.0 ? rawPct * 100 : rawPct;
-                    return {
-                        id_escola: d.id_escola,
-                        escola: d.escola || 'N/A',
-                        bimestre: normalizarBimestre(d.bimestre),
-                        serie: d.serie || 'N/A',
-                        percentual_acertos: pctCorrigido,
-                        descritor: d.descritor || 'N/A',
-                        disciplina: d.disciplina || 'N/A',
-                        aula_url: d.aula_url || 'N/A',
-                        questao_url: d.questao_url || 'N/A'
-                    };
-                });
+                listaEscolasExistentes = escolasArray;
 
                 let bimsPresentes = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
-                let seriesPresentes = [...new Set([...globalData.map(d => d.serie), ...escolaData.map(d => d.serie)])].sort();
-                let escolasPresentes = [...new Set(escolaData.map(d => d.escola))].sort();
+                let seriesPresentes = [...new Set(globalData.map(d => d.serie))].sort();
 
                 const optsBimAba = document.getElementById('options-bimestre-aba'); optsBimAba.innerHTML = '';
                 bimsPresentes.forEach(b => {
@@ -938,11 +940,12 @@
                 });
                 updateMultiSelectDisplay('bimestre_aba', 'Todos os Bimestres');
 
+                // Preenche o dropdown de escolas com TODAS as escolas encontradas no banco
                 const optsEscAba = document.getElementById('options-escola-aba'); optsEscAba.innerHTML = '';
-                escolasPresentes.forEach(e => {
-                    optsEscAba.innerHTML += `<label><input type="checkbox" value="${e}" onchange="updateMultiSelectDisplay('escola_aba', 'Todas as Escolas'); window.processarVisaoEscola();"> ${e}</label>`;
+                listaEscolasExistentes.forEach(e => {
+                    optsEscAba.innerHTML += `<label><input type="checkbox" value="${e}" onchange="updateMultiSelectDisplay('escola_aba', 'Selecione uma Escola...'); window.processarVisaoEscola();"> ${e}</label>`;
                 });
-                updateMultiSelectDisplay('escola_aba', 'Todas as Escolas');
+                updateMultiSelectDisplay('escola_aba', 'Selecione uma Escola...');
 
                 ['options-serie-global', 'options-serie-bimestre'].forEach(id => {
                     const container = document.getElementById(id); container.innerHTML = '';
@@ -954,7 +957,7 @@
                     updateMultiSelectDisplay(filterName, 'Todas as Séries');
                 });
 
-                const avalsDisc = [...new Set([...globalData.map(d => d.disciplina), ...escolaData.map(d => d.disciplina)])].sort();
+                const avalsDisc = [...new Set(globalData.map(d => d.disciplina))].sort();
                 ['filtro-disciplina-global', 'filtro-disciplina-bimestre', 'filtro-disciplina-escola'].forEach(id => {
                     const s = document.getElementById(id); s.innerHTML = '<option value="TODAS">Todas as Disciplinas</option>';
                     avalsDisc.forEach(c => s.innerHTML += `<option value="${c}">${c}</option>`);
@@ -1060,7 +1063,6 @@
 
             ordenarMatrizComNulosNoFim(tabelaMatriz, colunas, sortGlobalCol, sortGlobalAsc);
 
-            // PAGINAÇÃO APLICADA
             atualizarControlesPaginacao('global', tabelaMatriz.length);
             const state = paginationState.global;
             const matrizPaginada = tabelaMatriz.slice((state.currentPage - 1) * state.pageSize, state.currentPage * state.pageSize);
@@ -1217,49 +1219,85 @@
             tbody.innerHTML = tbodyRows.join('');
         };
 
-        // VISÃO POR ESCOLA
+        // VISÃO POR ESCOLA (BUSCA COMPLETA SEM TRUNCAR DADOS)
         window.ordenarTabelaEscola = (colIndex) => {
             if (sortEscCol === colIndex) sortEscAsc = !sortEscAsc;
             else { sortEscCol = colIndex; sortEscAsc = true; }
             processarVisaoEscola();
         };
 
-        window.processarVisaoEscola = () => {
-            if (!escolaData.length) return;
-
+        async function processarVisaoEscola() {
             const escolasSelecionadas = getSelectedCheckboxes('escola_aba');
+            const thead = document.querySelector('#tabelaDescritoresEscola thead');
+            const tbody = document.querySelector('#tabelaDescritoresEscola tbody');
+            const tituloEl = document.getElementById('titulo-matriz-escola');
+            const subTituloEl = document.getElementById('subtitulo-matriz-escola');
+
+            if (escolasSelecionadas.length === 0) {
+                thead.innerHTML = '';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; background:#fff; padding:2rem; font-weight:700; color:var(--muted);">👈 Por favor, selecione uma ou mais escolas no filtro acima para visualizar os dados.</td></tr>';
+                tituloEl.textContent = `Matriz Comparativa por Unidade Escolar`;
+                subTituloEl.textContent = `Aguardando a seleção de uma escola...`;
+                atualizarControlesPaginacao('escola', 0);
+                return;
+            }
+
+            // Busca paginada completa no Supabase sem travar na barreira de 1000 registros
+            showLoading('Buscando 100% dos dados da(s) escola(s) selecionada(s)...');
+            try {
+                let escolasParaBuscar = escolasSelecionadas.filter(e => !escolaDataCache.some(d => d.escola === e));
+
+                if (escolasParaBuscar.length > 0) {
+                    const response = await fetchAllFilteredData('desempenho_escola', 'escola', escolasParaBuscar);
+                    if (response.error) throw response.error;
+
+                    const novosDados = (response.data || []).map(d => {
+                        let rawPct = parseFloat(d.percentual_acertos) || 0;
+                        let pctCorrigido = rawPct <= 1.0 ? rawPct * 100 : rawPct;
+                        return {
+                            id_escola: d.id_escola,
+                            escola: d.escola || 'N/A',
+                            bimestre: normalizarBimestre(d.bimestre),
+                            serie: d.serie || 'N/A',
+                            percentual_acertos: pctCorrigido,
+                            descritor: d.descritor || 'N/A',
+                            disciplina: d.disciplina || 'N/A',
+                            aula_url: d.aula_url || 'N/A',
+                            questao_url: d.questao_url || 'N/A'
+                        };
+                    });
+
+                    escolaDataCache.push(...novosDados);
+                }
+            } catch (err) {
+                alert("Erro ao buscar dados completos da escola: " + err.message);
+                hideLoading();
+                return;
+            }
+            hideLoading();
+
             const serieSel = document.getElementById('filtro-serie-escola').value;
             const bimSel = document.getElementById('filtro-bimestre-escola').value;
             const discSelecionada = componenteAtualSelecionado;
 
-            let dataView = escolaData;
-            if (escolasSelecionadas.length > 0) dataView = dataView.filter(d => escolasSelecionadas.includes(d.escola));
+            let dataView = escolaDataCache.filter(d => escolasSelecionadas.includes(d.escola));
             if (serieSel !== 'TODAS') dataView = dataView.filter(d => d.serie === serieSel);
             if (modoVisaoEscola === 'geral' && bimSel !== 'TODOS') dataView = dataView.filter(d => d.bimestre === bimSel);
             if (discSelecionada !== 'TODAS') dataView = dataView.filter(d => d.disciplina.toLowerCase().includes(discSelecionada.toLowerCase()));
-
-            const tituloEl = document.getElementById('titulo-matriz-escola');
-            const subTituloEl = document.getElementById('subtitulo-matriz-escola');
 
             if (escolasSelecionadas.length === 1) {
                 tituloEl.textContent = `Matriz Comparativa — ${escolasSelecionadas[0]}`;
                 subTituloEl.textContent = modoVisaoEscola === 'geral' 
                     ? `Consolidado geral de desempenho por descritor para ${escolasSelecionadas[0]}.`
                     : `Evolução bimestre a bimestre dos descritores para ${escolasSelecionadas[0]}.`;
-            } else if (escolasSelecionadas.length > 1) {
+            } else {
                 tituloEl.textContent = `Matriz Comparativa — ${escolasSelecionadas.length} Escolas Selecionadas`;
                 subTituloEl.textContent = `Comparação entre as unidades escolares selecionadas.`;
-            } else {
-                tituloEl.textContent = `Matriz Comparativa por Unidade Escolar (Todas as Escolas)`;
-                subTituloEl.textContent = `Visão abrangente de todas as escolas da rede.`;
             }
-
-            const thead = document.querySelector('#tabelaDescritoresEscola thead');
-            const tbody = document.querySelector('#tabelaDescritoresEscola tbody');
 
             if (dataView.length === 0) {
                 thead.innerHTML = '';
-                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; background:#fff; padding:1.5rem;">Sem dados de escolas para os filtros selecionados.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; background:#fff; padding:1.5rem;">Sem dados de descritores para os filtros selecionados.</td></tr>';
                 atualizarControlesPaginacao('escola', 0);
                 return;
             }
@@ -1329,7 +1367,7 @@
                 tbodyRows.push(rowHtml);
             });
             tbody.innerHTML = tbodyRows.join('');
-        };
+        }
 
         // TABELA DETALHADA
         window.ordenarTabelaDet = (colIndex) => {

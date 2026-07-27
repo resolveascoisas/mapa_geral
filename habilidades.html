@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Desempenho por Descritor</title>
+    <link rel="icon" type="image/png" href="./imagens/icone.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --navy:    #0c1a35; --navy2:   #142040;
+            --blue:    #1d4ed8; --blue2:   #2563eb;
+            --sky:     #0284c7; --teal:    #0f766e;
+            --emerald: #059669; --amber:   #d97706;
+            --rose:    #e11d48; --orange:  #c2410c;
+            --purple:  #6d28d9;
+            --bg:      #f1f5fb; --surface: #ffffff; --surface2:#f8fafd;
+            --border:  #dbe3f0; --border2: #c9d5e8;
+            --text:    #0d1829; --muted:   #5a6e8a; --light:   #8fa3bc;
+            --radius:  8px; --radius2: 12px;
+            --shadow:  0 1px 2px rgba(0,0,0,.04), 0 4px 20px rgba(12,26,53,.06);
+            --grad-blue: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+            --grad-header: linear-gradient(160deg, #0c1a35 0%, #0f2a52 60%, #1a3d72 100%);
+
+            /* Cores Estilo Heatmap */
+            --cell-danger-bg: #fca5a5; --cell-danger-text: #7f1d1d;
+            --cell-warning-bg: #fde047; --cell-warning-text: #713f12;
+            --cell-success-bg: #059669; --cell-success-text: #ffffff;
+            --cell-purple-bg: #047857; --cell-purple-text: #ffffff;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 13.5px; line-height: 1.45; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+        /* CARREGAMENTO E LOGIN */
+        #loading-overlay { position: fixed; inset: 0; background: rgba(12,26,53,.88); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; flex-direction: column; z-index: 9999; gap: 1.25rem; }
+        .spinner { width: 40px; height: 40px; border: 2.5px solid rgba(255,255,255,.12); border-top-color: #60a5fa; border-radius: 50%; animation: spin .7s linear infinite; }
+        #loading-text { color: rgba(255,255,255,.75); font-size: .88rem; font-weight: 500; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #login-section { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: var(--grad-header); position: relative; overflow: hidden; }
+        .login-box { position: relative; z-index: 1; background: rgba(255,255,255,.05); backdrop-filter: blur(28px) saturate(1.4); border: 1px solid rgba(255,255,255,.13); padding: 2.75rem 2.5rem; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 40px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.1); }
+        .login-title { color: #fff; font-size: 1.45rem; font-weight: 800; text-align: center; margin-bottom: .35rem; }
+        .login-sub { color: rgba(255,255,255,.45); font-size: .85rem; text-align: center; margin-bottom: 2.25rem; }
+        .input-group { margin-bottom: 1rem; }
+        .input-group label { display: block; font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.5); margin-bottom: .45rem; text-transform: uppercase; }
+        .input-group input { width: 100%; padding: .75rem 1rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.11); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .925rem; outline: none; }
+        .login-btn { width: 100%; padding: .875rem; background: var(--grad-blue); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .925rem; font-weight: 700; border: none; cursor: pointer; margin-top: .5rem; }
+        #login-error { color: #fca5a5; font-size: .8rem; margin-top: .75rem; text-align: center; display: none; }
+
+        /* CABEÇALHO E ESTRUTURA */
+        #dashboard-section { display: none; }
+        header { background: var(--grad-header); padding: .75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 24px rgba(0,0,0,.22); position: sticky; top: 0; z-index: 200; border-bottom: 1px solid rgba(255,255,255,.06); }
+        .header-brand h1 { font-size: .9rem; font-weight: 800; color: #fff; line-height: 1.2; }
+        .header-brand span { font-size: .68rem; color: rgba(255,255,255,.38); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+        
+        .header-actions { display: flex; align-items: center; gap: .5rem; }
+        .btn-metodologia { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.2); padding: .38rem .75rem; border-radius: var(--radius); font-family: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; transition: all .2s; }
+        .btn-metodologia:hover { background: rgba(255,255,255,.15); }
+
+        .btn-logout { background: transparent; color: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.15); padding: .38rem .75rem; border-radius: var(--radius); font-family: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; transition: all .2s; }
+        .btn-logout:hover { background: rgba(225,29,72,.15); color: #fca5a5; border-color: rgba(225,29,72,.3); }
+        
+        .container { padding: 1.25rem 1.5rem 1.5rem 1.5rem; max-width: 1600px; margin: 0 auto; }
+        
+        /* ABAS PRINCIPAIS */
+        .view-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: .75rem; }
+        .btn-toggle { display: inline-flex; align-items: center; gap: .38rem; padding: .5rem 1.1rem; border-radius: 99px; font-family: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; border: 1.5px solid transparent; transition: all .18s; background: var(--surface); color: var(--muted); border-color: var(--border); box-shadow: var(--shadow); }
+        .btn-toggle:hover { background: var(--surface2); color: var(--navy); }
+        .btn-toggle.active { background: var(--navy); color: #fff; border-color: var(--navy); box-shadow: 0 4px 12px rgba(12,26,53,.2); }
+
+        /* PAINEL DE BOTÕES RÁPIDOS DOS COMPONENTES */
+        .component-pills-container { background: var(--surface); padding: .75rem 1rem; border-radius: var(--radius2); border: 1px solid var(--border); margin-bottom: 1rem; box-shadow: var(--shadow); }
+        .component-pills-title { font-size: 0.68rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+        .component-pills { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+        .btn-pill { padding: 0.35rem 0.75rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); transition: all 0.15s ease; }
+        .btn-pill:hover { background: var(--bg); color: var(--navy); border-color: var(--blue2); }
+        .btn-pill.active { background: var(--blue); color: #fff; border-color: var(--blue); box-shadow: 0 2px 6px rgba(29, 78, 216, 0.2); }
+
+        .toolbar { background: var(--surface); padding: 1rem 1.25rem; border-radius: var(--radius2); border: 1px solid var(--border); display: flex; align-items: center; gap: 1.25rem; box-shadow: var(--shadow); margin-bottom: 1rem; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: .3rem; }
+        .filter-group label { font-size: .7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+        .filter-group select { padding: .45rem .75rem; border-radius: var(--radius); border: 1.5px solid var(--border); font-family: inherit; font-size: .8rem; background: var(--surface2); color: var(--text); outline: none; min-width: 200px; font-weight: 600; cursor: pointer; }
+
+        /* MULTI-SELECT COM CHECKBOX COMPACTO */
+        .multi-select { position: relative; user-select: none; min-width: 220px; }
+        .select-display { padding: .45rem .75rem; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--surface2); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: .8rem; color: var(--text); font-weight: 600; min-height: 34px; transition: border-color .2s; }
+        .select-display:hover { border-color: var(--blue2); }
+        .select-display span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .select-display::after { content: '▾'; font-size: .75rem; color: var(--light); margin-left: .4rem; }
+        .select-options { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); max-height: 220px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 8px 32px rgba(12,26,53,.12); }
+        .select-options.show { display: block; }
+        .select-options label { display: flex; align-items: center; gap: .5rem; padding: .45rem .75rem; cursor: pointer; font-size: .8rem; font-weight: 500; color: var(--text); border-bottom: 1px solid var(--bg); transition: background .15s; }
+        .select-options label:hover { background: var(--bg); color: var(--blue); }
+        .select-options input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--blue); }
+        
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .85rem; margin-bottom: 1rem; }
+        .card { background: var(--surface); border-radius: var(--radius2); padding: 1.1rem 1.25rem; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; display: flex; flex-direction: column; justify-content: space-between; }
+        .card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--blue); border-radius: var(--radius2) var(--radius2) 0 0; }
+        .card.alert::after { background: var(--rose); }
+        .card.warning::after { background: var(--amber); }
+        .card.success::after { background: var(--emerald); }
+        .card h3 { font-size: .68rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .2rem; }
+        .card .value { font-size: 1.35rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; line-height: 1.2; }
+        .card .desc { font-size: .72rem; color: var(--muted); margin-top: .35rem; font-weight: 500; }
+
+        .charts-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 1rem; margin-bottom: 1rem; }
+        .charts-grid.single { grid-template-columns: 1fr; }
+        @media (max-width: 1000px) { .charts-grid { grid-template-columns: 1fr; } }
+        .chart-container { background: var(--surface); border-radius: var(--radius2); padding: 1.1rem 1.25rem; box-shadow: var(--shadow); border: 1px solid var(--border); height: 360px; display: flex; flex-direction: column; }
+        .chart-header { margin-bottom: .75rem; display: flex; justify-content: space-between; align-items: flex-start; }
+        .chart-header h2 { font-size: .92rem; font-weight: 800; color: var(--navy); }
+        .chart-header p { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
+        .canvas-wrapper { flex: 1; position: relative; }
+
+        .exec-summary-box { background: var(--surface); border-radius: var(--radius2); padding: 1.1rem 1.25rem; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 1rem; border-left: 4px solid var(--blue); }
+        .exec-summary-box h3 { font-size: 0.88rem; font-weight: 800; color: var(--navy); margin-bottom: 0.35rem; display: flex; align-items: center; gap: .4rem; }
+        .exec-summary-box p { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+        /* TABELA ESTILO IMAGEM DE REFERÊNCIA */
+        .table-container { background: var(--surface); border-radius: var(--radius2); padding: 1rem 1.25rem; box-shadow: var(--shadow); border: 1px solid var(--border); overflow-x: auto; margin-bottom: 1rem; }
+        table { width: 100%; border-collapse: separate; border-spacing: 1px; font-size: .78rem; white-space: nowrap; background: var(--border); }
+        
+        th { background: var(--navy); color: #ffffff; font-weight: 800; text-transform: uppercase; font-size: .68rem; letter-spacing: .05em; padding: .65rem .75rem; text-align: center; cursor: pointer; user-select: none; transition: background .15s; }
+        th:first-child { text-align: left; }
+        th:hover { background: #142850; }
+        th.sort-asc::after { content: ' ▲'; font-size: 0.62rem; color: #60a5fa; }
+        th.sort-desc::after { content: ' ▼'; font-size: 0.62rem; color: #60a5fa; }
+
+        td { padding: .5rem .75rem; text-align: center; vertical-align: middle; background: #ffffff; font-weight: 600; }
+        
+        .td-descritor { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--navy); text-align: left; background: #f8fafc; cursor: pointer; transition: color .15s, background .15s; }
+        .td-descritor:hover { color: var(--blue); background: #eef2ff; text-decoration: underline; }
+
+        .cell-perf { font-family: 'Geist Mono', monospace; font-size: .84rem; font-weight: 700; cursor: pointer; transition: opacity .15s, transform .12s; }
+        .cell-perf:hover { opacity: 0.88; transform: scale(0.98); }
+        
+        .cell-danger { background-color: var(--cell-danger-bg) !important; color: var(--cell-danger-text) !important; }
+        .cell-warning { background-color: var(--cell-warning-bg) !important; color: var(--cell-warning-text) !important; }
+        .cell-success { background-color: var(--cell-success-bg) !important; color: var(--cell-success-text) !important; }
+        .cell-purple { background-color: var(--cell-purple-bg) !important; color: var(--cell-purple-text) !important; }
+
+        .link-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.78rem; font-weight: 700; text-decoration: none; color: #ffffff; background: var(--blue); transition: all 0.15s; }
+        .link-btn:hover { background: var(--navy); transform: translateY(-1px); }
+
+        #view-detalhada, #view-global, #view-bimestre { display: none; animation: fadeIn 0.25s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* MODAL */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(12,26,53,.68); backdrop-filter: blur(6px); z-index: 10000; justify-content: center; align-items: center; padding: 1rem; }
+        .modal-content { background: var(--surface); padding: 1.75rem; border-radius: var(--radius2); width: 100%; max-width: 750px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 40px 80px rgba(0,0,0,.3); }
+        .modal-close { position: absolute; top: 1rem; right: 1rem; cursor: pointer; width: 28px; height: 28px; background: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .95rem; color: var(--muted); font-weight: 700; border: 1px solid var(--border); }
+        .modal-close:hover { background: var(--border); color: var(--text); }
+        .modal-content h2 { margin-bottom: 0.4rem; color: var(--navy); font-size: 1.15rem; font-weight: 800; }
+        .modal-content h3 { color: var(--navy); font-size: 0.88rem; font-weight: 700; margin-top: 1.1rem; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+        .desc-box-full { background: #f0f4f9; border-left: 4px solid var(--blue); padding: 1rem; border-radius: 6px; font-size: 0.92rem; font-weight: 600; color: var(--navy); line-height: 1.5; margin-bottom: 1rem; }
+
+        .diag-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin: .85rem 0; }
+        .diag-item { background: var(--surface2); padding: 0.75rem; border-radius: var(--radius); border: 1px solid var(--border); }
+        .diag-item label { font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 0.15rem; }
+        .diag-item span { font-size: 0.95rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; }
+
+        .pedagogical-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 0.75rem; }
+        .modal-actions-grid { display: flex; gap: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay"><div class="spinner"></div><div id="loading-text">Calculando habilidades...</div></div>
+
+    <!-- MODAL DETALHADO SEM SITUAÇÃO DE ASSIMILAÇÃO -->
+    <div id="modal-explicacao-descritor" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('modal-explicacao-descritor').style.display='none'">&times;</span>
+            <h2>Detalhamento da Habilidade</h2>
+            
+            <div id="modal-desc-texto-completo" class="desc-box-full">
+                Carregando habilidade completa...
+            </div>
+
+            <div class="diag-grid">
+                <div class="diag-item">
+                    <label>% Acertos</label>
+                    <span id="modal-desc-percent">-</span>
+                </div>
+                <div class="diag-item">
+                    <label>Disciplina / Série</label>
+                    <span id="modal-desc-contexto" style="font-size:0.8rem;">-</span>
+                </div>
+                <div class="diag-item">
+                    <label>Bimestre</label>
+                    <span id="modal-desc-bimestre">-</span>
+                </div>
+            </div>
+
+            <h3>Recursos e Materiais Didáticos</h3>
+            <div class="pedagogical-card" style="border-left: 4px solid var(--blue);">
+                <div id="modal-desc-links" class="modal-actions-grid">
+                    Carregando recursos...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-section">
+        <div class="login-box">
+            <div class="login-title">Painel de Descritores</div>
+            <div class="login-sub">Monitoramento por Habilidades e Competências</div>
+            <div class="input-group">
+                <label>E-mail de Acesso</label>
+                <input type="email" id="email" placeholder="seu@email.com" onkeypress="if(event.key==='Enter')window.handleLogin()">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key==='Enter')window.handleLogin()">
+            </div>
+            <button class="login-btn" onclick="window.handleLogin()">Entrar no Sistema</button>
+            <div id="login-error">Credenciais inválidas.</div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard-section">
+        <header>
+            <div class="header-brand">
+                <div>
+                    <h1>Análise de Desempenho por Descritor</h1>
+                    <span>Acompanhamento Pedagógico — URE Avaré</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-metodologia" onclick="history.back()">Voltar</button>
+                <button class="btn-logout" onclick="window.handleLogout()">Sair</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <!-- NAVEGAÇÃO PRINCIPAL (COM ABA DEDICADA PARA BIMESTRE) -->
+            <div class="view-tabs">
+                <button class="btn-toggle active" id="btn-tab-global" onclick="setTab('global')">Visão Geral (Consolidado)</button>
+                <button class="btn-toggle" id="btn-tab-bimestre" onclick="setTab('bimestre')">Visão por Bimestre</button>
+                <button class="btn-toggle" id="btn-tab-detalhe" onclick="setTab('detalhe')">Análise Detalhada por Série/Disciplina</button>
+            </div>
+
+            <!-- BARRA DE ATALHOS RÁPIDOS DE COMPONENTES -->
+            <div class="component-pills-container">
+                <div class="component-pills-title">Filtrar Componente Curricular:</div>
+                <div class="component-pills" id="container-pills">
+                    <button class="btn-pill active" onclick="selecionarComponentePill('TODAS', this)">Todas as Disciplinas</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Língua Portuguesa', this)">Língua Portuguesa</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Matemática', this)">Matemática</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('História', this)">História</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Geografia', this)">Geografia</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Ciências', this)">Ciências</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Biologia', this)">Biologia</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Física', this)">Física</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Química', this)">Química</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Filosofia', this)">Filosofia</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Sociologia', this)">Sociologia</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Tecnologia e Inovação', this)">Tecnologia e Inovação</button>
+                    <button class="btn-pill" onclick="selecionarComponentePill('Educação Financeira', this)">Educação Financeira</button>
+                </div>
+            </div>
+
+            <!-- VISÃO GERAL (CONSOLIDADO POR SÉRIE) -->
+            <div id="view-global">
+                <div class="toolbar">
+                    <div class="filter-group">
+                        <label>Filtrar por Série (Múltipla Seleção)</label>
+                        <div class="multi-select" data-filter="serie_global">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas as Séries</span></div>
+                            <div class="select-options" id="options-serie-global"></div>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>Disciplina Selecionada</label>
+                        <select id="filtro-disciplina-global" onchange="sincronizarSelectComPills(this.value); window.processarVisaoGlobal();">
+                            <option value="TODAS">Todas as Disciplinas</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="cards-grid">
+                    <div class="card alert">
+                        <h3>Descritor Mais Crítico</h3>
+                        <div class="value" id="kpi-desc-critico" style="font-size:1rem;">-</div>
+                        <div class="desc">Menor % acertos.</div>
+                    </div>
+                    <div class="card success">
+                        <h3>Descritor Mais Consolidado</h3>
+                        <div class="value" id="kpi-desc-facil" style="font-size:1rem;">-</div>
+                        <div class="desc">Maior % acertos.</div>
+                    </div>
+                    <div class="card warning">
+                        <h3>Média Geral da Rede</h3>
+                        <div class="value" id="kpi-media-geral">-</div>
+                        <div class="desc">Acerto médio no filtro.</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid single">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <div>
+                                <h2>Ranking de Domínio dos Descritores (% Acertos)</h2>
+                                <p>Da habilidade mais crítica à mais consolidada.</p>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper"><canvas id="graficoRankingDescritores"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="chart-header" style="margin-bottom: .5rem;">
+                        <div>
+                            <h2>Mapa de Domínio: Descritores por Série (Geral do Ano)</h2>
+                            <p>Clique no descritor para ver texto completo e links. Clique no cabeçalho das colunas para ordenar (vazios vão para baixo).</p>
+                        </div>
+                    </div>
+
+                    <table id="tabelaDescritoresGlobal">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VISÃO DEDICADA POR BIMESTRE -->
+            <div id="view-bimestre">
+                <div class="toolbar">
+                    <div class="filter-group">
+                        <label>Filtrar por Bimestre (Múltipla Seleção)</label>
+                        <div class="multi-select" data-filter="bimestre_aba">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todos os Bimestres</span></div>
+                            <div class="select-options" id="options-bimestre-aba"></div>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>Filtrar por Série (Múltipla Seleção)</label>
+                        <div class="multi-select" data-filter="serie_bimestre">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas as Séries</span></div>
+                            <div class="select-options" id="options-serie-bimestre"></div>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>Disciplina Selecionada</label>
+                        <select id="filtro-disciplina-bimestre" onchange="sincronizarSelectComPills(this.value); window.processarVisaoBimestre();">
+                            <option value="TODAS">Todas as Disciplinas</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="chart-header" style="margin-bottom: .5rem;">
+                        <div>
+                            <h2>Matriz de Evolução: Descritores por Bimestre</h2>
+                            <p>Acompanhamento direto da progressão bimestre a bimestre das habilidades.</p>
+                        </div>
+                    </div>
+
+                    <table id="tabelaDescritoresBimestre">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ANÁLISE DETALHADA -->
+            <div id="view-detalhada">
+                <div class="toolbar">
+                    <div class="filter-group">
+                        <label>Série</label>
+                        <select id="filtro-serie-det" onchange="window.processarEstatisticas()"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Disciplina</label>
+                        <select id="filtro-comp-det" onchange="sincronizarSelectComPills(this.value); window.processarEstatisticas();"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Bimestre</label>
+                        <select id="filtro-bim-det" onchange="window.processarEstatisticas()">
+                            <option value="TODOS">Todos os Bimestres</option>
+                            <option value="1º Bimestre">1º Bimestre</option>
+                            <option value="2º Bimestre">2º Bimestre</option>
+                            <option value="3º Bimestre">3º Bimestre</option>
+                            <option value="4º Bimestre">4º Bimestre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="exec-summary-box">
+                    <h3>💡 Análise Automática de Descritores</h3>
+                    <p id="texto-leitura-executiva">Analisando habilidades do segmento selecionado...</p>
+                </div>
+
+                <div class="table-container">
+                    <div class="chart-header">
+                        <div>
+                            <h2>Detalhamento das Habilidades e Recursos</h2>
+                            <p>Clique no descritor para abrir o texto e os links pedagógicos.</p>
+                        </div>
+                    </div>
+                    <table id="tabelaAnaliseDet">
+                        <thead>
+                            <tr>
+                                <th onclick="ordenarTabelaDet(0)">Bimestre</th>
+                                <th onclick="ordenarTabelaDet(1)">Descritor / Habilidade</th>
+                                <th onclick="ordenarTabelaDet(2)">% Acertos</th>
+                                <th>Material (Aula)</th>
+                                <th>Avaliação (Questão)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kmplasayzhtjoelxnvif.supabase.co';
+        const supabaseKey = 'sb_publishable_24GErsvesucjCS2GKZkBUQ_8xMMXuoh';
+
+        let supabaseClient = null;
+        if (window.supabase) { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); window.supabaseClient = supabaseClient; }
+
+        let currentUser = null;
+        let globalData = [];
+        let chartsInstance = {};
+        let activeTab = 'global';
+        let componenteAtualSelecionado = 'TODAS';
+
+        // Ordenações por Tabela
+        let sortGlobalCol = null; let sortGlobalAsc = true;
+        let sortBimCol = null;    let sortBimAsc = true;
+        let sortDetCol = null;    let sortDetAsc = true;
+
+        function showLoading(t='Calculando habilidades...') { document.getElementById('loading-text').textContent = t; document.getElementById('loading-overlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+        // Normalização Robusta de Strings de Bimestre
+        function normalizarBimestre(bim) {
+            let str = String(bim || '').trim().toLowerCase();
+            if (str.includes('1') || str.includes('primeiro')) return '1º Bimestre';
+            if (str.includes('2') || str.includes('segundo')) return '2º Bimestre';
+            if (str.includes('3') || str.includes('terceiro')) return '3º Bimestre';
+            if (str.includes('4') || str.includes('quarto')) return '4º Bimestre';
+            return str || 'Geral';
+        }
+
+        // BOTÕES RÁPIDOS DE COMPONENTES
+        window.selecionarComponentePill = (componente, btnEl) => {
+            componenteAtualSelecionado = componente;
+
+            document.querySelectorAll('.btn-pill').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+
+            const selectGlobal = document.getElementById('filtro-disciplina-global');
+            const selectBim = document.getElementById('filtro-disciplina-bimestre');
+            const selectDet = document.getElementById('filtro-comp-det');
+
+            if (selectGlobal) selectGlobal.value = componente;
+            if (selectBim) selectBim.value = componente;
+            if (selectDet && componente !== 'TODAS') selectDet.value = componente;
+
+            reprocessarTelaAtual();
+        };
+
+        function sincronizarSelectComPills(componente) {
+            componenteAtualSelecionado = componente;
+            document.querySelectorAll('.btn-pill').forEach(b => {
+                const text = b.textContent.trim();
+                if ((componente === 'TODAS' && text === 'Todas as Disciplinas') || text.toLowerCase() === componente.toLowerCase()) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
+        }
+
+        // Multi-Select Dropdowns
+        window.toggleDropdown = (el) => {
+            const opts = el.nextElementSibling;
+            const showing = opts.classList.contains('show');
+            document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            if (!showing) opts.classList.add('show');
+        };
+
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.multi-select')) {
+                document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            }
+        });
+
+        function updateMultiSelectDisplay(k, defaultLabel) {
+            const c = document.querySelector(`.multi-select[data-filter="${k}"]`); if (!c) return;
+            const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
+            const span = c.querySelector('.select-display span');
+            span.textContent = cbs.length === 0 ? defaultLabel : cbs.length === 1 ? cbs[0].value : `${cbs.length} selecionados`;
+        }
+
+        function getSelectedCheckboxes(k) {
+            return Array.from(document.querySelectorAll(`.multi-select[data-filter="${k}"] input[type="checkbox"]:checked`)).map(cb => cb.value);
+        }
+
+        window.setTab = (tab) => {
+            activeTab = tab;
+            document.getElementById('btn-tab-global').classList.toggle('active', tab === 'global');
+            document.getElementById('btn-tab-bimestre').classList.toggle('active', tab === 'bimestre');
+            document.getElementById('btn-tab-detalhe').classList.toggle('active', tab === 'detalhe');
+
+            document.getElementById('view-global').style.display = tab === 'global' ? 'block' : 'none';
+            document.getElementById('view-bimestre').style.display = tab === 'bimestre' ? 'block' : 'none';
+            document.getElementById('view-detalhada').style.display = tab === 'detalhe' ? 'block' : 'none';
+
+            reprocessarTelaAtual();
+        };
+
+        function reprocessarTelaAtual() {
+            if (activeTab === 'global') processarVisaoGlobal();
+            else if (activeTab === 'bimestre') processarVisaoBimestre();
+            else window.processarEstatisticas();
+        }
+
+        window.handleLogin = async () => {
+            const email = document.getElementById('email').value.trim(), pass = document.getElementById('password').value;
+            const err = document.getElementById('login-error'); err.style.display = 'none';
+            if (!email || !pass) { err.style.display='block'; err.textContent='Preencha os campos.'; return; }
+            try {
+                showLoading('Autenticando...');
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                if (error) { hideLoading(); err.style.display='block'; err.textContent=error.message; }
+                else { currentUser = data.user; await loadData(); }
+            } catch(e) { hideLoading(); err.style.display='block'; err.textContent=e.message; }
+        };
+
+        window.handleLogout = async () => {
+            showLoading('Saindo...'); await supabaseClient.auth.signOut();
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'flex'; hideLoading();
+        };
+
+        async function fetchAllData(table) {
+            let all = [], limit = 1000, start = 0, hasMore = true;
+            while (hasMore) {
+                const { data, error } = await supabaseClient.from(table).select('*').range(start, start + limit - 1);
+                if (error) return { error }; all.push(...data);
+                if (data.length < limit) hasMore = false; else start += limit;
+            } return { data: all };
+        }
+
+        const getClassificacaoAcertos = (pct) => {
+            if (pct < 50) return { text: 'Crítico (<50%)', cellClass: 'cell-danger' };
+            if (pct < 65) return { text: 'Abaixo do Esperado', cellClass: 'cell-warning' };
+            if (pct < 80) return { text: 'Adequado', cellClass: 'cell-success' };
+            return { text: 'Avançado', cellClass: 'cell-purple' };
+        };
+
+        // ABRE MODAL DETALHADO (SEM A SEÇÃO DE SITUAÇÃO DE ASSIMILAÇÃO)
+        window.abrirModalDescritor = (descritor, pct, disciplina, serie, bimestre, aulaUrl, questaoUrl) => {
+            document.getElementById('modal-desc-texto-completo').textContent = descritor;
+            
+            document.getElementById('modal-desc-percent').textContent = `${pct.toFixed(1).replace('.',',')}%`;
+            document.getElementById('modal-desc-contexto').textContent = `${disciplina} (${serie})`;
+            document.getElementById('modal-desc-bimestre').textContent = bimestre || 'Geral';
+
+            let htmlLinks = "";
+            if (aulaUrl && aulaUrl !== 'N/A' && aulaUrl.trim() !== '') {
+                htmlLinks += `<a href="${aulaUrl}" target="_blank" class="link-btn">📖 Material da Aula</a>`;
+            }
+            if (questaoUrl && questaoUrl !== 'N/A' && questaoUrl.trim() !== '') {
+                htmlLinks += `<a href="${questaoUrl}" target="_blank" class="link-btn">📝 Ver Questão / Avaliação</a>`;
+            }
+            if (!htmlLinks) {
+                htmlLinks = "<span style='color:var(--muted); font-size:0.8rem;'>Nenhum link externo cadastrado no banco para este descritor.</span>";
+            }
+
+            document.getElementById('modal-desc-links').innerHTML = htmlLinks;
+            document.getElementById('modal-explicacao-descritor').style.display = 'flex';
+        };
+
+        async function loadData() {
+            showLoading('Carregando descritores...');
+            try {
+                document.getElementById('login-section').style.display='none';
+                document.getElementById('dashboard-section').style.display='block';
+
+                const response = await fetchAllData('desempenho_descritor');
+                if (response.error) throw response.error;
+
+                globalData = (response.data || []).map(d => {
+                    let rawPct = parseFloat(d.percentual_acertos) || 0;
+                    let pctCorrigido = rawPct <= 1.0 ? rawPct * 100 : rawPct;
+
+                    return {
+                        bimestre: normalizarBimestre(d.bimestre),
+                        serie: d.serie || 'N/A',
+                        percentual_acertos: pctCorrigido,
+                        descritor: d.descritor || 'N/A',
+                        disciplina: d.disciplina || 'N/A',
+                        aula_url: d.aula_url || 'N/A',
+                        questao_url: d.questao_url || 'N/A'
+                    };
+                });
+
+                // Preencher Filtros de Séries e Bimestres
+                let bimsPresentes = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
+                let seriesPresentes = [...new Set(globalData.map(d => d.serie))].sort();
+
+                ['options-bimestre-aba'].forEach(id => {
+                    const container = document.getElementById(id); container.innerHTML = '';
+                    bimsPresentes.forEach(b => {
+                        container.innerHTML += `<label><input type="checkbox" value="${b}" onchange="updateMultiSelectDisplay('bimestre_aba', 'Todos os Bimestres'); window.processarVisaoBimestre();"> ${b}</label>`;
+                    });
+                    updateMultiSelectDisplay('bimestre_aba', 'Todos os Bimestres');
+                });
+
+                ['options-serie-global', 'options-serie-bimestre'].forEach(id => {
+                    const container = document.getElementById(id); container.innerHTML = '';
+                    const filterName = id === 'options-serie-global' ? 'serie_global' : 'serie_bimestre';
+                    const callback = id === 'options-serie-global' ? 'processarVisaoGlobal' : 'processarVisaoBimestre';
+                    seriesPresentes.forEach(s => {
+                        container.innerHTML += `<label><input type="checkbox" value="${s}" onchange="updateMultiSelectDisplay('${filterName}', 'Todas as Séries'); window.${callback}();"> ${s}</label>`;
+                    });
+                    updateMultiSelectDisplay(filterName, 'Todas as Séries');
+                });
+
+                const avalsDisc = [...new Set(globalData.map(d => d.disciplina))].sort();
+                ['filtro-disciplina-global', 'filtro-disciplina-bimestre'].forEach(id => {
+                    const s = document.getElementById(id); s.innerHTML = '<option value="TODAS">Todas as Disciplinas</option>';
+                    avalsDisc.forEach(c => s.innerHTML += `<option value="${c}">${c}</option>`);
+                });
+
+                const sSerDet = document.getElementById('filtro-serie-det'); sSerDet.innerHTML = '';
+                seriesPresentes.forEach(s => sSerDet.innerHTML += `<option value="${s}">${s}</option>`);
+
+                const sCompDet = document.getElementById('filtro-comp-det'); sCompDet.innerHTML = '<option value="TODAS">Todas as Disciplinas</option>';
+                avalsDisc.forEach(c => sCompDet.innerHTML += `<option value="${c}">${c}</option>`);
+
+                setTab('global');
+                hideLoading();
+            } catch(e) { alert("Erro ao carregar dados: " + e.message); hideLoading(); }
+        }
+
+        // FUNÇÃO DE ORDENAÇÃO GENÉRICA COM NULOS NO FIM
+        function ordenarMatrizComNulosNoFim(tabelaMatriz, colunas, sortCol, sortAsc) {
+            if (sortCol === null) return;
+            tabelaMatriz.sort((a, b) => {
+                let valA, valB;
+                if (sortCol === 0) {
+                    valA = a.descritor; valB = b.descritor;
+                    return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                } else {
+                    let colKey = colunas[sortCol - 1];
+                    let hasA = a.valores[colKey] !== null;
+                    let hasB = b.valores[colKey] !== null;
+
+                    // MANDA VAZIOS/NULOS PARA O FIM INDEPENDENTE DE SER ASC OU DESC
+                    if (!hasA && !hasB) return 0;
+                    if (!hasA) return 1;
+                    if (!hasB) return -1;
+
+                    valA = a.valores[colKey].pctMed;
+                    valB = b.valores[colKey].pctMed;
+                    return sortAsc ? valA - valB : valB - valA;
+                }
+            });
+        }
+
+        // ORDENAÇÃO TABELA GLOBAL
+        window.ordenarTabelaGlobal = (colIndex) => {
+            if (sortGlobalCol === colIndex) sortGlobalAsc = !sortGlobalAsc;
+            else { sortGlobalCol = colIndex; sortGlobalAsc = true; }
+            processarVisaoGlobal();
+        };
+
+        window.processarVisaoGlobal = () => {
+            if (!globalData.length) return;
+
+            const seriesSelecionadas = getSelectedCheckboxes('serie_global');
+            const discSelecionada = componenteAtualSelecionado;
+
+            let dataView = globalData;
+            if (seriesSelecionadas.length > 0) dataView = dataView.filter(d => seriesSelecionadas.includes(d.serie));
+            if (discSelecionada !== 'TODAS') dataView = dataView.filter(d => d.disciplina.toLowerCase().includes(discSelecionada.toLowerCase()));
+
+            if (dataView.length === 0) {
+                document.getElementById('kpi-desc-critico').textContent = '-';
+                document.getElementById('kpi-desc-facil').textContent = '-';
+                document.getElementById('kpi-media-geral').textContent = '-';
+                document.querySelector('#tabelaDescritoresGlobal thead').innerHTML = '';
+                document.querySelector('#tabelaDescritoresGlobal tbody').innerHTML = '<tr><td colspan="10" style="text-align:center; background:#fff; padding:1.5rem;">Sem dados para os filtros selecionados.</td></tr>';
+                if(chartsInstance.ranking) chartsInstance.ranking.destroy();
+                return;
+            }
+
+            let descMap = {};
+            dataView.forEach(d => {
+                if (!descMap[d.descritor]) descMap[d.descritor] = { soma: 0, qtd: 0, disciplina: d.disciplina, itemRef: d };
+                descMap[d.descritor].soma += d.percentual_acertos;
+                descMap[d.descritor].qtd += 1;
+            });
+
+            let rankingArray = Object.keys(descMap).map(desc => ({
+                descritor: desc, mediaPct: descMap[desc].soma / descMap[desc].qtd,
+                disciplina: descMap[desc].disciplina, itemRef: descMap[desc].itemRef
+            })).sort((a, b) => a.mediaPct - b.mediaPct);
+
+            let mediaGeral = dataView.reduce((a, b) => a + b.percentual_acertos, 0) / dataView.length;
+
+            document.getElementById('kpi-desc-critico').textContent = rankingArray[0].descritor;
+            document.getElementById('kpi-desc-facil').textContent = rankingArray[rankingArray.length - 1].descritor;
+            document.getElementById('kpi-media-geral').textContent = `${mediaGeral.toFixed(1).replace('.',',')}%`;
+
+            let descritoresUnicos = [...new Set(dataView.map(d => d.descritor))];
+            let colunas = [...new Set(dataView.map(d => d.serie))].sort();
+
+            let tabelaMatriz = descritoresUnicos.map(desc => {
+                let linhaObj = { descritor: desc, valores: {} };
+                colunas.forEach(col => {
+                    let itens = dataView.filter(d => d.descritor === desc && d.serie === col);
+                    if (itens.length > 0) {
+                        let pctMed = itens.reduce((a, b) => a + b.percentual_acertos, 0) / itens.length;
+                        linhaObj.valores[col] = { pctMed, itemRef: itens[0] };
+                    } else { linhaObj.valores[col] = null; }
+                });
+                return linhaObj;
+            });
+
+            ordenarMatrizComNulosNoFim(tabelaMatriz, colunas, sortGlobalCol, sortGlobalAsc);
+
+            const thead = document.querySelector('#tabelaDescritoresGlobal thead');
+            let theadHTML = `<tr><th onclick="ordenarTabelaGlobal(0)" class="${sortGlobalCol === 0 ? (sortGlobalAsc ? 'sort-asc' : 'sort-desc') : ''}" style="max-width:340px;">Descritor / Habilidade</th>`;
+            colunas.forEach((col, idx) => {
+                let colClass = sortGlobalCol === (idx + 1) ? (sortGlobalAsc ? 'sort-asc' : 'sort-desc') : '';
+                theadHTML += `<th onclick="ordenarTabelaGlobal(${idx + 1})" class="${colClass}">${col}</th>`;
+            });
+            theadHTML += `</tr>`; thead.innerHTML = theadHTML;
+
+            const tbody = document.querySelector('#tabelaDescritoresGlobal tbody');
+            let tbodyHTML = '';
+
+            tabelaMatriz.forEach(row => {
+                let emRef = Object.values(row.valores).find(v => v !== null);
+                let itemRefObj = emRef ? emRef.itemRef : { disciplina: 'N/A', serie: 'N/A', bimestre: 'Geral', aula_url: 'N/A', questao_url: 'N/A' };
+                let avgRowPct = emRef ? emRef.pctMed : 0;
+
+                let escDescritor = String(row.descritor).replace(/'/g, "\\'");
+                let escDisc = String(itemRefObj.disciplina).replace(/'/g, "\\'");
+                let escSerie = String(itemRefObj.serie).replace(/'/g, "\\'");
+                let escBim = String(itemRefObj.bimestre).replace(/'/g, "\\'");
+                let escAula = String(itemRefObj.aula_url).replace(/'/g, "\\'");
+                let escQuestao = String(itemRefObj.questao_url).replace(/'/g, "\\'");
+
+                tbodyHTML += `<tr><td class="td-descritor" title="${row.descritor}" onclick="abrirModalDescritor('${escDescritor}', ${avgRowPct}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${row.descritor}</td>`;
+                
+                colunas.forEach(col => {
+                    let cellData = row.valores[col];
+                    if (cellData) {
+                        let infoClass = getClassificacaoAcertos(cellData.pctMed);
+                        let itemCell = cellData.itemRef;
+                        let escCellAula = String(itemCell.aula_url).replace(/'/g, "\\'");
+                        let escCellQuestao = String(itemCell.questao_url).replace(/'/g, "\\'");
+
+                        tbodyHTML += `<td class="cell-perf ${infoClass.cellClass}" onclick="abrirModalDescritor('${escDescritor}', ${cellData.pctMed}, '${escDisc}', '${col}', '${escBim}', '${escCellAula}', '${escCellQuestao}')">${cellData.pctMed.toFixed(1).replace('.',',')}%</td>`;
+                    } else { tbodyHTML += `<td style="color:var(--muted); background:#ffffff;">-</td>`; }
+                });
+                tbodyHTML += `</tr>`;
+            });
+            tbody.innerHTML = tbodyHTML;
+
+            if(chartsInstance.ranking) chartsInstance.ranking.destroy();
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+            let topChart = rankingArray.slice(0, 15);
+            chartsInstance.ranking = new Chart(document.getElementById('graficoRankingDescritores').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: topChart.map(d => d.descritor.length > 22 ? d.descritor.substring(0, 20) + '...' : d.descritor),
+                    datasets: [{
+                        label: '% de Acertos', data: topChart.map(d => d.mediaPct),
+                        backgroundColor: topChart.map(d => d.mediaPct < 50 ? '#fca5a5' : (d.mediaPct < 65 ? '#fde047' : '#059669')),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { y: { title: { display: true, text: '% Acertos Médio', font: {weight: 'bold'} }, min: 0, max: 100 }, x: { grid: { display: false } } }
+                }
+            });
+        }
+
+        // ORDENAÇÃO E LÓGICA DA ABA VISÃO POR BIMESTRE
+        window.ordenarTabelaBimestre = (colIndex) => {
+            if (sortBimCol === colIndex) sortBimAsc = !sortBimAsc;
+            else { sortBimCol = colIndex; sortBimAsc = true; }
+            processarVisaoBimestre();
+        };
+
+        window.processarVisaoBimestre = () => {
+            if (!globalData.length) return;
+
+            const bimsSelecionados = getSelectedCheckboxes('bimestre_aba');
+            const seriesSelecionadas = getSelectedCheckboxes('serie_bimestre');
+            const discSelecionada = componenteAtualSelecionado;
+
+            let dataView = globalData;
+            if (bimsSelecionados.length > 0) dataView = dataView.filter(d => bimsSelecionados.includes(d.bimestre));
+            if (seriesSelecionadas.length > 0) dataView = dataView.filter(d => seriesSelecionadas.includes(d.serie));
+            if (discSelecionada !== 'TODAS') dataView = dataView.filter(d => d.disciplina.toLowerCase().includes(discSelecionada.toLowerCase()));
+
+            const thead = document.querySelector('#tabelaDescritoresBimestre thead');
+            const tbody = document.querySelector('#tabelaDescritoresBimestre tbody');
+
+            if (dataView.length === 0) {
+                thead.innerHTML = '';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; background:#fff; padding:1.5rem;">Sem dados para os filtros selecionados.</td></tr>';
+                return;
+            }
+
+            let descritoresUnicos = [...new Set(dataView.map(d => d.descritor))];
+            let colunasBim = ['1º Bimestre', '2º Bimestre', '3º Bimestre', '4º Bimestre'];
+            if (bimsSelecionados.length > 0) colunasBim = colunasBim.filter(b => bimsSelecionados.includes(b));
+
+            let tabelaMatriz = descritoresUnicos.map(desc => {
+                let linhaObj = { descritor: desc, valores: {} };
+                colunasBim.forEach(col => {
+                    let itens = dataView.filter(d => d.descritor === desc && d.bimestre === col);
+                    if (itens.length > 0) {
+                        let pctMed = itens.reduce((a, b) => a + b.percentual_acertos, 0) / itens.length;
+                        linhaObj.valores[col] = { pctMed, itemRef: itens[0] };
+                    } else { linhaObj.valores[col] = null; }
+                });
+                return linhaObj;
+            });
+
+            ordenarMatrizComNulosNoFim(tabelaMatriz, colunasBim, sortBimCol, sortBimAsc);
+
+            let theadHTML = `<tr><th onclick="ordenarTabelaBimestre(0)" class="${sortBimCol === 0 ? (sortBimAsc ? 'sort-asc' : 'sort-desc') : ''}" style="max-width:340px;">Descritor / Habilidade</th>`;
+            colunasBim.forEach((col, idx) => {
+                let colClass = sortBimCol === (idx + 1) ? (sortBimAsc ? 'sort-asc' : 'sort-desc') : '';
+                theadHTML += `<th onclick="ordenarTabelaBimestre(${idx + 1})" class="${colClass}">${col}</th>`;
+            });
+            theadHTML += `</tr>`; thead.innerHTML = theadHTML;
+
+            let tbodyHTML = '';
+            tabelaMatriz.forEach(row => {
+                let emRef = Object.values(row.valores).find(v => v !== null);
+                let itemRefObj = emRef ? emRef.itemRef : { disciplina: 'N/A', serie: 'N/A', bimestre: 'Geral', aula_url: 'N/A', questao_url: 'N/A' };
+                let avgRowPct = emRef ? emRef.pctMed : 0;
+
+                let escDescritor = String(row.descritor).replace(/'/g, "\\'");
+                let escDisc = String(itemRefObj.disciplina).replace(/'/g, "\\'");
+                let escSerie = String(itemRefObj.serie).replace(/'/g, "\\'");
+                let escBim = String(itemRefObj.bimestre).replace(/'/g, "\\'");
+                let escAula = String(itemRefObj.aula_url).replace(/'/g, "\\'");
+                let escQuestao = String(itemRefObj.questao_url).replace(/'/g, "\\'");
+
+                tbodyHTML += `<tr><td class="td-descritor" title="${row.descritor}" onclick="abrirModalDescritor('${escDescritor}', ${avgRowPct}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${row.descritor}</td>`;
+                
+                colunasBim.forEach(col => {
+                    let cellData = row.valores[col];
+                    if (cellData) {
+                        let infoClass = getClassificacaoAcertos(cellData.pctMed);
+                        let itemCell = cellData.itemRef;
+                        let escCellAula = String(itemCell.aula_url).replace(/'/g, "\\'");
+                        let escCellQuestao = String(itemCell.questao_url).replace(/'/g, "\\'");
+
+                        tbodyHTML += `<td class="cell-perf ${infoClass.cellClass}" onclick="abrirModalDescritor('${escDescritor}', ${cellData.pctMed}, '${escDisc}', '${escSerie}', '${col}', '${escCellAula}', '${escCellQuestao}')">${cellData.pctMed.toFixed(1).replace('.',',')}%</td>`;
+                    } else { tbodyHTML += `<td style="color:var(--muted); background:#ffffff;">-</td>`; }
+                });
+                tbodyHTML += `</tr>`;
+            });
+            tbody.innerHTML = tbodyHTML;
+        };
+
+        // ORDENAÇÃO DA TABELA DETALHADA
+        window.ordenarTabelaDet = (colIndex) => {
+            if (sortDetCol === colIndex) sortDetAsc = !sortDetAsc;
+            else { sortDetCol = colIndex; sortDetAsc = true; }
+            processarEstatisticas();
+        };
+
+        window.processarEstatisticas = () => {
+            if (!globalData.length) return;
+
+            const selSerie = document.getElementById('filtro-serie-det').value;
+            const selComp = document.getElementById('filtro-comp-det').value;
+            const selBim = document.getElementById('filtro-bim-det').value;
+
+            let dados = globalData.filter(d => d.serie === selSerie);
+            if (selComp && selComp !== 'TODAS') dados = dados.filter(d => d.disciplina.toLowerCase().includes(selComp.toLowerCase()));
+            if (selBim !== 'TODOS') dados = dados.filter(d => d.bimestre === selBim);
+
+            const tbody = document.querySelector('#tabelaAnaliseDet tbody'); tbody.innerHTML = '';
+
+            if (dados.length === 0) {
+                document.getElementById('texto-leitura-executiva').textContent = 'Nenhum descritor encontrado para esta combinação de filtros.';
+                return;
+            }
+
+            let avgPct = dados.reduce((a, b) => a + b.percentual_acertos, 0) / dados.length;
+            document.getElementById('texto-leitura-executiva').textContent = `Para ${selSerie} (${selComp || 'Todas Disciplinas'}), os alunos obtiveram um percentual médio de acertos de ${avgPct.toFixed(1).replace('.',',')}% nas habilidades avaliadas.`;
+
+            dados.sort((a, b) => {
+                if (sortDetCol === 0) return sortDetAsc ? a.bimestre.localeCompare(b.bimestre) : b.bimestre.localeCompare(a.bimestre);
+                if (sortDetCol === 1) return sortDetAsc ? a.descritor.localeCompare(b.descritor) : b.descritor.localeCompare(a.descritor);
+                if (sortDetCol === 2) return sortDetAsc ? a.percentual_acertos - b.percentual_acertos : b.percentual_acertos - a.percentual_acertos;
+                return a.percentual_acertos - b.percentual_acertos;
+            });
+
+            const ths = document.querySelectorAll('#tabelaAnaliseDet thead th');
+            ths.forEach((th, idx) => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (idx === sortDetCol) th.classList.add(sortDetAsc ? 'sort-asc' : 'sort-desc');
+            });
+
+            dados.forEach(d => {
+                let infoClass = getClassificacaoAcertos(d.percentual_acertos);
+                let linkAula = d.aula_url && d.aula_url !== 'N/A' && d.aula_url.trim() !== '' ? `<a href="${d.aula_url}" target="_blank" class="link-btn">📖 Ver Aula</a>` : '-';
+                let linkQuestao = d.questao_url && d.questao_url !== 'N/A' && d.questao_url.trim() !== '' ? `<a href="${d.questao_url}" target="_blank" class="link-btn">📝 Ver Questão</a>` : '-';
+
+                let escDesc = String(d.descritor).replace(/'/g, "\\'");
+                let escDisc = String(d.disciplina).replace(/'/g, "\\'");
+                let escSerie = String(d.serie).replace(/'/g, "\\'");
+                let escBim = String(d.bimestre).replace(/'/g, "\\'");
+                let escAula = String(d.aula_url).replace(/'/g, "\\'");
+                let escQuestao = String(d.questao_url).replace(/'/g, "\\'");
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="background:#f8fafc; font-weight:700; color:var(--navy);">${d.bimestre}</td>
+                        <td class="td-descritor" title="${d.descritor}" onclick="abrirModalDescritor('${escDesc}', ${d.percentual_acertos}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${d.descritor}</td>
+                        <td class="cell-perf ${infoClass.cellClass}" onclick="abrirModalDescritor('${escDesc}', ${d.percentual_acertos}, '${escDisc}', '${escSerie}', '${escBim}', '${escAula}', '${escQuestao}')">${d.percentual_acertos.toFixed(1).replace('.',',')}%</td>
+                        <td style="background:#fff;">${linkAula}</td>
+                        <td style="background:#fff;">${linkQuestao}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.onload = async () => {
+            try {
+                if(!window.supabaseClient) return;
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if(session) { currentUser = session.user; await loadData(); }
+            } catch(e) {}
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Tarefas Escolares — URE Avaré</title>
+    <link rel="icon" type="image/png" href="./imagens/icone.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Geist+Mono:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --navy:    #0c1a35;
+            --navy2:   #142040;
+            --blue:    #1d4ed8;
+            --blue2:   #2563eb;
+            --emerald: #059669;
+            --amber:   #d97706;
+            --rose:    #e11d48;
+            --bg:      #f1f5fb;
+            --surface: #ffffff;
+            --surface2:#f8fafd;
+            --border:  #e4eaf3;
+            --border2: #c9d5e8;
+            --text:    #0d1829;
+            --muted:   #5a6e8a;
+            --light:   #8fa3bc;
+            --radius:  8px;
+            --radius2: 12px;
+            --shadow:  0 1px 2px rgba(0,0,0,.04), 0 4px 20px rgba(12,26,53,.06);
+            --grad-blue: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+            --grad-header: linear-gradient(160deg, #0c1a35 0%, #0f2a52 60%, #1a3d72 100%);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+        #loading-overlay { position: fixed; inset: 0; background: rgba(12,26,53,.88); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; flex-direction: column; z-index: 9999; gap: 1rem; }
+        .spinner { width: 36px; height: 36px; border: 2.5px solid rgba(255,255,255,.12); border-top-color: #60a5fa; border-radius: 50%; animation: spin .7s linear infinite; }
+        #loading-text { color: rgba(255,255,255,.8); font-size: .85rem; font-weight: 600; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #login-section { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: var(--grad-header); }
+        .login-box { background: rgba(255,255,255,.05); backdrop-filter: blur(28px); border: 1px solid rgba(255,255,255,.13); padding: 2.5rem 2rem; border-radius: 16px; width: 100%; max-width: 380px; box-shadow: 0 30px 60px rgba(0,0,0,.4); }
+        .login-title { color: #fff; font-size: 1.35rem; font-weight: 800; text-align: center; margin-bottom: .25rem; }
+        .login-sub { color: rgba(255,255,255,.45); font-size: .8rem; text-align: center; margin-bottom: 2rem; }
+        .input-group { margin-bottom: .9rem; }
+        .input-group label { display: block; font-size: .7rem; font-weight: 700; color: rgba(255,255,255,.5); margin-bottom: .35rem; text-transform: uppercase; }
+        .input-group input { width: 100%; padding: .7rem .9rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.11); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .9rem; outline: none; }
+        .login-btn { width: 100%; padding: .8rem; background: var(--grad-blue); border-radius: var(--radius); color: #fff; font-family: inherit; font-size: .9rem; font-weight: 700; border: none; cursor: pointer; margin-top: .4rem; }
+        #login-error { color: #fca5a5; font-size: .8rem; margin-top: .6rem; display: none; text-align: center; font-weight: 600; }
+
+        header { background: var(--grad-header); padding: .75rem 1.5rem; display: flex; align-items: center; gap: 1rem; position: sticky; top: 0; z-index: 200; border-bottom: 1px solid rgba(255,255,255,.06); }
+        .header-brand h1 { font-size: .9rem; font-weight: 800; color: #fff; line-height: 1.2; }
+        .header-brand span { font-size: .65rem; color: rgba(255,255,255,.4); font-weight: 700; text-transform: uppercase; }
+        .header-actions { display: flex; gap: .4rem; align-items: center; margin-left: auto; }
+        .btn-logout { background: transparent; color: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.15); padding: .35rem .75rem; border-radius: var(--radius); font-size: .75rem; font-weight: 700; cursor: pointer; }
+
+        .container { padding: 1.25rem 1.5rem; max-width: 1600px; margin: 0 auto; }
+
+        .view-tabs { display: flex; gap: .3rem; margin-bottom: 1rem; align-items: center; background: var(--surface); padding: .3rem .4rem; border-radius: var(--radius2); border: 1px solid var(--border); box-shadow: var(--shadow); width: fit-content; flex-wrap: wrap; }
+        .btn-toggle { padding: .45rem 1rem; border-radius: 99px; font-family: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; border: 1px solid transparent; transition: all .15s; background: transparent; color: var(--muted); }
+        .btn-toggle:hover { background: var(--bg); color: var(--navy); }
+        .btn-toggle.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+        .filters-wrapper { background: var(--surface); border-radius: var(--radius2); padding: 1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .6rem; align-items: end; }
+        .filter-item label { display: block; font-size: .7rem; font-weight: 800; color: var(--muted); margin-bottom: .25rem; text-transform: uppercase; }
+        .multi-select { position: relative; user-select: none; }
+        .select-display { padding: .5rem .75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: .82rem; color: var(--text); min-height: 38px; font-weight: 700; }
+        .select-options { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); max-height: 240px; overflow-y: auto; z-index: 100; display: none; box-shadow: var(--shadow); }
+        .select-options.show { display: block; }
+        .select-options label { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; cursor: pointer; font-size: .8rem; border-bottom: 1px solid var(--bg); font-weight: 600; }
+        .select-options label:hover { background: var(--bg); color: var(--blue); }
+        
+        .filter-item select { width: 100%; padding: .5rem .75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); font-size: .82rem; font-weight: 700; color: var(--text); outline: none; height: 38px; }
+        .btn-clear { background: transparent; border: 1px solid var(--border2); color: var(--muted); border-radius: var(--radius); padding: .5rem .75rem; font-size: .8rem; font-weight: 700; cursor: pointer; height: 38px; width: 100%; }
+
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .85rem; margin-bottom: 1.25rem; }
+        .card { background: var(--surface); border-radius: var(--radius2); padding: 1rem 1.1rem; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden; }
+        .card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--grad-blue); }
+        .card h3 { font-size: .65rem; font-weight: 800; color: var(--light); text-transform: uppercase; margin-bottom: .3rem; }
+        .card .value { font-size: 1.6rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; line-height: 1.1; }
+        .card .desc { font-size: .7rem; color: var(--muted); margin-top: .25rem; font-weight: 600; }
+
+        .chart-box { background: var(--surface); border-radius: var(--radius2); padding: 1rem 1.25rem; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 1.25rem; height: 380px; display: flex; flex-direction: column; }
+        .chart-header { margin-bottom: .75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
+        .chart-title { font-size: .88rem; font-weight: 800; color: var(--navy); }
+
+        .table-container { background: var(--surface); border-radius: var(--radius2); padding: 1rem 1.25rem; box-shadow: var(--shadow); border: 1px solid var(--border); overflow-x: auto; margin-bottom: 1.25rem; }
+        .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: .85rem; }
+        .table-title { font-size: .88rem; font-weight: 800; color: var(--navy); }
+        
+        table.heatmap { width: 100%; border-collapse: collapse; font-size: .78rem; }
+        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: .45rem .35rem; text-align: center; vertical-align: middle; white-space: nowrap; }
+        table.heatmap th { background: var(--navy); color: rgba(255,255,255,.9); font-size: .68rem; font-weight: 800; text-transform: uppercase; cursor: pointer; user-select: none; }
+        table.heatmap th:hover { background: var(--navy2); }
+        table.heatmap .row-header { text-align: left; background: var(--surface2); color: var(--text); font-weight: 800; padding-left: .6rem; }
+
+        .escola-link { color: var(--blue); cursor: pointer; text-decoration: underline; text-decoration-color: rgba(37,99,235,0.3); text-underline-offset: 3px; transition: color 0.15s; }
+        .escola-link:hover { color: var(--navy); text-decoration-color: var(--navy); }
+
+        .btn-excel { display: inline-flex; align-items: center; gap: .3rem; background: rgba(5,150,105,.1); color: #065f46; border: 1px solid rgba(5,150,105,.25); padding: .35rem .75rem; border-radius: 6px; font-family: inherit; font-size: .75rem; font-weight: 800; cursor: pointer; }
+
+        .bg-green { background: var(--emerald) !important; color: #fff !important; font-weight: 700; }
+        .bg-yellow { background: #fde047 !important; color: #713f12 !important; font-weight: 700; }
+        .bg-red { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
+        .bg-empty { background: var(--bg) !important; color: var(--light) !important; }
+
+        .val-pos { color: var(--emerald); font-weight: 800; font-family: 'Geist Mono', monospace; }
+        .val-neg { color: var(--rose); font-weight: 800; font-family: 'Geist Mono', monospace; }
+
+        .pagination-bar { display: flex; justify-content: space-between; align-items: center; margin-top: .75rem; padding-top: .5rem; border-top: 1px solid var(--border); font-size: .72rem; color: var(--muted); flex-wrap: wrap; gap: .4rem; }
+        .pagination-controls { display: flex; align-items: center; gap: .3rem; }
+        .btn-page { padding: .25rem .6rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--navy); font-weight: 700; cursor: pointer; font-size: .72rem; }
+        .btn-page:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-page:not(:disabled):hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+        .select-pageSize { padding: .2rem .35rem; border-radius: 4px; border: 1px solid var(--border); background: var(--surface2); font-size: .72rem; font-weight: 700; color: var(--navy); outline: none; }
+
+        /* MODAL COM GRÁFICO */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(12,26,53,0.85); backdrop-filter: blur(6px); display: none; justify-content: center; align-items: center; z-index: 9999; padding: 1rem; }
+        .modal-box { background: var(--surface); border-radius: 16px; width: 100%; max-width: 820px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.3); border: 1px solid var(--border); animation: modalFade 0.2s ease; }
+        @keyframes modalFade { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-header { background: var(--navy); color: #fff; padding: 1.1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { font-size: 1.1rem; font-weight: 800; }
+        .modal-close { background: transparent; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.8; }
+        .modal-close:hover { opacity: 1; }
+        .modal-body { padding: 1.5rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1.25rem; }
+        
+        .modal-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .75rem; }
+        .modal-kpi { background: var(--surface2); padding: .85rem; border-radius: var(--radius); border: 1px solid var(--border); text-align: center; }
+        .modal-kpi span { display: block; font-size: .65rem; font-weight: 800; color: var(--muted); text-transform: uppercase; margin-bottom: .2rem; }
+        .modal-kpi strong { font-size: 1.35rem; font-weight: 800; color: var(--navy); font-family: 'Geist Mono', monospace; }
+
+        .modal-chart-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; height: 280px; display: flex; flex-direction: column; }
+
+        #dashboard-section { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Carregando matriz de tarefas...</div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-section">
+        <div class="login-box">
+            <div class="login-title">Painel de Tarefas</div>
+            <div class="login-sub">Monitoramento de Engajamento e Qualidade</div>
+            <div class="input-group">
+                <label>E-mail</label>
+                <input type="email" id="email" placeholder="seu@email.com" onkeypress="if(event.key==='Enter')handleLogin()">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key==='Enter')handleLogin()">
+            </div>
+            <button class="login-btn" onclick="handleLogin()">Entrar no Painel</button>
+            <div id="login-error">Credenciais inválidas.</div>
+        </div>
+    </div>
+
+    <!-- PAINEL PRINCIPAL -->
+    <div id="dashboard-section">
+        <header>
+            <div class="header-brand">
+                <h1>Monitoramento de Tarefas Escolares</h1>
+                <span>Propostas, Realizadas e Índice de Qualidade</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-logout" onclick="history.back()">Voltar</button>
+                <button class="btn-logout" onclick="handleLogout()">Sair</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="view-tabs">
+                <button class="btn-toggle active" id="btn-view-escola" onclick="switchViewMode('escola')">Visão por Escola</button>
+                <button class="btn-toggle" id="btn-view-turma" onclick="switchViewMode('turma')">Visão por Turma</button>
+                <button class="btn-toggle" id="btn-view-atividades" onclick="switchViewMode('atividades')">Atividades (Propostas vs Realizadas)</button>
+            </div>
+
+            <div class="filters-wrapper">
+                <div class="filters-grid">
+                    <div class="filter-item">
+                        <label>Escola</label>
+                        <div class="multi-select" data-filter="escola">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Turma</label>
+                        <div class="multi-select" data-filter="turma">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Mês Referência</label>
+                        <div class="multi-select" data-filter="mes">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item" id="containerSelectMetric">
+                        <label>Métrica Exibida</label>
+                        <select id="selectMetric" onchange="renderDashboard()">
+                            <option value="indice_qualidade" selected>Índice de Qualidade (IQ %)</option>
+                            <option value="percentual_tarefas_realizadas">% Realização de Tarefas</option>
+                            <option value="percentual_acertos">% de Acertos</option>
+                            <option value="percentual_alunos_com_tarefas_realizadas">% Alunos Participantes</option>
+                            <option value="desvio_media_serie">Desvio IQ vs Média Série</option>
+                            <option value="desvio_mediana_serie">Desvio IQ vs Mediana Série</option>
+                        </select>
+                    </div>
+                    <div class="filter-item" style="display:flex;align-items:flex-end;">
+                        <button class="btn-clear" onclick="clearFilters()">✕ Limpar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARDS KPI -->
+            <div class="cards-grid">
+                <div class="card">
+                    <h3>Tarefas Propostas</h3>
+                    <div class="value" id="card-tarefas-propostas">0</div>
+                    <div class="desc">Volume total enviado</div>
+                </div>
+                <div class="card">
+                    <h3>Realizadas (No Prazo)</h3>
+                    <div class="value" id="card-tarefas-prazo">0</div>
+                    <div class="desc">Entregas dentro do prazo</div>
+                </div>
+                <div class="card">
+                    <h3>Índice de Qualidade (IQ)</h3>
+                    <div class="value" id="card-iq-medio">0.0%</div>
+                    <div class="desc">Qualidade geral das entregas</div>
+                </div>
+                <div class="card">
+                    <h3>Matrículas Ativas (Último Retrato)</h3>
+                    <div class="value" id="card-total-matriculas">0</div>
+                    <div class="desc">Alunos ativos no escopo</div>
+                </div>
+            </div>
+
+            <!-- GRÁFICO DE EVOLUÇÃO -->
+            <div class="chart-box">
+                <div class="chart-header">
+                    <div class="chart-title" id="chart-title">Evolução Semanal</div>
+                    <!-- Controles específicos para a aba de Atividades -->
+                    <div id="atividades-chart-controls" style="display: none; align-items: center; gap: .75rem;">
+                        <div style="display: flex; align-items: center; gap: .4rem;">
+                            <label style="font-size: .7rem; font-weight: 800; color: var(--muted); text-transform: uppercase;">Entidade:</label>
+                            <select id="selectEntidadeAtividades" onchange="renderDashboard()" style="padding: .3rem .5rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: .78rem; font-weight: 700; background: var(--surface2); outline: none;"></select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: .4rem;">
+                            <label style="font-size: .7rem; font-weight: 800; color: var(--muted); text-transform: uppercase;">Índice:</label>
+                            <select id="selectIndiceAtividades" onchange="renderDashboard()" style="padding: .3rem .5rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: .78rem; font-weight: 700; background: var(--surface2); outline: none;">
+                                <option value="tarefas_propostas" selected>Tarefas Propostas</option>
+                                <option value="tarefas_realizadas_prazo">Tarefas no Prazo</option>
+                                <option value="tarefas_realizadas_fora_prazo">Tarefas Fora do Prazo</option>
+                                <option value="tarefas_incompletas_realizadas">Tarefas Incompletas</option>
+                                <option value="tarefas_nao_realizadas">Tarefas Não Realizadas</option>
+                                <option value="percentual_tarefas_realizadas">% Realização</option>
+                                <option value="percentual_acertos">% de Acertos</option>
+                                <option value="indice_qualidade">Índice de Qualidade (IQ %)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div style="flex: 1; position: relative;"><canvas id="chartEvolucao"></canvas></div>
+            </div>
+
+            <!-- TABELA MATRIZ -->
+            <div class="table-container" id="containerMatrizTabela">
+                <div class="table-toolbar">
+                    <div class="table-title" id="table-title-context">Matriz Semanal de Tarefas</div>
+                    <button class="btn-excel" onclick="exportarExcel()">📊 Exportar Excel</button>
+                </div>
+                
+                <table class="heatmap" id="tabelaTarefas">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+
+                <div class="pagination-bar">
+                    <div>
+                        <span>Exibir </span>
+                        <select class="select-pageSize" onchange="alterarTamanhoPagina(this.value)">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100" selected>100</option>
+                            <option value="999999">Todos</option>
+                        </select>
+                        <span id="info-paginacao" style="margin-left: 8px; font-weight: 700;">-</span>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn-page" id="btn-prev" onclick="mudarPagina(-1)">◀ Anterior</button>
+                        <span id="label-paginacao" style="font-weight: 700;">1 / 1</span>
+                        <button class="btn-page" id="btn-next" onclick="mudarPagina(1)">Próximo ▶</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL COM GRÁFICO DA ESCOLA -->
+    <div id="modal-insights" class="modal-overlay" onclick="if(event.target===this)fecharModalInsights()">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="modal-escola-nome">Relatório da Escola</h2>
+                <button class="modal-close" onclick="fecharModalInsights()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-kpi-grid">
+                    <div class="modal-kpi">
+                        <span>Turmas Ativas</span>
+                        <strong id="m-kpi-turmas">0</strong>
+                    </div>
+                    <div class="modal-kpi">
+                        <span>Total Alunos</span>
+                        <strong id="m-kpi-alunos">0</strong>
+                    </div>
+                    <div class="modal-kpi">
+                        <span>IQ Médio Geral</span>
+                        <strong id="m-kpi-iq">0.0%</strong>
+                    </div>
+                    <div class="modal-kpi">
+                        <span>Entregas no Prazo</span>
+                        <strong id="m-kpi-prazo">0.0%</strong>
+                    </div>
+                    <div class="modal-kpi">
+                        <span>% de Acertos</span>
+                        <strong id="m-kpi-acertos">0.0%</strong>
+                    </div>
+                </div>
+
+                <div class="modal-chart-box">
+                    <div style="font-weight: 800; font-size: .82rem; color: var(--navy); margin-bottom: .5rem;">Evolução Histórica do Índice de Qualidade (IQ %)</div>
+                    <div style="flex: 1; position: relative;"><canvas id="chartModalEscola"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kmplasayzhtjoelxnvif.supabase.co';
+        const supabaseKey = 'sb_publishable_24GErsvesucjCS2GKZkBUQ_8xMMXuoh';
+
+        let supabaseClient = null;
+        if (window.supabase) { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); }
+
+        let globalData = [];
+        let filteredData = [];
+        let currentView = 'escola';
+
+        let sortColumn = 'rotulo';
+        let sortDirection = 'asc';
+
+        let currentPage = 1;
+        let pageSize = 100;
+        let chartInstance = null;
+        let modalChartInstance = null;
+
+        const mesesNomes = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        const PALETA = ['#1d4ed8', '#059669', '#d97706', '#e11d48', '#6d28d9', '#0284c7', '#0f766e', '#ca8a04', '#be123c'];
+
+        function showLoading(text='Carregando...') {
+            document.getElementById('loading-text').textContent = text;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+        async function handleLogin() {
+            const email = document.getElementById('email').value.trim(), pass = document.getElementById('password').value;
+            const err = document.getElementById('login-error'); err.style.display = 'none';
+            if (!email || !pass) { err.style.display = 'block'; err.textContent = 'Preencha os campos.'; return; }
+            try {
+                showLoading('Autenticando...');
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                if (error) throw error;
+                initDashboard();
+            } catch (e) { hideLoading(); err.style.display = 'block'; err.textContent = 'Erro: ' + e.message; }
+        }
+
+        async function handleLogout() {
+            showLoading('Saindo...'); await supabaseClient.auth.signOut();
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'flex'; hideLoading();
+        }
+
+        function extrairAnoSerie(nome) {
+            if (!nome) return "Outros";
+            const upper = String(nome).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const m = upper.match(/([1-9])([ºª°OA]?\s*(ANO|SERIE)?)/);
+            if (m) {
+                const num = m[1];
+                if (upper.includes('SERIE') || (upper.includes('EM') && num <= 3)) {
+                    return `${num}ª SÉRIE`;
+                }
+                return `${num}º ANO`;
+            }
+            return "Outros";
+        }
+
+        function normalizarPercentual(val) {
+            let num = parseFloat(val) || 0;
+            if (num > 0 && num <= 1.0) num *= 100;
+            return num;
+        }
+
+        async function fetchAllData(table) {
+            let all = [], limit = 1000, start = 0, hasMore = true;
+            while (hasMore) {
+                const { data, error } = await supabaseClient.from(table).select('*').range(start, start + limit - 1);
+                if (error) throw error;
+                all.push(...data);
+                if (data.length < limit) hasMore = false; else start += limit;
+            }
+            return all;
+        }
+
+        async function loadDatabase() {
+            showLoading('Carregando tarefas e turmas...');
+            try {
+                const [tarefas, turmas, escolas] = await Promise.all([
+                    fetchAllData('tarefas_turma'),
+                    fetchAllData('turmas'),
+                    fetchAllData('escolas')
+                ]);
+
+                const escolasMap = new Map();
+                escolas.forEach(e => {
+                    const key = String(e.id_escola || e.id || '').trim();
+                    if (key) escolasMap.set(key, e.nome_escola || e.escola || e.nome);
+                });
+
+                const turmasMap = new Map();
+                turmas.forEach(t => {
+                    const key = String(t.id || '').trim();
+                    const idEscolaStr = String(t.id_escola || '').trim();
+                    const nomeEscola = escolasMap.get(idEscolaStr) || t.escola || 'Escola Não Identificada';
+                    if (key) {
+                        turmasMap.set(key, {
+                            nomeLimpo: t.nome_limpo || t.turma || 'Turma Não Identificada',
+                            escola: nomeEscola,
+                            anoSerie: extrairAnoSerie(t.nome_limpo || t.turma)
+                        });
+                    }
+                });
+
+                globalData = tarefas.map(t => {
+                    const idTurmaStr = String(t.id_turma || '').trim();
+                    const infoTurma = turmasMap.get(idTurmaStr) || {};
+                    const mesNum = parseInt(t.mes_referencia) || 0;
+
+                    const nomeEscola = infoTurma.escola || 'Escola Não Identificada';
+                    const nomeTurma = infoTurma.nomeLimpo || t.turma || 'Turma Não Identificada';
+                    const anoSerie = infoTurma.anoSerie || extrairAnoSerie(t.turma);
+
+                    const iq = normalizarPercentual(t.indice_qualidade);
+                    const pctRealizadas = normalizarPercentual(t.percentual_tarefas_realizadas);
+                    const pctAcertos = normalizarPercentual(t.percentual_acertos);
+                    const pctAlunos = normalizarPercentual(t.percentual_alunos_com_tarefas_realizadas);
+
+                    const codigoIntervalo = String(t.codigo_intervalo || '').trim();
+                    const numSemana = parseInt(codigoIntervalo.replace(/\D/g, '')) || 0;
+                    const semanaRotulo = codigoIntervalo ? `Sem. ${codigoIntervalo}` : (t.data_inicio ? `${t.data_inicio}` : 'Semana');
+
+                    return {
+                        id_turma: idTurmaStr,
+                        turma: nomeTurma,
+                        escola: nomeEscola,
+                        anoSerie: anoSerie,
+                        mesNum: mesNum,
+                        mesNome: mesesNomes[mesNum] || `Mês ${mesNum}`,
+                        codigo_intervalo: codigoIntervalo,
+                        numSemana: numSemana,
+                        semanaRotulo: semanaRotulo,
+                        matriculas_ativas: parseInt(t.matriculas_ativas) || 0,
+                        alunos_com_tarefas_realizadas: parseFloat(t.alunos_com_tarefas_realizadas) || 0,
+                        percentual_alunos_com_tarefas_realizadas: pctAlunos,
+                        tarefas_propostas: parseFloat(t.tarefas_propostas) || 0,
+                        tarefas_realizadas_prazo: parseFloat(t.tarefas_realizadas_prazo) || 0,
+                        tarefas_realizadas_fora_prazo: parseFloat(t.tarefas_realizadas_fora_prazo) || 0,
+                        tarefas_incompletas_realizadas: parseFloat(t.tarefas_incompletas_realizadas) || 0,
+                        tarefas_nao_realizadas: parseFloat(t.tarefas_nao_realizadas) || 0,
+                        percentual_tarefas_realizadas: pctRealizadas,
+                        percentual_acertos: pctAcertos,
+                        indice_qualidade: iq
+                    };
+                });
+
+                updateAllFiltersOptions();
+                applyFilters();
+                hideLoading();
+            } catch (e) {
+                hideLoading();
+                alert('Falha ao carregar banco de tarefas: ' + e.message);
+            }
+        }
+
+        function switchViewMode(mode) {
+            currentView = mode;
+            document.getElementById('btn-view-escola').classList.toggle('active', mode === 'escola');
+            document.getElementById('btn-view-turma').classList.toggle('active', mode === 'turma');
+            document.getElementById('btn-view-atividades').classList.toggle('active', mode === 'atividades');
+            
+            document.getElementById('containerSelectMetric').style.display = mode === 'atividades' ? 'none' : 'block';
+            document.getElementById('atividades-chart-controls').style.display = mode === 'atividades' ? 'flex' : 'none';
+            document.getElementById('containerMatrizTabela').style.display = mode === 'atividades' ? 'none' : 'block';
+
+            if (mode === 'atividades') {
+                atualizarOpcoesDropdownAtividades();
+            }
+
+            currentPage = 1;
+            renderDashboard();
+        }
+
+        function atualizarOpcoesDropdownAtividades() {
+            const selectEnt = document.getElementById('selectEntidadeAtividades');
+            const entidadesSet = new Set();
+            filteredData.forEach(d => {
+                const rot = currentView === 'escola' ? d.escola : d.turma;
+                entidadesSet.add(rot);
+            });
+
+            const atual = selectEnt.value;
+            selectEnt.innerHTML = '<option value="TODAS">Todas (Consolidado URE)</option>';
+            Array.from(entidadesSet).sort().forEach(ent => {
+                selectEnt.innerHTML += `<option value="${ent.replace(/"/g, '&quot;')}">${ent}</option>`;
+            });
+            if (entidadesSet.has(atual) || atual === 'TODAS') selectEnt.value = atual;
+        }
+
+        function toggleDropdown(el) {
+            const opts = el.nextElementSibling;
+            const showing = opts.classList.contains('show');
+            document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            if (!showing) opts.classList.add('show');
+        }
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.multi-select')) {
+                document.querySelectorAll('.select-options.show').forEach(o => o.classList.remove('show'));
+            }
+        });
+
+        function updateMultiSelectDisplay(k) {
+            const c = document.querySelector(`.multi-select[data-filter="${k}"]`); if (!c) return;
+            const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
+            const span = c.querySelector('.select-display span');
+            span.textContent = cbs.length === 0 ? 'Todas/Todos' : cbs.length === 1 ? cbs[0].value : `${cbs.length} sel.`;
+        }
+
+        function getSelectedCheckboxes(k) {
+            return Array.from(document.querySelectorAll(`.multi-select[data-filter="${k}"] input[type="checkbox"]:checked`)).map(cb => cb.value);
+        }
+
+        function updateAllFiltersOptions() {
+            const sEsc = getSelectedCheckboxes('escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
+            const setEsc = new Set(), setTur = new Set(), setMes = new Set();
+
+            globalData.forEach(d => {
+                const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
+                const mTur = sTur.length === 0 || sTur.includes(d.turma);
+                const mMes = sMes.length === 0 || sMes.includes(d.mesNome);
+
+                if (mTur && mMes && d.escola) setEsc.add(d.escola);
+                if (mEsc && mMes && d.turma) setTur.add(d.turma);
+                if (mEsc && mTur && d.mesNome) setMes.add(d.mesNome);
+            });
+
+            rebuildDropdown('escola', Array.from(setEsc).sort(), sEsc);
+            rebuildDropdown('turma', Array.from(setTur).sort(), sTur);
+            rebuildDropdown('mes', Array.from(setMes).sort((a,b) => mesesNomes.indexOf(a) - mesesNomes.indexOf(b)), sMes);
+        }
+
+        function rebuildDropdown(filterKey, availableValues, currentSelected) {
+            const container = document.querySelector(`.multi-select[data-filter="${filterKey}"] .select-options`);
+            if (!container) return;
+            container.innerHTML = '';
+            availableValues.forEach(val => {
+                const isChecked = currentSelected.includes(val);
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${val.replace(/"/g,'&quot;')}" ${isChecked ? 'checked' : ''} onchange="updateMultiSelectDisplay('${filterKey}'); updateAllFiltersOptions(); applyFilters();"> ${val}`;
+                container.appendChild(label);
+            });
+            updateMultiSelectDisplay(filterKey);
+        }
+
+        function clearFilters() {
+            document.querySelectorAll('.multi-select input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateAllFiltersOptions();
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const sEsc = getSelectedCheckboxes('escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
+
+            filteredData = globalData.filter(d => {
+                const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
+                const mTur = sTur.length === 0 || sTur.includes(d.turma);
+                const mMes = sMes.length === 0 || sMes.includes(d.mesNome);
+                return mEsc && mTur && mMes;
+            });
+
+            if (currentView === 'atividades') {
+                atualizarOpcoesDropdownAtividades();
+            }
+
+            currentPage = 1;
+            renderDashboard();
+        }
+
+        function getFarolColor(metric, val) {
+            if (val === null || val === undefined) return 'bg-empty';
+            if (metric.includes('desvio')) return ''; 
+
+            let num = val;
+            if (num < 40.0) return 'bg-red';
+            if (num < 60.0) return 'bg-yellow';
+            return 'bg-green';
+        }
+
+        function formatVal(metric, val) {
+            if (val === null || val === undefined || isNaN(val)) return '-';
+            if (metric.includes('desvio')) {
+                let sinal = val > 0 ? '+' : '';
+                return `${sinal}${val.toFixed(1).replace('.', ',')}%`;
+            }
+            if (metric.includes('percentual') || metric.includes('acertos') || metric.includes('qualidade') || (metric.includes('indice') && !metric.includes('qualidade'))) {
+                return `${val.toFixed(1).replace('.', ',')}%`;
+            }
+            return Math.round(val).toLocaleString('pt-BR');
+        }
+
+        function toggleSort(col) {
+            if (sortColumn === col) { sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; }
+            else { sortColumn = col; sortDirection = 'asc'; }
+            renderDashboard();
+        }
+
+        function mudarPagina(delta) { currentPage += delta; renderDashboard(); }
+        function alterarTamanhoPagina(val) { pageSize = parseInt(val, 10); currentPage = 1; renderDashboard(); }
+
+        function calcularMediana(arr) {
+            if (!arr.length) return 0;
+            const s = [...arr].sort((a,b) => a - b);
+            const m = Math.floor(s.length / 2);
+            return s.length % 2 !== 0 ? s[m] : (s[m - 1] + s[m]) / 2;
+        }
+
+        function abrirModalInsights(nomeEscola) {
+            const dadosEscola = globalData.filter(d => d.escola.toLowerCase().trim() === nomeEscola.toLowerCase().trim());
+            if (dadosEscola.length === 0) return;
+
+            document.getElementById('modal-escola-nome').textContent = nomeEscola;
+
+            const turmasUnicas = new Set(dadosEscola.map(d => d.id_turma));
+            document.getElementById('m-kpi-turmas').textContent = turmasUnicas.size;
+
+            const ultimosRetratos = new Map();
+            dadosEscola.forEach(d => {
+                if (!ultimosRetratos.has(d.id_turma) || d.numSemana >= ultimosRetratos.get(d.id_turma).numSemana) {
+                    ultimosRetratos.set(d.id_turma, d);
+                }
+            });
+
+            let totalAlunos = 0;
+            ultimosRetratos.forEach(d => totalAlunos += d.matriculas_ativas);
+            document.getElementById('m-kpi-alunos').textContent = totalAlunos.toLocaleString('pt-BR');
+
+            let sumIQ = 0, sumPrazo = 0, sumPropostas = 0, sumAcertos = 0, sumWeight = 0;
+            dadosEscola.forEach(d => {
+                let w = d.matriculas_ativas || 1;
+                sumIQ += d.indice_qualidade * w;
+                sumAcertos += d.percentual_acertos * w;
+                sumPrazo += d.tarefas_realizadas_prazo;
+                sumPropostas += d.tarefas_propostas;
+                sumWeight += w;
+            });
+
+            const iqMedio = sumWeight > 0 ? sumIQ / sumWeight : 0;
+            const pctPrazo = sumPropostas > 0 ? (sumPrazo / sumPropostas) * 100 : 0;
+            const acertosMedio = sumWeight > 0 ? sumAcertos / sumWeight : 0;
+
+            document.getElementById('m-kpi-iq').textContent = `${iqMedio.toFixed(1).replace('.', ',')}%`;
+            document.getElementById('m-kpi-prazo').textContent = `${pctPrazo.toFixed(1).replace('.', ',')}%`;
+            document.getElementById('m-kpi-acertos').textContent = `${acertosMedio.toFixed(1).replace('.', ',')}%`;
+
+            document.getElementById('modal-insights').style.display = 'flex';
+
+            const semanasEscolaMap = new Map();
+            dadosEscola.forEach(d => {
+                const sKey = d.codigo_intervalo || d.semanaRotulo;
+                if (!semanasEscolaMap.has(sKey)) {
+                    semanasEscolaMap.set(sKey, { sem: sKey, sumIQ: 0, weight: 0 });
+                }
+                const item = semanasEscolaMap.get(sKey);
+                let w = d.matriculas_ativas || 1;
+                item.sumIQ += d.indice_qualidade * w;
+                item.weight += w;
+            });
+
+            const semanasOrdModal = Array.from(semanasEscolaMap.values()).sort((a,b) => (parseInt(a.sem.replace(/\D/g, '')) || 0) - (parseInt(b.sem.replace(/\D/g, '')) || 0));
+            const labelsModal = semanasOrdModal.map(s => s.sem.includes('Sem') ? s.sem : `Sem. ${s.sem}`);
+            const dataModal = semanasOrdModal.map(s => s.weight > 0 ? parseFloat((s.sumIQ / s.weight).toFixed(1)) : 0);
+
+            const ctxModal = document.getElementById('chartModalEscola').getContext('2d');
+            if (modalChartInstance) modalChartInstance.destroy();
+
+            modalChartInstance = new Chart(ctxModal, {
+                type: 'line',
+                data: {
+                    labels: labelsModal,
+                    datasets: [{
+                        label: 'Índice de Qualidade (%)',
+                        data: dataModal,
+                        borderColor: '#1d4ed8',
+                        backgroundColor: 'rgba(29, 78, 216, 0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.04)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function fecharModalInsights() {
+            document.getElementById('modal-insights').style.display = 'none';
+        }
+
+        function renderDashboard() {
+            if (filteredData.length === 0) {
+                document.getElementById('card-tarefas-propostas').textContent = '0';
+                document.getElementById('card-tarefas-prazo').textContent = '0';
+                document.getElementById('card-iq-medio').textContent = '0.0%';
+                document.getElementById('card-total-matriculas').textContent = '0';
+                document.querySelector('#tabelaTarefas tbody').innerHTML = '<tr><td colspan="15" style="padding:1.5rem; text-align:center;">Nenhum registro encontrado.</td></tr>';
+                if (chartInstance) chartInstance.destroy();
+                return;
+            }
+
+            const activeMetric = currentView === 'atividades' ? 'atividades' : document.getElementById('selectMetric').value;
+
+            const semanasSet = new Set(filteredData.map(d => d.codigo_intervalo || d.semanaRotulo));
+            const semanasOrdenadas = Array.from(semanasSet).sort((a, b) => {
+                const numA = parseInt(String(a).replace(/\D/g, '')) || 0;
+                const numB = parseInt(String(b).replace(/\D/g, '')) || 0;
+                return numA - numB;
+            });
+
+            const ultimasMatriculasPorTurma = new Map();
+            filteredData.forEach(d => {
+                const turKey = d.id_turma;
+                if (!ultimasMatriculasPorTurma.has(turKey)) {
+                    ultimasMatriculasPorTurma.set(turKey, d);
+                } else {
+                    const existente = ultimasMatriculasPorTurma.get(turKey);
+                    if (d.numSemana >= existente.numSemana || d.mesNum >= existente.mesNum) {
+                        ultimasMatriculasPorTurma.set(turKey, d);
+                    }
+                }
+            });
+
+            let sumMatriculasGlobal = 0;
+            ultimasMatriculasPorTurma.forEach(d => sumMatriculasGlobal += d.matriculas_ativas);
+
+            const ultimasMatriculasPorEscola = new Map();
+            ultimasMatriculasPorTurma.forEach(d => {
+                const esc = d.escola;
+                ultimasMatriculasPorEscola.set(esc, (ultimasMatriculasPorEscola.get(esc) || 0) + d.matriculas_ativas);
+            });
+
+            const estatsSemanaisURE = {};
+            semanasOrdenadas.forEach(semKey => {
+                const dadosSemana = filteredData.filter(d => (d.codigo_intervalo || d.semanaRotulo) === semKey);
+                let sumIQGlobal = 0, sumWeightGlobal = 0;
+                let arrIQGlobal = [];
+                let seriesGroup = {};
+
+                dadosSemana.forEach(d => {
+                    let w = d.matriculas_ativas || 1;
+                    sumIQGlobal += d.indice_qualidade * w;
+                    sumWeightGlobal += w;
+                    if (d.indice_qualidade > 0) arrIQGlobal.push(d.indice_qualidade);
+
+                    const sKey = d.anoSerie || 'Outros';
+                    if (!seriesGroup[sKey]) seriesGroup[sKey] = { sumIQ: 0, sumWeight: 0, arrIQ: [] };
+                    seriesGroup[sKey].sumIQ += d.indice_qualidade * w;
+                    seriesGroup[sKey].sumWeight += w;
+                    if (d.indice_qualidade > 0) seriesGroup[sKey].arrIQ.push(d.indice_qualidade);
+                });
+
+                const seriesEstats = {};
+                for (let sKey in seriesGroup) {
+                    const sg = seriesGroup[sKey];
+                    seriesEstats[sKey] = {
+                        media: sg.sumWeight > 0 ? sg.sumIQ / sg.sumWeight : 0,
+                        mediana: calcularMediana(sg.arrIQ)
+                    };
+                }
+
+                estatsSemanaisURE[semKey] = {
+                    mediaGeral: sumWeightGlobal > 0 ? sumIQGlobal / sumWeightGlobal : 0,
+                    medianaGeral: calcularMediana(arrIQGlobal),
+                    series: seriesEstats
+                };
+            });
+
+            const mapaMatriz = new Map();
+            let sumIQXMatGlobal = 0, sumTarefasProp = 0, sumTarefasPrazo = 0, sumMatriculasAcumuladas = 0;
+
+            filteredData.forEach(d => {
+                const key = currentView === 'escola' ? d.escola : (currentView === 'atividades' ? `${d.escola}___${d.turma}` : `${d.id_turma}___${d.turma}`);
+                const rotulo = currentView === 'escola' ? d.escola : d.turma;
+                const escolaPai = d.escola;
+                const anoSerie = d.anoSerie;
+                const semKey = d.codigo_intervalo || d.semanaRotulo;
+
+                if (!mapaMatriz.has(key)) {
+                    let matUltimoDado = 0;
+                    if (currentView === 'escola') {
+                        matUltimoDado = ultimasMatriculasPorEscola.get(d.escola) || 0;
+                    } else {
+                        matUltimoDado = ultimasMatriculasPorTurma.get(d.id_turma)?.matriculas_ativas || d.matriculas_ativas;
+                    }
+
+                    mapaMatriz.set(key, {
+                        key, rotulo, escolaPai, anoSerie,
+                        matriculas: matUltimoDado,
+                        semanasData: {},
+                        somaIQTotal: 0,
+                        somaPropostas: 0,
+                        somaPrazo: 0,
+                        somaForaPrazo: 0,
+                        somaNaoRealizadas: 0,
+                        somaMatriculasPeso: 0,
+                        qtdRegistros: 0
+                    });
+                }
+
+                const item = mapaMatriz.get(key);
+                let w = d.matriculas_ativas || 1;
+                item.somaIQTotal += d.indice_qualidade * w;
+                item.somaPropostas += d.tarefas_propostas;
+                item.somaPrazo += d.tarefas_realizadas_prazo;
+                item.somaForaPrazo += d.tarefas_realizadas_fora_prazo;
+                item.somaNaoRealizadas += d.tarefas_nao_realizadas;
+                item.somaMatriculasPeso += w;
+                item.qtdRegistros++;
+
+                if (!item.semanasData[semKey]) {
+                    item.semanasData[semKey] = { somaVal: 0, somaWeight: 0, qtd: 0, valIQ: 0, propostas: 0, prazo: 0, foraPrazo: 0, naoRealizadas: 0, acertosSoma: 0, realizadasSoma: 0, anoSerie: d.anoSerie };
+                }
+                const sObj = item.semanasData[semKey];
+                
+                let valM = 0;
+                if (activeMetric === 'atividades' || activeMetric === 'tarefas_propostas') valM = d.tarefas_propostas;
+                else if (activeMetric === 'indice_qualidade') valM = d.indice_qualidade;
+                else if (activeMetric === 'percentual_tarefas_realizadas') valM = d.percentual_tarefas_realizadas;
+                else if (activeMetric === 'percentual_acertos') valM = d.percentual_acertos;
+                else if (activeMetric === 'percentual_alunos_com_tarefas_realizadas') valM = d.percentual_alunos_com_tarefas_realizadas;
+                else valM = d[activeMetric] || 0;
+
+                sObj.somaVal += valM * w;
+                sObj.somaWeight += w;
+                sObj.valIQ = d.indice_qualidade;
+                sObj.propostas += d.tarefas_propostas;
+                sObj.prazo += d.tarefas_realizadas_prazo;
+                sObj.foraPrazo += d.tarefas_realizadas_fora_prazo;
+                sObj.naoRealizadas += d.tarefas_nao_realizadas;
+                sObj.acertosSoma += d.percentual_acertos * w;
+                sObj.realizadasSoma += d.percentual_tarefas_realizadas * w;
+                sObj.qtd++;
+
+                sumIQXMatGlobal += d.indice_qualidade * w;
+                sumTarefasProp += d.tarefas_propostas;
+                sumTarefasPrazo += d.tarefas_realizadas_prazo;
+                sumMatriculasAcumuladas += w;
+            });
+
+            // KPIs
+            document.getElementById('card-tarefas-propostas').textContent = Math.round(sumTarefasProp).toLocaleString('pt-BR');
+            document.getElementById('card-tarefas-prazo').textContent = Math.round(sumTarefasPrazo).toLocaleString('pt-BR');
+            document.getElementById('card-total-matriculas').textContent = sumMatriculasGlobal.toLocaleString('pt-BR');
+            const avgIQGlobal = sumMatriculasAcumuladas > 0 ? (sumIQXMatGlobal / sumMatriculasAcumuladas) : 0;
+            document.getElementById('card-iq-medio').textContent = `${avgIQGlobal.toFixed(1).replace('.', ',')}%`;
+
+            let linhas = Array.from(mapaMatriz.values()).map(e => {
+                let totalConsolidado = 0;
+                let somaDesvioRow = 0;
+                let countDesvioRow = 0;
+                let somaIQRow = 0;
+                let somaWeightRow = 0;
+
+                semanasOrdenadas.forEach(semKey => {
+                    const sData = e.semanasData[semKey];
+                    if (sData && sData.somaWeight > 0) {
+                        const iqEntidade = sData.valIQ || (sData.somaVal / sData.somaWeight);
+                        somaIQRow += (activeMetric === 'indice_qualidade' ? (sData.somaVal / sData.somaWeight) : iqEntidade) * sData.somaWeight;
+                        somaWeightRow += sData.somaWeight;
+
+                        const estatsURE = estatsSemanaisURE[semKey];
+                        const serieKey = sData.anoSerie || e.anoSerie;
+
+                        if (activeMetric === 'desvio_media_serie') {
+                            const mediaSerie = estatsURE.series[serieKey]?.media ?? estatsURE.mediaGeral;
+                            const dev = iqEntidade - mediaSerie;
+                            sData.valDesvio = dev;
+                            somaDesvioRow += dev;
+                            countDesvioRow++;
+                        } else if (activeMetric === 'desvio_mediana_serie') {
+                            const medianaSerie = estatsURE.series[serieKey]?.mediana ?? estatsURE.medianaGeral;
+                            const dev = iqEntidade - medianaSerie;
+                            sData.valDesvio = dev;
+                            somaDesvioRow += dev;
+                            countDesvioRow++;
+                        }
+                    }
+                });
+
+                if (activeMetric === 'atividades') {
+                    totalConsolidado = e.somaPropostas;
+                } else if (activeMetric.includes('desvio')) {
+                    totalConsolidado = countDesvioRow > 0 ? somaDesvioRow / countDesvioRow : 0;
+                } else {
+                    totalConsolidado = somaWeightRow > 0 ? (somaIQRow / somaWeightRow) : 0;
+                }
+
+                return { ...e, totalConsolidado };
+            });
+
+            // Ordenação
+            linhas.sort((a, b) => {
+                let vA, vB;
+                if (sortColumn.startsWith('sem_')) {
+                    const semK = sortColumn.replace('sem_', '');
+                    const sA = a.semanasData[semK], sB = b.semanasData[semK];
+                    vA = sA ? (activeMetric === 'atividades' ? sA.propostas : (sA.somaWeight > 0 ? sA.somaVal / sA.somaWeight : 0)) : -999;
+                    vB = sB ? (activeMetric === 'atividades' ? sB.propostas : (sB.somaWeight > 0 ? sB.somaVal / sB.somaWeight : 0)) : -999;
+                } else if (sortColumn === 'totalConsolidado') {
+                    vA = a.totalConsolidado; vB = b.totalConsolidado;
+                } else {
+                    vA = String(a[sortColumn] || '').toLowerCase(); vB = String(b[sortColumn] || '').toLowerCase();
+                }
+                if (vA < vB) return sortDirection === 'asc' ? -1 : 1;
+                if (vA > vB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            // Paginação
+            const totalItens = linhas.length;
+            const totalPages = Math.ceil(totalItens / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const start = (currentPage - 1) * pageSize;
+            const paginadas = linhas.slice(start, start + pageSize);
+
+            document.getElementById('info-paginacao').textContent = `Exibindo ${totalItens === 0 ? 0 : start + 1}-${Math.min(start + pageSize, totalItens)} de ${totalItens}`;
+            document.getElementById('label-paginacao').textContent = `${currentPage} / ${totalPages}`;
+            document.getElementById('btn-prev').disabled = currentPage <= 1;
+            document.getElementById('btn-next').disabled = currentPage >= totalPages;
+
+            const getArrow = col => sortColumn === col ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
+
+            // Cabeçalho
+            const theadTr = document.querySelector('#tabelaTarefas thead');
+            let thHtml = `<tr>
+                <th style="width:36px;">#</th>
+                <th onclick="toggleSort('rotulo')" class="row-header" style="width:220px;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('rotulo')}</th>`;
+            
+            if (currentView !== 'escola') {
+                thHtml += `<th onclick="toggleSort('escolaPai')" style="width:160px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
+            }
+
+            semanasOrdenadas.forEach(semKey => {
+                const colK = `sem_${semKey}`;
+                const rotuloCol = semKey.includes('Sem') ? semKey : `Sem. ${semKey}`;
+                thHtml += `<th onclick="toggleSort('${colK}')">${rotuloCol}${getArrow(colK)}</th>`;
+            });
+
+            const colTotalLabel = activeMetric.includes('desvio') ? 'Média Desvios' : (activeMetric.includes('percentual') || activeMetric.includes('acertos') || activeMetric.includes('qualidade') ? 'Média Geral (%)' : 'Total / Média');
+            thHtml += `<th onclick="toggleSort('totalConsolidado')" style="border-left:2px solid var(--navy2);">${colTotalLabel}${getArrow('totalConsolidado')}</th></tr>`;
+            theadTr.innerHTML = thHtml;
+
+            // Corpo da Tabela
+            const tbody = document.querySelector('#tabelaTarefas tbody');
+            let tbHtml = '';
+
+            paginadas.forEach((r, idx) => {
+                const nomeEscolaTarget = currentView === 'escola' ? r.rotulo : r.escolaPai;
+                const linkEscolaHtml = `<span class="escola-link" onclick="abrirModalInsights('${nomeEscolaTarget.replace(/'/g, "\\'")}')">${r.rotulo}</span>`;
+
+                tbHtml += `<tr>
+                    <td style="font-weight:700; color:var(--light);">${start + idx + 1}</td>
+                    <td class="row-header">${linkEscolaHtml}</td>`;
+                
+                if (currentView !== 'escola') {
+                    const linkPaiHtml = `<span class="escola-link" onclick="abrirModalInsights('${r.escolaPai.replace(/'/g, "\\'")}')">${r.escolaPai}</span>`;
+                    tbHtml += `<td style="color:var(--muted); font-weight:600;">${linkPaiHtml}</td>`;
+                }
+
+                semanasOrdenadas.forEach(semKey => {
+                    const sData = r.semanasData[semKey];
+                    if (sData && sData.somaWeight > 0) {
+                        if (activeMetric.includes('desvio')) {
+                            const dev = sData.valDesvio || 0;
+                            const cls = dev >= 0 ? 'val-pos' : 'val-neg';
+                            tbHtml += `<td class="${cls}">${formatVal(activeMetric, dev)}</td>`;
+                        } else {
+                            const valS = sData.somaVal / sData.somaWeight;
+                            const farol = getFarolColor(activeMetric, valS);
+                            tbHtml += `<td class="${farol}">${formatVal(activeMetric, valS)}</td>`;
+                        }
+                    } else {
+                        tbHtml += `<td class="bg-empty">-</td>`;
+                    }
+                });
+
+                if (activeMetric.includes('desvio')) {
+                    const clsTotal = r.totalConsolidado >= 0 ? 'val-pos' : 'val-neg';
+                    tbHtml += `<td class="${clsTotal}" style="border-left:2px solid var(--border2); font-weight:800;">${formatVal(activeMetric, r.totalConsolidado)}</td></tr>`;
+                } else {
+                    const farolTotal = getFarolColor(activeMetric, r.totalConsolidado);
+                    tbHtml += `<td class="${farolTotal}" style="border-left:2px solid var(--border2); font-weight:800;">${formatVal(activeMetric, r.totalConsolidado)}</td></tr>`;
+                }
+            });
+
+            tbody.innerHTML = tbHtml;
+
+            renderChartEvolucao(mapaMatriz, semanasOrdenadas);
+        }
+
+        function renderChartEvolucao(mapaMatriz, semanasOrdenadas) {
+            const ctx = document.getElementById('chartEvolucao').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            const labels = semanasOrdenadas.map(s => s.includes('Sem') ? s : `Semana ${s}`);
+            let datasets = [];
+
+            if (currentView === 'atividades') {
+                const entidadeSelecionada = document.getElementById('selectEntidadeAtividades').value;
+                const indiceSelecionado = document.getElementById('selectIndiceAtividades').value;
+
+                if (entidadeSelecionada === 'TODAS') {
+                    const dataPts = semanasOrdenadas.map(semKey => {
+                        let somaValSem = 0, somaWeightSem = 0;
+                        mapaMatriz.forEach(item => {
+                            const sData = item.semanasData[semKey];
+                            if (sData && sData.somaWeight > 0) {
+                                let v = 0;
+                                if (indiceSelecionado === 'tarefas_propostas') v = sData.propostas;
+                                else if (indiceSelecionado === 'tarefas_realizadas_prazo') v = sData.prazo;
+                                else if (indiceSelecionado === 'tarefas_realizadas_fora_prazo') v = sData.foraPrazo;
+                                else if (indiceSelecionado === 'tarefas_incompletas_realizadas') v = sData.incompletas;
+                                else if (indiceSelecionado === 'tarefas_nao_realizadas') v = sData.naoRealizadas;
+                                else v = (sData.somaVal / sData.somaWeight);
+
+                                if (indiceSelecionado.includes('percentual') || indiceSelecionado.includes('acertos') || indiceSelecionado.includes('qualidade')) {
+                                    somaValSem += v * sData.somaWeight;
+                                    somaWeightSem += sData.somaWeight;
+                                } else {
+                                    somaValSem += v;
+                                }
+                            }
+                        });
+                        if (indiceSelecionado.includes('percentual') || indiceSelecionado.includes('acertos') || indiceSelecionado.includes('qualidade')) {
+                            return somaWeightSem > 0 ? parseFloat((somaValSem / somaWeightSem).toFixed(1)) : 0;
+                        }
+                        return somaValSem;
+                    });
+
+                    datasets = [{
+                        label: 'Todas (Consolidado URE)',
+                        data: dataPts,
+                        borderColor: '#1d4ed8',
+                        backgroundColor: 'rgba(29, 78, 216, 0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.2
+                    }];
+                } else {
+                    let itemEntidade = null;
+                    mapaMatriz.forEach(item => {
+                        if (item.rotulo === entidadeSelecionada) itemEntidade = item;
+                    });
+
+                    if (itemEntidade) {
+                        const dataPts = semanasOrdenadas.map(semKey => {
+                            const sData = itemEntidade.semanasData[semKey];
+                            if (!sData || sData.somaWeight === 0) return 0;
+                            return parseFloat((sData.somaVal / sData.somaWeight).toFixed(1));
+                        });
+
+                        datasets = [{
+                            label: entidadeSelecionada,
+                            data: dataPts,
+                            borderColor: '#1d4ed8',
+                            backgroundColor: 'rgba(29, 78, 216, 0.1)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.2
+                        }];
+                    }
+                }
+            } else {
+                const activeMetric = document.getElementById('selectMetric').value;
+                const arrayItens = Array.from(mapaMatriz.values());
+                datasets = arrayItens.slice(0, 8).map((e, idx) => {
+                    const cor = PALETA[idx % PALETA.length];
+                    const dataPts = semanasOrdenadas.map(semKey => {
+                        const sData = e.semanasData[semKey];
+                        if (!sData || sData.somaWeight === 0) return null;
+                        return parseFloat((sData.somaVal / sData.somaWeight).toFixed(1));
+                    });
+
+                    return {
+                        label: e.rotulo,
+                        data: dataPts,
+                        borderColor: cor,
+                        backgroundColor: cor,
+                        borderWidth: 2.2,
+                        fill: false,
+                        tension: 0.2,
+                        spanGaps: true
+                    };
+                });
+            }
+
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: 'rgba(0,0,0,0.04)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: '600' } } }
+                    }
+                }
+            });
+        }
+
+        function exportarExcel() {
+            const table = document.getElementById('tabelaTarefas');
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Tarefas_URE" });
+            XLSX.writeFile(wb, `Tarefas_${currentView}.xlsx`);
+        }
+
+        async function initDashboard() {
+            showLoading('Iniciando painel...');
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('dashboard-section').style.display = 'block';
+            await loadDatabase();
+        }
+
+        window.onload = async () => {
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) { initDashboard(); }
+        };
+    </script>
+</body>
+</html>

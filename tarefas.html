@@ -114,10 +114,6 @@
         .bg-red { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
         .bg-empty { background: var(--bg) !important; color: var(--light) !important; }
 
-        .cell-split { display: flex; align-items: center; justify-content: center; font-family: 'Geist Mono', monospace; font-weight: 700; font-size: .78rem; }
-        .cell-split span { padding: .2rem .35rem; flex: 1; text-align: center; }
-        .cell-split span:first-child { border-right: 1px solid rgba(0,0,0,0.15); }
-
         .val-pos { color: var(--emerald); font-weight: 800; font-family: 'Geist Mono', monospace; }
         .val-neg { color: var(--rose); font-weight: 800; font-family: 'Geist Mono', monospace; }
 
@@ -219,11 +215,12 @@
                     <div class="filter-item" id="containerSelectMetric">
                         <label>Métrica Exibida</label>
                         <select id="selectMetric" onchange="renderDashboard()">
-                            <option value="realizacao_acertos" selected>% Realização / % Acertos</option>
-                            <option value="indice_qualidade">Índice de Qualidade (IQ %)</option>
+                            <option value="indice_qualidade" selected>Índice de Qualidade (IQ %)</option>
                             <option value="percentual_tarefas_realizadas">% Realização de Tarefas</option>
                             <option value="percentual_acertos">% de Acertos</option>
                             <option value="percentual_alunos_com_tarefas_realizadas">% Alunos Participantes</option>
+                            <option value="desvio_media_serie">Desvio IQ vs Média Série</option>
+                            <option value="desvio_mediana_serie">Desvio IQ vs Mediana Série</option>
                         </select>
                     </div>
                     <div class="filter-item" style="display:flex;align-items:flex-end;">
@@ -260,6 +257,7 @@
             <div class="chart-box">
                 <div class="chart-header">
                     <div class="chart-title" id="chart-title">Evolução Semanal</div>
+                    <!-- Controles específicos para a aba de Atividades -->
                     <div id="atividades-chart-controls" style="display: none; align-items: center; gap: .75rem;">
                         <div style="display: flex; align-items: center; gap: .4rem;">
                             <label style="font-size: .7rem; font-weight: 800; color: var(--muted); text-transform: uppercase;">Entidade:</label>
@@ -270,6 +268,9 @@
                             <select id="selectIndiceAtividades" onchange="renderDashboard()" style="padding: .3rem .5rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: .78rem; font-weight: 700; background: var(--surface2); outline: none;">
                                 <option value="tarefas_propostas" selected>Tarefas Propostas</option>
                                 <option value="tarefas_realizadas_prazo">Tarefas no Prazo</option>
+                                <option value="tarefas_realizadas_fora_prazo">Tarefas Fora do Prazo</option>
+                                <option value="tarefas_incompletas_realizadas">Tarefas Incompletas</option>
+                                <option value="tarefas_nao_realizadas">Tarefas Não Realizadas</option>
                                 <option value="percentual_tarefas_realizadas">% Realização</option>
                                 <option value="percentual_acertos">% de Acertos</option>
                                 <option value="indice_qualidade">Índice de Qualidade (IQ %)</option>
@@ -623,11 +624,42 @@
             renderDashboard();
         }
 
-        function getFarolColor(val) {
+        function getFarolColor(metric, val) {
             if (val === null || val === undefined) return 'bg-empty';
-            if (val < 40.0) return 'bg-red';
-            if (val < 60.0) return 'bg-yellow';
+            if (metric.includes('desvio')) return ''; 
+
+            let num = val;
+            if (num < 40.0) return 'bg-red';
+            if (num < 60.0) return 'bg-yellow';
             return 'bg-green';
+        }
+
+        function formatVal(metric, val) {
+            if (val === null || val === undefined || isNaN(val)) return '-';
+            if (metric.includes('desvio')) {
+                let sinal = val > 0 ? '+' : '';
+                return `${sinal}${val.toFixed(1).replace('.', ',')}%`;
+            }
+            if (metric.includes('percentual') || metric.includes('acertos') || metric.includes('qualidade') || (metric.includes('indice') && !metric.includes('qualidade'))) {
+                return `${val.toFixed(1).replace('.', ',')}%`;
+            }
+            return Math.round(val).toLocaleString('pt-BR');
+        }
+
+        function toggleSort(col) {
+            if (sortColumn === col) { sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; }
+            else { sortColumn = col; sortDirection = 'asc'; }
+            renderDashboard();
+        }
+
+        function mudarPagina(delta) { currentPage += delta; renderDashboard(); }
+        function alterarTamanhoPagina(val) { pageSize = parseInt(val, 10); currentPage = 1; renderDashboard(); }
+
+        function calcularMediana(arr) {
+            if (!arr.length) return 0;
+            const s = [...arr].sort((a,b) => a - b);
+            const m = Math.floor(s.length / 2);
+            return s.length % 2 !== 0 ? s[m] : (s[m - 1] + s[m]) / 2;
         }
 
         function abrirModalInsights(nomeEscola) {
@@ -761,40 +793,107 @@
                 ultimasMatriculasPorEscola.set(esc, (ultimasMatriculasPorEscola.get(esc) || 0) + d.matriculas_ativas);
             });
 
+            const estatsSemanaisURE = {};
+            semanasOrdenadas.forEach(semKey => {
+                const dadosSemana = filteredData.filter(d => (d.codigo_intervalo || d.semanaRotulo) === semKey);
+                let sumIQGlobal = 0, sumWeightGlobal = 0;
+                let arrIQGlobal = [];
+                let seriesGroup = {};
+
+                dadosSemana.forEach(d => {
+                    let w = d.matriculas_ativas || 1;
+                    sumIQGlobal += d.indice_qualidade * w;
+                    sumWeightGlobal += w;
+                    if (d.indice_qualidade > 0) arrIQGlobal.push(d.indice_qualidade);
+
+                    const sKey = d.anoSerie || 'Outros';
+                    if (!seriesGroup[sKey]) seriesGroup[sKey] = { sumIQ: 0, sumWeight: 0, arrIQ: [] };
+                    seriesGroup[sKey].sumIQ += d.indice_qualidade * w;
+                    seriesGroup[sKey].sumWeight += w;
+                    if (d.indice_qualidade > 0) seriesGroup[sKey].arrIQ.push(d.indice_qualidade);
+                });
+
+                const seriesEstats = {};
+                for (let sKey in seriesGroup) {
+                    const sg = seriesGroup[sKey];
+                    seriesEstats[sKey] = {
+                        media: sg.sumWeight > 0 ? sg.sumIQ / sg.sumWeight : 0,
+                        mediana: calcularMediana(sg.arrIQ)
+                    };
+                }
+
+                estatsSemanaisURE[semKey] = {
+                    mediaGeral: sumWeightGlobal > 0 ? sumIQGlobal / sumWeightGlobal : 0,
+                    medianaGeral: calcularMediana(arrIQGlobal),
+                    series: seriesEstats
+                };
+            });
+
             const mapaMatriz = new Map();
             let sumIQXMatGlobal = 0, sumTarefasProp = 0, sumTarefasPrazo = 0, sumMatriculasAcumuladas = 0;
 
             filteredData.forEach(d => {
-                const key = currentView === 'escola' ? d.escola : `${d.id_turma}___${d.turma}`;
+                const key = currentView === 'escola' ? d.escola : (currentView === 'atividades' ? `${d.escola}___${d.turma}` : `${d.id_turma}___${d.turma}`);
                 const rotulo = currentView === 'escola' ? d.escola : d.turma;
                 const escolaPai = d.escola;
+                const anoSerie = d.anoSerie;
                 const semKey = d.codigo_intervalo || d.semanaRotulo;
 
                 if (!mapaMatriz.has(key)) {
-                    let matUltimoDado = currentView === 'escola' ? (ultimasMatriculasPorEscola.get(d.escola) || 0) : (ultimasMatriculasPorTurma.get(d.id_turma)?.matriculas_ativas || d.matriculas_ativas);
+                    let matUltimoDado = 0;
+                    if (currentView === 'escola') {
+                        matUltimoDado = ultimasMatriculasPorEscola.get(d.escola) || 0;
+                    } else {
+                        matUltimoDado = ultimasMatriculasPorTurma.get(d.id_turma)?.matriculas_ativas || d.matriculas_ativas;
+                    }
 
                     mapaMatriz.set(key, {
-                        key, rotulo, escolaPai,
+                        key, rotulo, escolaPai, anoSerie,
                         matriculas: matUltimoDado,
                         semanasData: {},
                         somaIQTotal: 0,
-                        somaMatriculasPeso: 0
+                        somaPropostas: 0,
+                        somaPrazo: 0,
+                        somaForaPrazo: 0,
+                        somaNaoRealizadas: 0,
+                        somaMatriculasPeso: 0,
+                        qtdRegistros: 0
                     });
                 }
 
                 const item = mapaMatriz.get(key);
                 let w = d.matriculas_ativas || 1;
                 item.somaIQTotal += d.indice_qualidade * w;
+                item.somaPropostas += d.tarefas_propostas;
+                item.somaPrazo += d.tarefas_realizadas_prazo;
+                item.somaForaPrazo += d.tarefas_realizadas_fora_prazo;
+                item.somaNaoRealizadas += d.tarefas_nao_realizadas;
                 item.somaMatriculasPeso += w;
+                item.qtdRegistros++;
 
                 if (!item.semanasData[semKey]) {
-                    item.semanasData[semKey] = { realSoma: 0, acertoSoma: 0, weight: 0 };
+                    item.semanasData[semKey] = { somaVal: 0, somaWeight: 0, qtd: 0, valIQ: 0, propostas: 0, prazo: 0, foraPrazo: 0, naoRealizadas: 0, acertosSoma: 0, realizadasSoma: 0, anoSerie: d.anoSerie };
                 }
                 const sObj = item.semanasData[semKey];
                 
-                sObj.realSoma += d.percentual_tarefas_realizadas * w;
-                sObj.acertoSoma += d.percentual_acertos * w;
-                sObj.weight += w;
+                let valM = 0;
+                if (activeMetric === 'atividades' || activeMetric === 'tarefas_propostas') valM = d.tarefas_propostas;
+                else if (activeMetric === 'indice_qualidade') valM = d.indice_qualidade;
+                else if (activeMetric === 'percentual_tarefas_realizadas') valM = d.percentual_tarefas_realizadas;
+                else if (activeMetric === 'percentual_acertos') valM = d.percentual_acertos;
+                else if (activeMetric === 'percentual_alunos_com_tarefas_realizadas') valM = d.percentual_alunos_com_tarefas_realizadas;
+                else valM = d[activeMetric] || 0;
+
+                sObj.somaVal += valM * w;
+                sObj.somaWeight += w;
+                sObj.valIQ = d.indice_qualidade;
+                sObj.propostas += d.tarefas_propostas;
+                sObj.prazo += d.tarefas_realizadas_prazo;
+                sObj.foraPrazo += d.tarefas_realizadas_fora_prazo;
+                sObj.naoRealizadas += d.tarefas_nao_realizadas;
+                sObj.acertosSoma += d.percentual_acertos * w;
+                sObj.realizadasSoma += d.percentual_tarefas_realizadas * w;
+                sObj.qtd++;
 
                 sumIQXMatGlobal += d.indice_qualidade * w;
                 sumTarefasProp += d.tarefas_propostas;
@@ -802,6 +901,7 @@
                 sumMatriculasAcumuladas += w;
             });
 
+            // KPIs
             document.getElementById('card-tarefas-propostas').textContent = Math.round(sumTarefasProp).toLocaleString('pt-BR');
             document.getElementById('card-tarefas-prazo').textContent = Math.round(sumTarefasPrazo).toLocaleString('pt-BR');
             document.getElementById('card-total-matriculas').textContent = sumMatriculasGlobal.toLocaleString('pt-BR');
@@ -809,39 +909,68 @@
             document.getElementById('card-iq-medio').textContent = `${avgIQGlobal.toFixed(1).replace('.', ',')}%`;
 
             let linhas = Array.from(mapaMatriz.values()).map(e => {
-                let somaRow = 0, weightRow = 0;
+                let totalConsolidado = 0;
+                let somaDesvioRow = 0;
+                let countDesvioRow = 0;
+                let somaIQRow = 0;
+                let somaWeightRow = 0;
+
                 semanasOrdenadas.forEach(semKey => {
                     const sData = e.semanasData[semKey];
-                    if (sData && sData.weight > 0) {
-                        let valCell = 0;
-                        if (activeMetric === 'realizacao_acertos') {
-                            valCell = sData.realSoma / sData.weight;
-                        } else if (activeMetric === 'indice_qualidade') {
-                            valCell = e.somaMatriculasPeso > 0 ? e.somaIQTotal / e.somaMatriculasPeso : 0;
-                        } else {
-                            valCell = sData.realSoma / sData.weight;
+                    if (sData && sData.somaWeight > 0) {
+                        const iqEntidade = sData.valIQ || (sData.somaVal / sData.somaWeight);
+                        somaIQRow += (activeMetric === 'indice_qualidade' ? (sData.somaVal / sData.somaWeight) : iqEntidade) * sData.somaWeight;
+                        somaWeightRow += sData.somaWeight;
+
+                        const estatsURE = estatsSemanaisURE[semKey];
+                        const serieKey = sData.anoSerie || e.anoSerie;
+
+                        if (activeMetric === 'desvio_media_serie') {
+                            const mediaSerie = estatsURE.series[serieKey]?.media ?? estatsURE.mediaGeral;
+                            const dev = iqEntidade - mediaSerie;
+                            sData.valDesvio = dev;
+                            somaDesvioRow += dev;
+                            countDesvioRow++;
+                        } else if (activeMetric === 'desvio_mediana_serie') {
+                            const medianaSerie = estatsURE.series[serieKey]?.mediana ?? estatsURE.medianaGeral;
+                            const dev = iqEntidade - medianaSerie;
+                            sData.valDesvio = dev;
+                            somaDesvioRow += dev;
+                            countDesvioRow++;
                         }
-                        somaRow += valCell * sData.weight;
-                        weightRow += sData.weight;
                     }
                 });
-                const totalConsolidado = weightRow > 0 ? somaRow / weightRow : 0;
+
+                if (activeMetric === 'atividades') {
+                    totalConsolidado = e.somaPropostas;
+                } else if (activeMetric.includes('desvio')) {
+                    totalConsolidado = countDesvioRow > 0 ? somaDesvioRow / countDesvioRow : 0;
+                } else {
+                    totalConsolidado = somaWeightRow > 0 ? (somaIQRow / somaWeightRow) : 0;
+                }
+
                 return { ...e, totalConsolidado };
             });
 
             // Ordenação
             linhas.sort((a, b) => {
-                let vA = a.totalConsolidado, vB = b.totalConsolidado;
-                if (sortColumn === 'rotulo') {
-                    vA = a.rotulo.toLowerCase(); vB = b.rotulo.toLowerCase();
-                } else if (sortColumn === 'escolaPai') {
-                    vA = a.escolaPai.toLowerCase(); vB = b.escolaPai.toLowerCase();
+                let vA, vB;
+                if (sortColumn.startsWith('sem_')) {
+                    const semK = sortColumn.replace('sem_', '');
+                    const sA = a.semanasData[semK], sB = b.semanasData[semK];
+                    vA = sA ? (activeMetric === 'atividades' ? sA.propostas : (sA.somaWeight > 0 ? sA.somaVal / sA.somaWeight : 0)) : -999;
+                    vB = sB ? (activeMetric === 'atividades' ? sB.propostas : (sB.somaWeight > 0 ? sB.somaVal / sB.somaWeight : 0)) : -999;
+                } else if (sortColumn === 'totalConsolidado') {
+                    vA = a.totalConsolidado; vB = b.totalConsolidado;
+                } else {
+                    vA = String(a[sortColumn] || '').toLowerCase(); vB = String(b[sortColumn] || '').toLowerCase();
                 }
                 if (vA < vB) return sortDirection === 'asc' ? -1 : 1;
                 if (vA > vB) return sortDirection === 'asc' ? 1 : -1;
                 return 0;
             });
 
+            // Paginação
             const totalItens = linhas.length;
             const totalPages = Math.ceil(totalItens / pageSize) || 1;
             if (currentPage > totalPages) currentPage = totalPages;
@@ -857,22 +986,24 @@
 
             const getArrow = col => sortColumn === col ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
 
-            // Cabeçalho da Tabela
+            // Cabeçalho
             const theadTr = document.querySelector('#tabelaTarefas thead');
             let thHtml = `<tr>
                 <th style="width:36px;">#</th>
-                <th onclick="toggleSort('rotulo')" class="row-header" style="width:200px;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('rotulo')}</th>`;
+                <th onclick="toggleSort('rotulo')" class="row-header" style="width:220px;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('rotulo')}</th>`;
             
             if (currentView !== 'escola') {
-                thHtml += `<th onclick="toggleSort('escolaPai')" style="width:150px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
+                thHtml += `<th onclick="toggleSort('escolaPai')" style="width:160px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
             }
 
             semanasOrdenadas.forEach(semKey => {
+                const colK = `sem_${semKey}`;
                 const rotuloCol = semKey.includes('Sem') ? semKey : `Sem. ${semKey}`;
-                thHtml += `<th>${rotuloCol} <div style="font-size:0.6rem;opacity:0.8;">% Real. / % Acerto</div></th>`;
+                thHtml += `<th onclick="toggleSort('${colK}')">${rotuloCol}${getArrow(colK)}</th>`;
             });
 
-            thHtml += `<th style="border-left:2px solid var(--navy2);">Média Geral</th></tr>`;
+            const colTotalLabel = activeMetric.includes('desvio') ? 'Média Desvios' : (activeMetric.includes('percentual') || activeMetric.includes('acertos') || activeMetric.includes('qualidade') ? 'Média Geral (%)' : 'Total / Média');
+            thHtml += `<th onclick="toggleSort('totalConsolidado')" style="border-left:2px solid var(--navy2);">${colTotalLabel}${getArrow('totalConsolidado')}</th></tr>`;
             theadTr.innerHTML = thHtml;
 
             // Corpo da Tabela
@@ -894,26 +1025,28 @@
 
                 semanasOrdenadas.forEach(semKey => {
                     const sData = r.semanasData[semKey];
-                    if (sData && sData.weight > 0) {
-                        const pReal = sData.realSoma / sData.weight;
-                        const pAcerto = sData.acertoSoma / sData.weight;
-                        const cReal = getFarolColor(pReal);
-                        const cAcerto = getFarolColor(pAcerto);
-
-                        tbHtml += `<td>
-                            <div class="cell-split">
-                                <span class="${cReal}" title="Realização">${pReal.toFixed(0)}%</span>
-                                <span class="${cAcerto}" title="Acertos">${pAcerto.toFixed(0)}%</span>
-                            </div>
-                        </td>`;
+                    if (sData && sData.somaWeight > 0) {
+                        if (activeMetric.includes('desvio')) {
+                            const dev = sData.valDesvio || 0;
+                            const cls = dev >= 0 ? 'val-pos' : 'val-neg';
+                            tbHtml += `<td class="${cls}">${formatVal(activeMetric, dev)}</td>`;
+                        } else {
+                            const valS = sData.somaVal / sData.somaWeight;
+                            const farol = getFarolColor(activeMetric, valS);
+                            tbHtml += `<td class="${farol}">${formatVal(activeMetric, valS)}</td>`;
+                        }
                     } else {
                         tbHtml += `<td class="bg-empty">-</td>`;
                     }
                 });
 
-                const totalGeral = r.totalConsolidado;
-                const farolTotal = getFarolColor(totalGeral);
-                tbHtml += `<td class="${farolTotal}" style="border-left:2px solid var(--border2); font-weight:800;">${totalGeral.toFixed(1).replace('.', ',')}%</td></tr>`;
+                if (activeMetric.includes('desvio')) {
+                    const clsTotal = r.totalConsolidado >= 0 ? 'val-pos' : 'val-neg';
+                    tbHtml += `<td class="${clsTotal}" style="border-left:2px solid var(--border2); font-weight:800;">${formatVal(activeMetric, r.totalConsolidado)}</td></tr>`;
+                } else {
+                    const farolTotal = getFarolColor(activeMetric, r.totalConsolidado);
+                    tbHtml += `<td class="${farolTotal}" style="border-left:2px solid var(--border2); font-weight:800;">${formatVal(activeMetric, r.totalConsolidado)}</td></tr>`;
+                }
             });
 
             tbody.innerHTML = tbHtml;
@@ -937,13 +1070,27 @@
                         let somaValSem = 0, somaWeightSem = 0;
                         mapaMatriz.forEach(item => {
                             const sData = item.semanasData[semKey];
-                            if (sData && sData.weight > 0) {
-                                let v = indiceSelecionado === 'percentual_acertos' ? (sData.acertoSoma / sData.weight) : (sData.realSoma / sData.weight);
-                                somaValSem += v * sData.weight;
-                                somaWeightSem += sData.weight;
+                            if (sData && sData.somaWeight > 0) {
+                                let v = 0;
+                                if (indiceSelecionado === 'tarefas_propostas') v = sData.propostas;
+                                else if (indiceSelecionado === 'tarefas_realizadas_prazo') v = sData.prazo;
+                                else if (indiceSelecionado === 'tarefas_realizadas_fora_prazo') v = sData.foraPrazo;
+                                else if (indiceSelecionado === 'tarefas_incompletas_realizadas') v = sData.incompletas;
+                                else if (indiceSelecionado === 'tarefas_nao_realizadas') v = sData.naoRealizadas;
+                                else v = (sData.somaVal / sData.somaWeight);
+
+                                if (indiceSelecionado.includes('percentual') || indiceSelecionado.includes('acertos') || indiceSelecionado.includes('qualidade')) {
+                                    somaValSem += v * sData.somaWeight;
+                                    somaWeightSem += sData.somaWeight;
+                                } else {
+                                    somaValSem += v;
+                                }
                             }
                         });
-                        return somaWeightSem > 0 ? parseFloat((somaValSem / somaWeightSem).toFixed(1)) : 0;
+                        if (indiceSelecionado.includes('percentual') || indiceSelecionado.includes('acertos') || indiceSelecionado.includes('qualidade')) {
+                            return somaWeightSem > 0 ? parseFloat((somaValSem / somaWeightSem).toFixed(1)) : 0;
+                        }
+                        return somaValSem;
                     });
 
                     datasets = [{
@@ -955,15 +1102,39 @@
                         fill: true,
                         tension: 0.2
                     }];
+                } else {
+                    let itemEntidade = null;
+                    mapaMatriz.forEach(item => {
+                        if (item.rotulo === entidadeSelecionada) itemEntidade = item;
+                    });
+
+                    if (itemEntidade) {
+                        const dataPts = semanasOrdenadas.map(semKey => {
+                            const sData = itemEntidade.semanasData[semKey];
+                            if (!sData || sData.somaWeight === 0) return 0;
+                            return parseFloat((sData.somaVal / sData.somaWeight).toFixed(1));
+                        });
+
+                        datasets = [{
+                            label: entidadeSelecionada,
+                            data: dataPts,
+                            borderColor: '#1d4ed8',
+                            backgroundColor: 'rgba(29, 78, 216, 0.1)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.2
+                        }];
+                    }
                 }
             } else {
+                const activeMetric = document.getElementById('selectMetric').value;
                 const arrayItens = Array.from(mapaMatriz.values());
                 datasets = arrayItens.slice(0, 8).map((e, idx) => {
                     const cor = PALETA[idx % PALETA.length];
                     const dataPts = semanasOrdenadas.map(semKey => {
                         const sData = e.semanasData[semKey];
-                        if (!sData || sData.weight === 0) return null;
-                        return parseFloat((sData.realSoma / sData.weight).toFixed(1));
+                        if (!sData || sData.somaWeight === 0) return null;
+                        return parseFloat((sData.somaVal / sData.somaWeight).toFixed(1));
                     });
 
                     return {
@@ -988,7 +1159,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.04)' } },
+                        y: { grid: { color: 'rgba(0,0,0,0.04)' } },
                         x: { grid: { display: false } }
                     },
                     plugins: {

@@ -654,7 +654,6 @@
         function exportarTabelaJPG() {
             const containerTabela = document.getElementById('containerMatrizTabela');
             
-            // Força largura e altura máximas do container para o html2canvas capturar a tabela inteira e não só a view visível
             const originalWidth = containerTabela.style.width;
             const originalMaxHeight = containerTabela.style.maxHeight;
             const originalOverflow = containerTabela.style.overflowX;
@@ -869,17 +868,16 @@
                     if (sData && sData.weight > 0) {
                         let valCell = 0;
                         const pReal = sData.realSoma / sData.weight;
-                        const pAcerto = sData.acertoSoma / sData.weight;
                         const iqVal = sData.iqSoma / sData.weight;
 
                         if (activeMetric === 'triplo') {
-                            // Nova fórmula do BI baseada no IQ: (IQ / 70%) * 75%, limitado a 75%
-                            const bi = iqVal > 0 ? Math.min((iqVal / 70.0) * 75.0, 75.0) : 0;
+                            // Fórmula exata do BI em formato 0 a 0,75: (IQ / 70%) * 0,75, limitado a 0,75
+                            const bi = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
                             valCell = bi;
                         } else if (activeMetric === 'indice_qualidade') {
-                            valCell = iqVal;
+                            valCell = iqVal / 100.0;
                         } else {
-                            valCell = pReal;
+                            valCell = pReal / 100.0;
                         }
                         somaRow += valCell * sData.weight;
                         weightRow += sData.weight;
@@ -929,7 +927,7 @@
 
             semanasOrdenadas.forEach(semKey => {
                 const rotuloCol = semKey.includes('Sem') ? semKey : `Sem. ${semKey}`;
-                thHtml += `<th>${rotuloCol} <div style="font-size:0.55rem;opacity:0.8;">% Real. / % Acerto / BI</div></th>`;
+                thHtml += `<th>${rotuloCol} <div style="font-size:0.55rem;opacity:0.8;">% Real. / % Acerto / BI (0-0,75)</div></th>`;
             });
 
             thHtml += `<th style="border-left:2px solid var(--navy2);">Média Geral</th></tr>`;
@@ -959,18 +957,18 @@
                         const pAcerto = sData.acertoSoma / sData.weight;
                         const iqVal = sData.iqSoma / sData.weight;
                         
-                        // Fórmula exata do BI baseada no IQ (limitada a 75%)
-                        const biVal = iqVal > 0 ? Math.min((iqVal / 70.0) * 75.0, 75.0) : 0;
+                        // BI em formato 0 a 0,75 exato
+                        const biVal = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
 
                         const cReal = getFarolColor(pReal);
                         const cAcerto = getFarolColor(pAcerto);
-                        const cBi = getFarolColor(biVal);
+                        const cBi = getFarolColor((biVal / 0.75) * 100);
 
                         tbHtml += `<td>
                             <div class="cell-triple">
                                 <span class="${cReal}" title="Realização">${pReal.toFixed(0)}%</span>
                                 <span class="${cAcerto}" title="Acertos">${pAcerto.toFixed(0)}%</span>
-                                <span class="${cBi}" title="BI">${biVal.toFixed(0)}%</span>
+                                <span class="${cBi}" title="BI (0 a 0,75)">${biVal.toFixed(2).replace('.', ',')}</span>
                             </div>
                         </td>`;
                     } else {
@@ -979,8 +977,8 @@
                 });
 
                 const totalGeral = r.totalConsolidado;
-                const farolTotal = getFarolColor(totalGeral);
-                tbHtml += `<td class="${farolTotal}" style="border-left:2px solid var(--border2); font-weight:800;">${totalGeral.toFixed(1).replace('.', ',')}%</td></tr>`;
+                const farolTotal = getFarolColor((totalGeral / 0.75) * 100);
+                tbHtml += `<td class="${farolTotal}" style="border-left:2px solid var(--border2); font-weight:800;">${totalGeral.toFixed(2).replace('.', ',')}</td></tr>`;
             });
 
             tbody.innerHTML = tbHtml;

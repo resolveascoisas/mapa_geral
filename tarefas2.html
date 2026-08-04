@@ -578,20 +578,16 @@
         function updateAllFiltersOptions() {
             const sEsc = getSelectedCheckboxes('escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
             
-            // Reconstroi preservando seleções vigentes
             const setEsc = new Set(), setTur = new Set(), setMes = new Set();
 
             globalData.forEach(d => {
-                // Para popular escola, respeita filtro de turma e mes
                 const mTur = sTur.length === 0 || sTur.includes(d.turma);
                 const mMes = sMes.length === 0 || sMes.includes(d.mesNome);
                 if (mTur && mMes && d.escola) setEsc.add(d.escola);
 
-                // Para popular turma, respeita escola e mes
                 const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
                 if (mEsc && mMes && d.turma) setTur.add(d.turma);
 
-                // Para popular mes, respeita escola e turma
                 if (mEsc && mTur && d.mesNome) setMes.add(d.mesNome);
             });
 
@@ -657,11 +653,30 @@
 
         function exportarTabelaJPG() {
             const containerTabela = document.getElementById('containerMatrizTabela');
-            html2canvas(containerTabela, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+            
+            // Força largura e altura máximas do container para o html2canvas capturar a tabela inteira e não só a view visível
+            const originalWidth = containerTabela.style.width;
+            const originalMaxHeight = containerTabela.style.maxHeight;
+            const originalOverflow = containerTabela.style.overflowX;
+
+            containerTabela.style.width = containerTabela.scrollWidth + 'px';
+            containerTabela.style.maxHeight = 'none';
+            containerTabela.style.overflowX = 'visible';
+
+            html2canvas(containerTabela, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(canvas => {
+                containerTabela.style.width = originalWidth;
+                containerTabela.style.maxHeight = originalMaxHeight;
+                containerTabela.style.overflowX = originalOverflow;
+
                 const link = document.createElement('a');
-                link.download = `Matriz_Tarefas_${currentView}.jpg`;
+                link.download = `Matriz_Completa_Tarefas_${currentView}.jpg`;
                 link.href = canvas.toDataURL('image/jpeg', 1.0);
                 link.click();
+            }).catch(err => {
+                containerTabela.style.width = originalWidth;
+                containerTabela.style.maxHeight = originalMaxHeight;
+                containerTabela.style.overflowX = originalOverflow;
+                alert('Erro ao exportar imagem: ' + err.message);
             });
         }
 
@@ -802,7 +817,6 @@
             const mapaMatriz = new Map();
             let sumIQXMatGlobal = 0, sumTarefasProp = 0, sumTarefasPrazo = 0, sumMatriculasAcumuladas = 0;
 
-            filteredData.gotoUnica = false;
             filteredData.forEach(d => {
                 const key = currentView === 'escola' ? d.escola : `${d.id_turma}___${d.turma}`;
                 const rotulo = currentView === 'escola' ? d.escola : d.turma;
@@ -827,12 +841,13 @@
                 item.somaMatriculasPeso += w;
 
                 if (!item.semanasData[semKey]) {
-                    item.semanasData[semKey] = { realSoma: 0, acertoSoma: 0, weight: 0 };
+                    item.semanasData[semKey] = { realSoma: 0, acertoSoma: 0, iqSoma: 0, weight: 0 };
                 }
                 const sObj = item.semanasData[semKey];
                 
                 sObj.realSoma += d.percentual_tarefas_realizadas * w;
                 sObj.acertoSoma += d.percentual_acertos * w;
+                sObj.iqSoma += d.indice_qualidade * w;
                 sObj.weight += w;
 
                 sumIQXMatGlobal += d.indice_qualidade * w;
@@ -855,12 +870,14 @@
                         let valCell = 0;
                         const pReal = sData.realSoma / sData.weight;
                         const pAcerto = sData.acertoSoma / sData.weight;
+                        const iqVal = sData.iqSoma / sData.weight;
 
                         if (activeMetric === 'triplo') {
-                            const bi = pAcerto > 0 ? ((pReal / pAcerto) / 0.70) * 0.75 * 100 : 0;
+                            // Nova fórmula do BI baseada no IQ: (IQ / 70%) * 75%, limitado a 75%
+                            const bi = iqVal > 0 ? Math.min((iqVal / 70.0) * 75.0, 75.0) : 0;
                             valCell = bi;
                         } else if (activeMetric === 'indice_qualidade') {
-                            valCell = e.somaMatriculasPeso > 0 ? e.somaIQTotal / e.somaMatriculasPeso : 0;
+                            valCell = iqVal;
                         } else {
                             valCell = pReal;
                         }
@@ -907,7 +924,7 @@
                 <th onclick="toggleSort('rotulo')" class="row-header" style="width:200px;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('rotulo')}</th>`;
             
             if (currentView !== 'escola') {
-                thHtml += `<th onclick="toggleSort('escolaPai')" style="width:140px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
+                thHtml += `<th onclick="toggleSort('escolaPai')" style="width:150px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
             }
 
             semanasOrdenadas.forEach(semKey => {
@@ -940,8 +957,10 @@
                     if (sData && sData.weight > 0) {
                         const pReal = sData.realSoma / sData.weight;
                         const pAcerto = sData.acertoSoma / sData.weight;
-                        // Fórmula solicitada: ((% realização / % acertos) / 70%) * 75%
-                        const biVal = pAcerto > 0 ? ((pReal / pAcerto) / 0.70) * 0.75 * 100 : 0;
+                        const iqVal = sData.iqSoma / sData.weight;
+                        
+                        // Fórmula exata do BI baseada no IQ (limitada a 75%)
+                        const biVal = iqVal > 0 ? Math.min((iqVal / 70.0) * 75.0, 75.0) : 0;
 
                         const cReal = getFarolColor(pReal);
                         const cAcerto = getFarolColor(pAcerto);

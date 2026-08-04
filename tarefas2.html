@@ -116,9 +116,10 @@
         .bg-red { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
         .bg-empty { background: var(--bg) !important; color: var(--light) !important; }
 
-        .cell-triple { display: flex; align-items: center; justify-content: center; font-family: 'Geist Mono', monospace; font-weight: 700; font-size: .75rem; }
-        .cell-triple span { padding: .2rem .25rem; flex: 1; text-align: center; }
-        .cell-triple span:not(:last-child) { border-right: 1px solid rgba(0,0,0,0.15); }
+        /* Estilo Empilhado (Texto Quebrado) */
+        .cell-stacked { display: flex; flex-direction: column; gap: 2px; font-family: 'Geist Mono', monospace; font-size: .72rem; font-weight: 700; }
+        .cell-stacked div { padding: .15rem .3rem; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+        .cell-stacked div span:first-child { font-weight: 600; font-size: .62rem; opacity: 0.85; text-transform: uppercase; }
 
         .val-pos { color: var(--emerald); font-weight: 800; font-family: 'Geist Mono', monospace; }
         .val-neg { color: var(--rose); font-weight: 800; font-family: 'Geist Mono', monospace; }
@@ -205,6 +206,13 @@
                         </div>
                     </div>
                     <div class="filter-item">
+                        <label>Excluir Escola (Ocultar)</label>
+                        <div class="multi-select" data-filter="excluir_escola">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Nenhuma</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
                         <label>Turma</label>
                         <div class="multi-select" data-filter="turma">
                             <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
@@ -221,7 +229,7 @@
                     <div class="filter-item" id="containerSelectMetric">
                         <label>Métrica Exibida</label>
                         <select id="selectMetric" onchange="renderDashboard()">
-                            <option value="triplo" selected>% Real. / % Acerto / BI</option>
+                            <option value="triplo" selected>Empilhado (% Real. / % Acerto / BI)</option>
                             <option value="indice_qualidade">Índice de Qualidade (IQ %)</option>
                             <option value="percentual_tarefas_realizadas">% Realização de Tarefas</option>
                             <option value="percentual_acertos">% de Acertos</option>
@@ -568,7 +576,7 @@
             const c = document.querySelector(`.multi-select[data-filter="${k}"]`); if (!c) return;
             const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
             const span = c.querySelector('.select-display span');
-            span.textContent = cbs.length === 0 ? 'Todas/Todos' : cbs.length === 1 ? cbs[0].value : `${cbs.length} sel.`;
+            span.textContent = cbs.length === 0 ? (k === 'excluir_escola' ? 'Nenhuma' : 'Todas/Todos') : cbs.length === 1 ? cbs[0].value : `${cbs.length} sel.`;
         }
 
         function getSelectedCheckboxes(k) {
@@ -576,22 +584,26 @@
         }
 
         function updateAllFiltersOptions() {
-            const sEsc = getSelectedCheckboxes('escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
+            const sEsc = getSelectedCheckboxes('escola'), sExc = getSelectedCheckboxes('excluir_escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
             
-            const setEsc = new Set(), setTur = new Set(), setMes = new Set();
+            const setEsc = new Set(), setTur = new Set(), setMes = new Set(), setExc = new Set();
 
             globalData.forEach(d => {
+                setExc.add(d.escola);
+
                 const mTur = sTur.length === 0 || sTur.includes(d.turma);
                 const mMes = sMes.length === 0 || sMes.includes(d.mesNome);
-                if (mTur && mMes && d.escola) setEsc.add(d.escola);
+                const mExc = !sExc.includes(d.escola);
+                if (mTur && mMes && mExc && d.escola) setEsc.add(d.escola);
 
                 const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
-                if (mEsc && mMes && d.turma) setTur.add(d.turma);
+                if (mEsc && mMes && mExc && d.turma) setTur.add(d.turma);
 
-                if (mEsc && mTur && d.mesNome) setMes.add(d.mesNome);
+                if (mEsc && mTur && mExc && d.mesNome) setMes.add(d.mesNome);
             });
 
             rebuildDropdown('escola', Array.from(setEsc).sort(), sEsc);
+            rebuildDropdown('excluir_escola', Array.from(setExc).sort(), sExc);
             rebuildDropdown('turma', Array.from(setTur).sort(), sTur);
             rebuildDropdown('mes', Array.from(setMes).sort((a,b) => mesesNomes.indexOf(a) - mesesNomes.indexOf(b)), sMes);
         }
@@ -616,13 +628,14 @@
         }
 
         function applyFilters() {
-            const sEsc = getSelectedCheckboxes('escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
+            const sEsc = getSelectedCheckboxes('escola'), sExc = getSelectedCheckboxes('excluir_escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
 
             filteredData = globalData.filter(d => {
                 const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
+                const mExc = !sExc.includes(d.escola);
                 const mTur = sTur.length === 0 || sTur.includes(d.turma);
                 const mMes = sMes.length === 0 || sMes.includes(d.mesNome);
-                return mEsc && mTur && mMes;
+                return mEsc && mExc && mTur && mMes;
             });
 
             updateAllFiltersOptions();
@@ -871,7 +884,6 @@
                         const iqVal = sData.iqSoma / sData.weight;
 
                         if (activeMetric === 'triplo') {
-                            // Fórmula exata do BI em formato 0 a 0,75: (IQ / 70%) * 0,75, limitado a 0,75
                             const bi = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
                             valCell = bi;
                         } else if (activeMetric === 'indice_qualidade') {
@@ -927,7 +939,7 @@
 
             semanasOrdenadas.forEach(semKey => {
                 const rotuloCol = semKey.includes('Sem') ? semKey : `Sem. ${semKey}`;
-                thHtml += `<th>${rotuloCol} <div style="font-size:0.55rem;opacity:0.8;">% Real. / % Acerto / BI (0-0,75)</div></th>`;
+                thHtml += `<th>${rotuloCol}</th>`;
             });
 
             thHtml += `<th style="border-left:2px solid var(--navy2);">Média Geral</th></tr>`;
@@ -965,10 +977,10 @@
                         const cBi = getFarolColor((biVal / 0.75) * 100);
 
                         tbHtml += `<td>
-                            <div class="cell-triple">
-                                <span class="${cReal}" title="Realização">${pReal.toFixed(0)}%</span>
-                                <span class="${cAcerto}" title="Acertos">${pAcerto.toFixed(0)}%</span>
-                                <span class="${cBi}" title="BI (0 a 0,75)">${biVal.toFixed(2).replace('.', ',')}</span>
+                            <div class="cell-stacked">
+                                <div class="${cReal}"><span>Real:</span> <strong>${pReal.toFixed(0)}%</strong></div>
+                                <div class="${cAcerto}"><span>Acerto:</span> <strong>${pAcerto.toFixed(0)}%</strong></div>
+                                <div class="${cBi}"><span>BI:</span> <strong>${biVal.toFixed(2).replace('.', ',')}</strong></div>
                             </div>
                         </td>`;
                     } else {

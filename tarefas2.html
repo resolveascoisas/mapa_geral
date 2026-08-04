@@ -116,7 +116,6 @@
         .bg-red { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
         .bg-empty { background: var(--bg) !important; color: var(--light) !important; }
 
-        /* Estilo Empilhado (Texto Quebrado) */
         .cell-stacked { display: flex; flex-direction: column; gap: 2px; font-family: 'Geist Mono', monospace; font-size: .72rem; font-weight: 700; }
         .cell-stacked div { padding: .15rem .3rem; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
         .cell-stacked div span:first-child { font-weight: 600; font-size: .62rem; opacity: 0.85; text-transform: uppercase; }
@@ -206,13 +205,6 @@
                         </div>
                     </div>
                     <div class="filter-item">
-                        <label>Excluir Escola (Ocultar)</label>
-                        <div class="multi-select" data-filter="excluir_escola">
-                            <div class="select-display" onclick="toggleDropdown(this)"><span>Nenhuma</span></div>
-                            <div class="select-options"></div>
-                        </div>
-                    </div>
-                    <div class="filter-item">
                         <label>Turma</label>
                         <div class="multi-select" data-filter="turma">
                             <div class="select-display" onclick="toggleDropdown(this)"><span>Todas</span></div>
@@ -223,6 +215,13 @@
                         <label>Mês Referência</label>
                         <div class="multi-select" data-filter="mes">
                             <div class="select-display" onclick="toggleDropdown(this)"><span>Todos</span></div>
+                            <div class="select-options"></div>
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <label>Ocultar Colunas</label>
+                        <div class="multi-select" data-filter="ocultar_colunas">
+                            <div class="select-display" onclick="toggleDropdown(this)"><span>Nenhuma</span></div>
                             <div class="select-options"></div>
                         </div>
                     </div>
@@ -576,7 +575,7 @@
             const c = document.querySelector(`.multi-select[data-filter="${k}"]`); if (!c) return;
             const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
             const span = c.querySelector('.select-display span');
-            span.textContent = cbs.length === 0 ? (k === 'excluir_escola' ? 'Nenhuma' : 'Todas/Todos') : cbs.length === 1 ? cbs[0].value : `${cbs.length} sel.`;
+            span.textContent = cbs.length === 0 ? 'Nenhuma' : cbs.length === 1 ? cbs[0].value : `${cbs.length} sel.`;
         }
 
         function getSelectedCheckboxes(k) {
@@ -584,28 +583,59 @@
         }
 
         function updateAllFiltersOptions() {
-            const sEsc = getSelectedCheckboxes('escola'), sExc = getSelectedCheckboxes('excluir_escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
+            const sEsc = getSelectedCheckboxes('escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
             
-            const setEsc = new Set(), setTur = new Set(), setMes = new Set(), setExc = new Set();
+            const setEsc = new Set(), setTur = new Set(), setMes = new Set();
 
             globalData.forEach(d => {
-                setExc.add(d.escola);
-
                 const mTur = sTur.length === 0 || sTur.includes(d.turma);
                 const mMes = sMes.length === 0 || sMes.includes(d.mesNome);
-                const mExc = !sExc.includes(d.escola);
-                if (mTur && mMes && mExc && d.escola) setEsc.add(d.escola);
+                if (mTur && mMes && d.escola) setEsc.add(d.escola);
 
                 const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
-                if (mEsc && mMes && mExc && d.turma) setTur.add(d.turma);
+                if (mEsc && mMes && d.turma) setTur.add(d.turma);
 
-                if (mEsc && mTur && mExc && d.mesNome) setMes.add(d.mesNome);
+                if (mEsc && mTur && d.mesNome) setMes.add(d.mesNome);
             });
 
             rebuildDropdown('escola', Array.from(setEsc).sort(), sEsc);
-            rebuildDropdown('excluir_escola', Array.from(setExc).sort(), sExc);
             rebuildDropdown('turma', Array.from(setTur).sort(), sTur);
             rebuildDropdown('mes', Array.from(setMes).sort((a,b) => mesesNomes.indexOf(a) - mesesNomes.indexOf(b)), sMes);
+        }
+
+        function rebuildColunasOcultarOptions(semanasOrdenadas) {
+            const container = document.querySelector('.multi-select[data-filter="ocultar_colunas"] .select-options');
+            if (!container) return;
+
+            const atualOcultas = getSelectedCheckboxes('ocultar_colunas');
+            container.innerHTML = '';
+
+            // Colunas fixas opcionais de ocultação
+            const colunasFixas = [
+                { id: 'col_escola', label: currentView === 'escola' ? 'Escola' : 'Turma' }
+            ];
+            if (currentView !== 'escola') {
+                colunasFixas.push({ id: 'col_escola_pai', label: 'Escola Pertencente' });
+            }
+
+            colunasFixas.forEach(cf => {
+                const isChecked = atualOcultas.includes(cf.id);
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${cf.id}" ${isChecked ? 'checked' : ''} onchange="updateMultiSelectDisplay('ocultar_colunas'); renderDashboard();"> ${cf.label}`;
+                container.appendChild(label);
+            });
+
+            // Colunas de Semanas
+            semanasOrdenadas.forEach(semKey => {
+                const colId = `sem_${semKey}`;
+                const rot = semKey.includes('Sem') ? semKey : `Sem. ${semKey}`;
+                const isChecked = atualOcultas.includes(colId);
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${colId}" ${isChecked ? 'checked' : ''} onchange="updateMultiSelectDisplay('ocultar_colunas'); renderDashboard();"> ${rot}`;
+                container.appendChild(label);
+            });
+
+            updateMultiSelectDisplay('ocultar_colunas');
         }
 
         function rebuildDropdown(filterKey, availableValues, currentSelected) {
@@ -628,14 +658,13 @@
         }
 
         function applyFilters() {
-            const sEsc = getSelectedCheckboxes('escola'), sExc = getSelectedCheckboxes('excluir_escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
+            const sEsc = getSelectedCheckboxes('escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
 
             filteredData = globalData.filter(d => {
                 const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
-                const mExc = !sExc.includes(d.escola);
                 const mTur = sTur.length === 0 || sTur.includes(d.turma);
                 const mMes = sMes.length === 0 || sMes.includes(d.mesNome);
-                return mEsc && mExc && mTur && mMes;
+                return mEsc && mTur && mMes;
             });
 
             updateAllFiltersOptions();
@@ -804,6 +833,10 @@
                 return numA - numB;
             });
 
+            // Atualiza as opções do dropdown de ocultar colunas com base nas semanas presentes
+            rebuildColunasOcultarOptions(semanasOrdenadas);
+            const colunasOcultas = getSelectedCheckboxes('ocultar_colunas');
+
             const ultimasMatriculasPorTurma = new Map();
             filteredData.forEach(d => {
                 const turKey = d.id_turma;
@@ -927,19 +960,24 @@
 
             const getArrow = col => sortColumn === col ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
 
-            // Cabeçalho da Tabela
+            // Cabeçalho da Tabela (Respeitando colunas ocultas)
             const theadTr = document.querySelector('#tabelaTarefas thead');
-            let thHtml = `<tr>
-                <th style="width:36px;">#</th>
-                <th onclick="toggleSort('rotulo')" class="row-header" style="width:200px;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('rotulo')}</th>`;
+            let thHtml = `<tr><th style="width:36px;">#</th>`;
             
-            if (currentView !== 'escola') {
+            if (!colunasOcultas.includes('col_escola')) {
+                thHtml += `<th onclick="toggleSort('rotulo')" class="row-header" style="width:200px;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('rotulo')}</th>`;
+            }
+            
+            if (currentView !== 'escola' && !colunasOcultas.includes('col_escola_pai')) {
                 thHtml += `<th onclick="toggleSort('escolaPai')" style="width:150px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
             }
 
             semanasOrdenadas.forEach(semKey => {
-                const rotuloCol = semKey.includes('Sem') ? semKey : `Sem. ${semKey}`;
-                thHtml += `<th>${rotuloCol}</th>`;
+                const colId = `sem_${semKey}`;
+                if (!colunasOcultas.includes(colId)) {
+                    const rotuloCol = semKey.includes('Sem') ? semKey : `Sem. ${semKey}`;
+                    thHtml += `<th>${rotuloCol}</th>`;
+                }
             });
 
             thHtml += `<th style="border-left:2px solid var(--navy2);">Média Geral</th></tr>`;
@@ -953,38 +991,41 @@
                 const nomeEscolaTarget = currentView === 'escola' ? r.rotulo : r.escolaPai;
                 const linkEscolaHtml = `<span class="escola-link" onclick="abrirModalInsights('${nomeEscolaTarget.replace(/'/g, "\\'")}')">${r.rotulo}</span>`;
 
-                tbHtml += `<tr>
-                    <td style="font-weight:700; color:var(--light);">${start + idx + 1}</td>
-                    <td class="row-header">${linkEscolaHtml}</td>`;
+                tbHtml += `<tr><td style="font-weight:700; color:var(--light);">${start + idx + 1}</td>`;
                 
-                if (currentView !== 'escola') {
+                if (!colunasOcultas.includes('col_escola')) {
+                    tbHtml += `<td class="row-header">${linkEscolaHtml}</td>`;
+                }
+                
+                if (currentView !== 'escola' && !colunasOcultas.includes('col_escola_pai')) {
                     const linkPaiHtml = `<span class="escola-link" onclick="abrirModalInsights('${r.escolaPai.replace(/'/g, "\\'")}')">${r.escolaPai}</span>`;
                     tbHtml += `<td style="color:var(--muted); font-weight:600;">${linkPaiHtml}</td>`;
                 }
 
                 semanasOrdenadas.forEach(semKey => {
-                    const sData = r.semanasData[semKey];
-                    if (sData && sData.weight > 0) {
-                        const pReal = sData.realSoma / sData.weight;
-                        const pAcerto = sData.acertoSoma / sData.weight;
-                        const iqVal = sData.iqSoma / sData.weight;
-                        
-                        // BI em formato 0 a 0,75 exato
-                        const biVal = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
+                    const colId = `sem_${semKey}`;
+                    if (!colunasOcultas.includes(colId)) {
+                        const sData = r.semanasData[semKey];
+                        if (sData && sData.weight > 0) {
+                            const pReal = sData.realSoma / sData.weight;
+                            const pAcerto = sData.acertoSoma / sData.weight;
+                            const iqVal = sData.iqSoma / sData.weight;
+                            const biVal = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
 
-                        const cReal = getFarolColor(pReal);
-                        const cAcerto = getFarolColor(pAcerto);
-                        const cBi = getFarolColor((biVal / 0.75) * 100);
+                            const cReal = getFarolColor(pReal);
+                            const cAcerto = getFarolColor(pAcerto);
+                            const cBi = getFarolColor((biVal / 0.75) * 100);
 
-                        tbHtml += `<td>
-                            <div class="cell-stacked">
-                                <div class="${cReal}"><span>Real:</span> <strong>${pReal.toFixed(0)}%</strong></div>
-                                <div class="${cAcerto}"><span>Acerto:</span> <strong>${pAcerto.toFixed(0)}%</strong></div>
-                                <div class="${cBi}"><span>BI:</span> <strong>${biVal.toFixed(2).replace('.', ',')}</strong></div>
-                            </div>
-                        </td>`;
-                    } else {
-                        tbHtml += `<td class="bg-empty">-</td>`;
+                            tbHtml += `<td>
+                                <div class="cell-stacked">
+                                    <div class="${cReal}"><span>Real:</span> <strong>${pReal.toFixed(0)}%</strong></div>
+                                    <div class="${cAcerto}"><span>Acerto:</span> <strong>${pAcerto.toFixed(0)}%</strong></div>
+                                    <div class="${cBi}"><span>BI:</span> <strong>${biVal.toFixed(2).replace('.', ',')}</strong></div>
+                                </div>
+                            </td>`;
+                        } else {
+                            tbHtml += `<td class="bg-empty">-</td>`;
+                        }
                     }
                 });
 

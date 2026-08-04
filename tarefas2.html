@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         :root {
@@ -95,7 +96,7 @@
         .chart-title { font-size: .88rem; font-weight: 800; color: var(--navy); }
 
         .table-container { background: var(--surface); border-radius: var(--radius2); padding: 1rem 1.25rem; box-shadow: var(--shadow); border: 1px solid var(--border); overflow-x: auto; margin-bottom: 1.25rem; }
-        .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: .85rem; }
+        .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: .85rem; flex-wrap: wrap; gap: .5rem; }
         .table-title { font-size: .88rem; font-weight: 800; color: var(--navy); }
         
         table.heatmap { width: 100%; border-collapse: collapse; font-size: .78rem; }
@@ -115,9 +116,9 @@
         .bg-red { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
         .bg-empty { background: var(--bg) !important; color: var(--light) !important; }
 
-        .cell-split { display: flex; align-items: center; justify-content: center; font-family: 'Geist Mono', monospace; font-weight: 700; font-size: .78rem; }
-        .cell-split span { padding: .2rem .35rem; flex: 1; text-align: center; }
-        .cell-split span:first-child { border-right: 1px solid rgba(0,0,0,0.15); }
+        .cell-triple { display: flex; align-items: center; justify-content: center; font-family: 'Geist Mono', monospace; font-weight: 700; font-size: .75rem; }
+        .cell-triple span { padding: .2rem .25rem; flex: 1; text-align: center; }
+        .cell-triple span:not(:last-child) { border-right: 1px solid rgba(0,0,0,0.15); }
 
         .val-pos { color: var(--emerald); font-weight: 800; font-family: 'Geist Mono', monospace; }
         .val-neg { color: var(--rose); font-weight: 800; font-family: 'Geist Mono', monospace; }
@@ -220,7 +221,7 @@
                     <div class="filter-item" id="containerSelectMetric">
                         <label>Métrica Exibida</label>
                         <select id="selectMetric" onchange="renderDashboard()">
-                            <option value="realizacao_acertos" selected>% Realização / % Acertos</option>
+                            <option value="triplo" selected>% Real. / % Acerto / BI</option>
                             <option value="indice_qualidade">Índice de Qualidade (IQ %)</option>
                             <option value="percentual_tarefas_realizadas">% Realização de Tarefas</option>
                             <option value="percentual_acertos">% de Acertos</option>
@@ -288,7 +289,10 @@
             <div class="table-container" id="containerMatrizTabela">
                 <div class="table-toolbar">
                     <div class="table-title" id="table-title-context">Matriz Semanal de Tarefas</div>
-                    <button class="btn-excel" onclick="exportarExcel()">📊 Exportar Excel</button>
+                    <div style="display: flex; gap: .5rem;">
+                        <button class="btn-img" onclick="exportarTabelaJPG()">📥 Baixar Tabela JPG</button>
+                        <button class="btn-excel" onclick="exportarExcel()">📊 Exportar Excel</button>
+                    </div>
                 </div>
                 
                 <table class="heatmap" id="tabelaTarefas">
@@ -573,15 +577,21 @@
 
         function updateAllFiltersOptions() {
             const sEsc = getSelectedCheckboxes('escola'), sTur = getSelectedCheckboxes('turma'), sMes = getSelectedCheckboxes('mes');
+            
+            // Reconstroi preservando seleções vigentes
             const setEsc = new Set(), setTur = new Set(), setMes = new Set();
 
             globalData.forEach(d => {
-                const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
+                // Para popular escola, respeita filtro de turma e mes
                 const mTur = sTur.length === 0 || sTur.includes(d.turma);
                 const mMes = sMes.length === 0 || sMes.includes(d.mesNome);
-
                 if (mTur && mMes && d.escola) setEsc.add(d.escola);
+
+                // Para popular turma, respeita escola e mes
+                const mEsc = sEsc.length === 0 || sEsc.includes(d.escola);
                 if (mEsc && mMes && d.turma) setTur.add(d.turma);
+
+                // Para popular mes, respeita escola e turma
                 if (mEsc && mTur && d.mesNome) setMes.add(d.mesNome);
             });
 
@@ -597,7 +607,7 @@
             availableValues.forEach(val => {
                 const isChecked = currentSelected.includes(val);
                 const label = document.createElement('label');
-                label.innerHTML = `<input type="checkbox" value="${val.replace(/"/g,'&quot;')}" ${isChecked ? 'checked' : ''} onchange="updateMultiSelectDisplay('${filterKey}'); updateAllFiltersOptions(); applyFilters();"> ${val}`;
+                label.innerHTML = `<input type="checkbox" value="${val.replace(/"/g,'&quot;')}" ${isChecked ? 'checked' : ''} onchange="updateMultiSelectDisplay('${filterKey}'); applyFilters();"> ${val}`;
                 container.appendChild(label);
             });
             updateMultiSelectDisplay(filterKey);
@@ -618,6 +628,8 @@
                 const mMes = sMes.length === 0 || sMes.includes(d.mesNome);
                 return mEsc && mTur && mMes;
             });
+
+            updateAllFiltersOptions();
 
             if (currentView === 'atividades') {
                 atualizarOpcoesDropdownAtividades();
@@ -641,6 +653,16 @@
             link.download = `Evolucao_Tarefas_${currentView}.jpg`;
             link.href = urlCanvas;
             link.click();
+        }
+
+        function exportarTabelaJPG() {
+            const containerTabela = document.getElementById('containerMatrizTabela');
+            html2canvas(containerTabela, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Matriz_Tarefas_${currentView}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 1.0);
+                link.click();
+            });
         }
 
         function mudarPagina(delta) { currentPage += delta; renderDashboard(); }
@@ -780,6 +802,7 @@
             const mapaMatriz = new Map();
             let sumIQXMatGlobal = 0, sumTarefasProp = 0, sumTarefasPrazo = 0, sumMatriculasAcumuladas = 0;
 
+            filteredData.gotoUnica = false;
             filteredData.forEach(d => {
                 const key = currentView === 'escola' ? d.escola : `${d.id_turma}___${d.turma}`;
                 const rotulo = currentView === 'escola' ? d.escola : d.turma;
@@ -830,12 +853,16 @@
                     const sData = e.semanasData[semKey];
                     if (sData && sData.weight > 0) {
                         let valCell = 0;
-                        if (activeMetric === 'realizacao_acertos') {
-                            valCell = sData.realSoma / sData.weight;
+                        const pReal = sData.realSoma / sData.weight;
+                        const pAcerto = sData.acertoSoma / sData.weight;
+
+                        if (activeMetric === 'triplo') {
+                            const bi = pAcerto > 0 ? ((pReal / pAcerto) / 0.70) * 0.75 * 100 : 0;
+                            valCell = bi;
                         } else if (activeMetric === 'indice_qualidade') {
                             valCell = e.somaMatriculasPeso > 0 ? e.somaIQTotal / e.somaMatriculasPeso : 0;
                         } else {
-                            valCell = sData.realSoma / sData.weight;
+                            valCell = pReal;
                         }
                         somaRow += valCell * sData.weight;
                         weightRow += sData.weight;
@@ -880,12 +907,12 @@
                 <th onclick="toggleSort('rotulo')" class="row-header" style="width:200px;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('rotulo')}</th>`;
             
             if (currentView !== 'escola') {
-                thHtml += `<th onclick="toggleSort('escolaPai')" style="width:150px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
+                thHtml += `<th onclick="toggleSort('escolaPai')" style="width:140px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
             }
 
             semanasOrdenadas.forEach(semKey => {
                 const rotuloCol = semKey.includes('Sem') ? semKey : `Sem. ${semKey}`;
-                thHtml += `<th>${rotuloCol} <div style="font-size:0.6rem;opacity:0.8;">% Real. / % Acerto</div></th>`;
+                thHtml += `<th>${rotuloCol} <div style="font-size:0.55rem;opacity:0.8;">% Real. / % Acerto / BI</div></th>`;
             });
 
             thHtml += `<th style="border-left:2px solid var(--navy2);">Média Geral</th></tr>`;
@@ -913,13 +940,18 @@
                     if (sData && sData.weight > 0) {
                         const pReal = sData.realSoma / sData.weight;
                         const pAcerto = sData.acertoSoma / sData.weight;
+                        // Fórmula solicitada: ((% realização / % acertos) / 70%) * 75%
+                        const biVal = pAcerto > 0 ? ((pReal / pAcerto) / 0.70) * 0.75 * 100 : 0;
+
                         const cReal = getFarolColor(pReal);
                         const cAcerto = getFarolColor(pAcerto);
+                        const cBi = getFarolColor(biVal);
 
                         tbHtml += `<td>
-                            <div class="cell-split">
+                            <div class="cell-triple">
                                 <span class="${cReal}" title="Realização">${pReal.toFixed(0)}%</span>
                                 <span class="${cAcerto}" title="Acertos">${pAcerto.toFixed(0)}%</span>
+                                <span class="${cBi}" title="BI">${biVal.toFixed(0)}%</span>
                             </div>
                         </td>`;
                     } else {
@@ -955,9 +987,12 @@
                             const sData = item.semanasData[semKey];
                             if (sData && sData.weight > 0) {
                                 let v = 0;
-                                if (indiceSelecionado === 'percentual_acertos') v = (sData.acertoSoma / sData.weight);
-                                else if (indiceSelecionado === 'percentual_tarefas_realizadas') v = (sData.realSoma / sData.weight);
-                                else v = (sData.realSoma / sData.weight);
+                                const pr = sData.realSoma / sData.weight;
+                                const pa = sData.acertoSoma / sData.weight;
+
+                                if (indiceSelecionado === 'percentual_acertos') v = pa;
+                                else if (indiceSelecionado === 'percentual_tarefas_realizadas') v = pr;
+                                else v = pr;
 
                                 somaValSem += v * sData.weight;
                                 somaWeightSem += sData.weight;
@@ -985,7 +1020,6 @@
                         const dataPts = semanasOrdenadas.map(semKey => {
                             const sData = itemEntidade.semanasData[semKey];
                             if (!sData || sData.weight === 0) return 0;
-                            if (indiceSelecionado === 'percentual_acertos') return parseFloat((sData.acertoSoma / sData.weight).toFixed(1));
                             return parseFloat((sData.realSoma / sData.weight).toFixed(1));
                         });
 

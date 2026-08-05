@@ -99,11 +99,11 @@
         .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: .85rem; flex-wrap: wrap; gap: .5rem; }
         .table-title { font-size: .88rem; font-weight: 800; color: var(--navy); }
         
-        table.heatmap { width: 100%; border-collapse: collapse; font-size: .75rem; table-layout: auto; }
-        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: .3rem .25rem; text-align: center; vertical-align: middle; white-space: nowrap; }
-        table.heatmap th { background: var(--navy); color: rgba(255,255,255,.9); font-size: .65rem; font-weight: 800; text-transform: uppercase; cursor: pointer; user-select: none; }
+        table.heatmap { width: 100%; border-collapse: collapse; font-size: .78rem; }
+        table.heatmap th, table.heatmap td { border: 1px solid var(--border); padding: .45rem .35rem; text-align: center; vertical-align: middle; white-space: nowrap; }
+        table.heatmap th { background: var(--navy); color: rgba(255,255,255,.9); font-size: .68rem; font-weight: 800; text-transform: uppercase; cursor: pointer; user-select: none; }
         table.heatmap th:hover { background: var(--navy2); }
-        table.heatmap .row-header { text-align: left; background: var(--surface2); color: var(--text); font-weight: 800; padding-left: .5rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+        table.heatmap .row-header { text-align: left; background: var(--surface2); color: var(--text); font-weight: 800; padding-left: .6rem; }
         
         table.heatmap tr.row-consolidado td { background: #e6f0ff !important; color: var(--navy) !important; font-weight: 800; border-bottom: 2px solid var(--blue2); }
         table.heatmap tr.row-consolidado .row-header { background: #d0e1fd !important; }
@@ -119,9 +119,9 @@
         .bg-red { background: var(--rose) !important; color: #fff !important; font-weight: 700; }
         .bg-empty { background: var(--bg) !important; color: var(--light) !important; }
 
-        .cell-stacked { display: flex; flex-direction: column; gap: 1px; font-family: 'Geist Mono', monospace; font-size: .7rem; font-weight: 700; min-width: 110px; }
-        .cell-stacked div { padding: .1rem .25rem; border-radius: 2px; display: flex; justify-content: space-between; align-items: center; gap: 4px; }
-        .cell-stacked div span:first-child { font-weight: 600; font-size: .58rem; opacity: 0.85; text-transform: uppercase; }
+        .cell-stacked { display: flex; flex-direction: column; gap: 2px; font-family: 'Geist Mono', monospace; font-size: .72rem; font-weight: 700; }
+        .cell-stacked div { padding: .15rem .3rem; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+        .cell-stacked div span:first-child { font-weight: 600; font-size: .62rem; opacity: 0.85; text-transform: uppercase; }
 
         .val-pos { color: var(--emerald); font-weight: 800; font-family: 'Geist Mono', monospace; }
         .val-neg { color: var(--rose); font-weight: 800; font-family: 'Geist Mono', monospace; }
@@ -909,7 +909,7 @@
             const avgIQGlobal = sumMatriculasAcumuladas > 0 ? (sumIQXMatGlobal / sumMatriculasAcumuladas) : 0;
             document.getElementById('card-iq-medio').textContent = `${avgIQGlobal.toFixed(1).replace('.', ',')}%`;
 
-            // Pré-cálculo do peso total por semana
+            // Pré-cálculo dos totais de peso (alunos) por semana para saber a proporção (peso da entidade / peso total da rede na semana)
             const totalPesoSemanal = {};
             semanasOrdenadas.forEach(semKey => {
                 let wTotal = 0;
@@ -930,9 +930,9 @@
                         const iqVal = sData.iqSoma / sData.weight;
 
                         if (activeMetric === 'triplo') {
-                            const bi = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
+                            const biEntidade = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
                             const proporcao = sData.weight / (totalPesoSemanal[semKey] || 1);
-                            valCell = bi * proporcao;
+                            valCell = biEntidade * proporcao;
                         } else if (activeMetric === 'indice_qualidade') {
                             valCell = (iqVal / 100.0) * (sData.weight / (totalPesoSemanal[semKey] || 1));
                         } else {
@@ -1019,11 +1019,11 @@
             }
 
             if (!colunasOcultas.includes('col_escola')) {
-                thHtml += `<th onclick="toggleSort('rotulo')" class="row-header" style="width:180px;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('rotulo')}</th>`;
+                thHtml += `<th onclick="toggleSort('rotulo')" class="row-header" style="width:200px;">${currentView === 'escola' ? 'Escola' : 'Turma'}${getArrow('rotulo')}</th>`;
             }
             
             if (currentView !== 'escola' && !colunasOcultas.includes('col_escola_pai')) {
-                thHtml += `<th onclick="toggleSort('escolaPai')" style="width:140px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
+                thHtml += `<th onclick="toggleSort('escolaPai')" style="width:150px;">Escola Pertencente${getArrow('escolaPai')}</th>`;
             }
 
             semanasOrdenadas.forEach(semKey => {
@@ -1078,11 +1078,9 @@
                     }
                 }
             });
-            // Correção do farol da Média Geral baseado na escala percentual correspondente ao BI geral
-            const farolUreTotal = getFarolColor((ureTotalConsolidado / 0.75) * 100);
-            tbHtml += `<td class="${farolUreTotal}" style="border-left:2px solid var(--border2); font-weight:800;">${ureTotalConsolidado.toFixed(2).replace('.', ',')}</td></tr>`;
+            tbHtml += `<td style="border-left:2px solid var(--border2); font-weight:800;">${ureTotalConsolidado.toFixed(2).replace('.', ',')}</td></tr>`;
 
-            // Demais Linhas (Entidades Individuais)
+            // Demais Linhas (Entidades Individuais com contribuição proporcional no BI)
             paginadas.forEach((r, idx) => {
                 const nomeEscolaTarget = currentView === 'escola' ? r.rotulo : r.escolaPai;
                 const linkEscolaHtml = `<span class="escola-link" onclick="abrirModalInsights('${nomeEscolaTarget.replace(/'/g, "\\'")}')">${r.rotulo}</span>`;
@@ -1111,13 +1109,16 @@
                             const pAcerto = sData.acertoSoma / sData.weight;
                             const iqVal = sData.iqSoma / sData.weight;
                             
+                            // Índice BI real da turma/escola isolada
                             const biBruto = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
+                            
+                            // Parcela de contribuição proporcional que vai para a média geral
                             const proporcaoPeso = sData.weight / (totalPesoSemanal[semKey] || 1);
                             const biContribuicao = biBruto * proporcaoPeso;
 
                             const cReal = getFarolColor(pReal);
                             const cAcerto = getFarolColor(pAcerto);
-                            const cBi = getFarolColor((biBruto / 0.75) * 100);
+                            const cBi = getFarolColor((biBruto / 0.75) * 100); // Cor avaliada pelo desempenho real da turma
                             const qtdProps = Math.round(sData.propSoma || 0);
 
                             tbHtml += `<td>
@@ -1274,4 +1275,3 @@
     </script>
 </body>
 </html>
-

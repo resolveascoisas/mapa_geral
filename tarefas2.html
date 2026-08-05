@@ -909,6 +909,17 @@
             const avgIQGlobal = sumMatriculasAcumuladas > 0 ? (sumIQXMatGlobal / sumMatriculasAcumuladas) : 0;
             document.getElementById('card-iq-medio').textContent = `${avgIQGlobal.toFixed(1).replace('.', ',')}%`;
 
+            // Pré-cálculo dos totais de peso (alunos) por semana para saber a proporção (peso da entidade / peso total da rede na semana)
+            const totalPesoSemanal = {};
+            semanasOrdenadas.forEach(semKey => {
+                let wTotal = 0;
+                mapaMatriz.forEach(item => {
+                    const sd = item.semanasData[semKey];
+                    if (sd && sd.weight > 0) wTotal += sd.weight;
+                });
+                totalPesoSemanal[semKey] = wTotal;
+            });
+
             let linhas = Array.from(mapaMatriz.values()).map(e => {
                 let somaRow = 0, weightRow = 0;
                 semanasOrdenadas.forEach(semKey => {
@@ -919,12 +930,13 @@
                         const iqVal = sData.iqSoma / sData.weight;
 
                         if (activeMetric === 'triplo') {
-                            const bi = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
-                            valCell = bi;
+                            const biEntidade = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
+                            const proporcao = sData.weight / (totalPesoSemanal[semKey] || 1);
+                            valCell = biEntidade * proporcao;
                         } else if (activeMetric === 'indice_qualidade') {
-                            valCell = iqVal / 100.0;
+                            valCell = (iqVal / 100.0) * (sData.weight / (totalPesoSemanal[semKey] || 1));
                         } else {
-                            valCell = pReal / 100.0;
+                            valCell = (pReal / 100.0) * (sData.weight / (totalPesoSemanal[semKey] || 1));
                         }
                         somaRow += valCell * sData.weight;
                         weightRow += sData.weight;
@@ -962,7 +974,7 @@
 
             const getArrow = col => sortColumn === col ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
 
-            // --- CÁLCULO DA LINHA 1: MÉDIA GERAL (PONDERADA POR ALUNOS + SOMA DE TAREFAS PROPOSTAS) ---
+            // --- CÁLCULO DA LINHA 1: MÉDIA GERAL (PONDERADA POR ALUNOS) ---
             const ureSemanasData = {};
             semanasOrdenadas.forEach(semKey => {
                 let sumRealSem = 0, sumAcertoSem = 0, sumIqSem = 0, sumPropSem = 0, sumWSem = 0;
@@ -1068,7 +1080,7 @@
             });
             tbHtml += `<td style="border-left:2px solid var(--border2); font-weight:800;">${ureTotalConsolidado.toFixed(2).replace('.', ',')}</td></tr>`;
 
-            // Demais Linhas (Entidades Individuais)
+            // Demais Linhas (Entidades Individuais com contribuição proporcional no BI)
             paginadas.forEach((r, idx) => {
                 const nomeEscolaTarget = currentView === 'escola' ? r.rotulo : r.escolaPai;
                 const linkEscolaHtml = `<span class="escola-link" onclick="abrirModalInsights('${nomeEscolaTarget.replace(/'/g, "\\'")}')">${r.rotulo}</span>`;
@@ -1097,13 +1109,17 @@
                             const pAcerto = sData.acertoSoma / sData.weight;
                             const iqVal = sData.iqSoma / sData.weight;
                             
-                            // Cada turma/escola contribui calculando o BI com o seu próprio IQ ponderado que vai para a média geral
-                            const biVal = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
-                            const qtdProps = Math.round(sData.propSoma || 0);
+                            // Índice BI real da turma/escola isolada
+                            const biBruto = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
+                            
+                            // Parcela de contribuição proporcional que vai para a média geral
+                            const proporcaoPeso = sData.weight / (totalPesoSemanal[semKey] || 1);
+                            const biContribuicao = biBruto * proporcaoPeso;
 
                             const cReal = getFarolColor(pReal);
                             const cAcerto = getFarolColor(pAcerto);
-                            const cBi = getFarolColor((biVal / 0.75) * 100);
+                            const cBi = getFarolColor((biBruto / 0.75) * 100); // Cor avaliada pelo desempenho real da turma
+                            const qtdProps = Math.round(sData.propSoma || 0);
 
                             tbHtml += `<td>
                                 <div class="cell-stacked">
@@ -1112,7 +1128,7 @@
                                     </div>
                                     <div class="${cReal}"><span>Real:</span> <strong>${pReal.toFixed(0)}%</strong></div>
                                     <div class="${cAcerto}"><span>Acerto:</span> <strong>${pAcerto.toFixed(0)}%</strong></div>
-                                    <div class="${cBi}"><span>BI:</span> <strong>${biVal.toFixed(2).replace('.', ',')}</strong></div>
+                                    <div class="${cBi}" title="Contribuição na média: ${biContribuicao.toFixed(3)}"><span>BI:</span> <strong>${biContribuicao.toFixed(2).replace('.', ',')}</strong></div>
                                 </div>
                             </td>`;
                         } else {

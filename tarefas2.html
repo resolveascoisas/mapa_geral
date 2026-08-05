@@ -1096,6 +1096,8 @@
                             const pReal = sData.realSoma / sData.weight;
                             const pAcerto = sData.acertoSoma / sData.weight;
                             const iqVal = sData.iqSoma / sData.weight;
+                            
+                            // Cada turma/escola contribui calculando o BI com o seu próprio IQ ponderado que vai para a média geral
                             const biVal = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
                             const qtdProps = Math.round(sData.propSoma || 0);
 
@@ -1257,3 +1259,4 @@
     </script>
 </body>
 </html>
+

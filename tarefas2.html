@@ -692,7 +692,7 @@
             renderDashboard();
         }
 
-        // Nova regra do Farol para o IQ solicitada
+        // Nova regra do Farol para o IQ solicitada: >=70 Verde, >=50 Amarelo, <50 Vermelho
         function getFarolColorIQ(val) {
             if (val === null || val === undefined) return 'bg-empty';
             if (val >= 70.0) return 'bg-green';
@@ -964,7 +964,7 @@
                 item.somaMatriculasPeso += w;
 
                 if (!item.semanasData[semKey]) {
-                    item.semanasData[semKey] = { realSoma: 0, acertoSoma: 0, iqSoma: 0, propSoma: 0, prazoSoma: 0, weight: 0 };
+                    item.semanasData[semKey] = { realSoma: 0, acertoSoma: 0, iqSoma: 0, propSoma: 0, prazoSoma: 0, temRegistro: true, weight: 0 };
                 }
                 const sObj = item.semanasData[semKey];
                 
@@ -992,7 +992,7 @@
                 semanasOrdenadas.forEach(semKey => {
                     const sData = e.semanasData[semKey];
                     if (sData && sData.weight > 0) {
-                        const iqVal = sData.iqSoma / sData.weight;
+                        const iqVal = sData.weight > 0 ? (sData.iqSoma / sData.weight) : 0;
                         let valCell = (iqVal / 100.0);
                         somaRow += valCell * sData.weight;
                         weightRow += sData.weight;
@@ -1030,7 +1030,7 @@
 
             const getArrow = col => sortColumn === col ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
 
-            // --- CÁLCULO DA LINHA 1: MÉDIA GERAL (USANDO total_realizadas_prazos e tarefas_propostas para o percentual de realização, com acertos e IQ) ---
+            // --- CÁLCULO DA LINHA 1: MÉDIA GERAL (Cruzando total_realizadas_prazos e tarefas_propostas para a realização da rede) ---
             const ureSemanasData = {};
             semanasOrdenadas.forEach(semKey => {
                 let sumPrazoSem = 0, sumPropSem = 0, sumAcertoSem = 0, sumIqSem = 0, sumWSem = 0;
@@ -1044,13 +1044,14 @@
                         sumWSem += sd.weight;
                     }
                 });
-                if (sumWSem > 0) {
+                if (sumWSem > 0 || sumPropSem > 0) {
                     const realGeralCalc = sumPropSem > 0 ? (sumPrazoSem / sumPropSem) * 100.0 : 0;
                     ureSemanasData[semKey] = {
                         real: realGeralCalc,
-                        acerto: sumAcertoSem / sumWSem,
-                        iq: sumIqSem / sumWSem,
+                        acerto: sumWSem > 0 ? (sumAcertoSem / sumWSem) : 0,
+                        iq: sumWSem > 0 ? (sumIqSem / sumWSem) : 0,
                         propostas: sumPropSem,
+                        temProposta: sumPropSem > 0,
                         weight: sumWSem
                     };
                 }
@@ -1087,7 +1088,7 @@
             const tbody = document.querySelector('#tabelaTarefas tbody');
             let tbHtml = '';
 
-            // LINHA 1: MÉDIA GERAL (Usando novas regras de realização e farol IQ)
+            // LINHA 1: MÉDIA GERAL
             tbHtml += `<tr class="row-consolidado">
                 <td style="font-weight:800;">★</td>`;
             if (!colunasOcultas.includes('col_alunos')) {
@@ -1103,7 +1104,7 @@
                 const colId = `sem_${semKey}`;
                 if (!colunasOcultas.includes(colId)) {
                     const sd = ureSemanasData[semKey];
-                    if (sd) {
+                    if (sd && (sd.temProposta || sd.weight > 0)) {
                         const pReal = sd.real;
                         const pAcerto = sd.acerto;
                         const iqVal = sd.iq;
@@ -1120,13 +1121,13 @@
                             </div>
                         </td>`;
                     } else {
-                        tbHtml += `<td>-</td>`;
+                        tbHtml += `<td class="bg-empty">-</td>`;
                     }
                 }
             });
             tbHtml += `</tr>`;
 
-            // Demais Linhas (Entidades Individuais)
+            // Demais Linhas (Entidades Individuais com diferenciação exata entre semana vazia e semana zerada)
             paginadas.forEach((r, idx) => {
                 const nomeEscolaTarget = currentView === 'escola' ? r.rotulo : r.escolaPai;
                 const linkEscolaHtml = `<span class="escola-link" onclick="abrirModalInsights('${nomeEscolaTarget.replace(/'/g, "\\'")}')">${r.rotulo}</span>`;
@@ -1150,14 +1151,15 @@
                     const colId = `sem_${semKey}`;
                     if (!colunasOcultas.includes(colId)) {
                         const sData = r.semanasData[semKey];
-                        if (sData && sData.weight > 0) {
-                            const pReal = sData.realSoma / sData.weight;
-                            const pAcerto = sData.acertoSoma / sData.weight;
-                            const iqVal = sData.iqSoma / sData.weight;
+                        // Verifica se houve propostas cadastradas (semanas zeradas vs semanas vazias)
+                        if (sData && sData.propSoma > 0) {
+                            const pReal = sData.weight > 0 ? (sData.realSoma / sData.weight) : 0;
+                            const pAcerto = sData.weight > 0 ? (sData.acertoSoma / sData.weight) : 0;
+                            const iqVal = sData.weight > 0 ? (sData.iqSoma / sData.weight) : 0;
 
                             const cReal = getFarolColor(pReal);
                             const cAcerto = getFarolColor(pAcerto);
-                            const cIq = getFarolColorIQ(iqVal); // Farol do IQ atualizado
+                            const cIq = getFarolColorIQ(iqVal);
                             const qtdProps = Math.round(sData.propSoma || 0);
 
                             tbHtml += `<td>
@@ -1171,6 +1173,7 @@
                                 </div>
                             </td>`;
                         } else {
+                            // Semana verdadeiramente vazia (sem tarefas propostas)
                             tbHtml += `<td class="bg-empty">-</td>`;
                         }
                     }

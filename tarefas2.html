@@ -11,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         :root {
@@ -113,6 +114,7 @@
 
         .btn-excel { display: inline-flex; align-items: center; gap: .3rem; background: rgba(5,150,105,.1); color: #065f46; border: 1px solid rgba(5,150,105,.25); padding: .35rem .75rem; border-radius: 6px; font-family: inherit; font-size: .75rem; font-weight: 800; cursor: pointer; }
         .btn-img { display: inline-flex; align-items: center; gap: .3rem; background: rgba(29,78,216,.1); color: var(--blue); border: 1px solid rgba(29,78,216,.25); padding: .35rem .75rem; border-radius: 6px; font-family: inherit; font-size: .75rem; font-weight: 800; cursor: pointer; }
+        .btn-pdf { display: inline-flex; align-items: center; gap: .3rem; background: rgba(225,29,72,.1); color: var(--rose); border: 1px solid rgba(225,29,72,.25); padding: .35rem .75rem; border-radius: 6px; font-family: inherit; font-size: .75rem; font-weight: 800; cursor: pointer; }
 
         .bg-green { background: var(--emerald) !important; color: #fff !important; font-weight: 700; }
         .bg-yellow { background: #fde047 !important; color: #713f12 !important; font-weight: 700; }
@@ -231,7 +233,7 @@
                     <div class="filter-item" id="containerSelectMetric">
                         <label>Métrica Exibida</label>
                         <select id="selectMetric" onchange="renderDashboard()">
-                            <option value="triplo" selected>Empilhado (% Real. / % Acerto / BI)</option>
+                            <option value="triplo" selected>Empilhado (% Real. / % Acerto / IQ)</option>
                             <option value="indice_qualidade">Índice de Qualidade (IQ %)</option>
                             <option value="percentual_tarefas_realizadas">% Realização de Tarefas</option>
                             <option value="percentual_acertos">% de Acertos</option>
@@ -299,7 +301,8 @@
             <div class="table-container" id="containerMatrizTabela">
                 <div class="table-toolbar">
                     <div class="table-title" id="table-title-context">Matriz Semanal de Tarefas</div>
-                    <div style="display: flex; gap: .5rem;">
+                    <div style="display: flex; gap: .5rem; flex-wrap: wrap;">
+                        <button class="btn-pdf" onclick="exportarTabelaPDF()">📥 Baixar Tabela PDF</button>
                         <button class="btn-img" onclick="exportarTabelaJPG()">📥 Baixar Tabela JPG</button>
                         <button class="btn-excel" onclick="exportarExcel()">📊 Exportar Excel</button>
                     </div>
@@ -314,9 +317,10 @@
                     <div>
                         <span>Exibir </span>
                         <select class="select-pageSize" onchange="alterarTamanhoPagina(this.value)">
+                            <option value="14" selected>14</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
-                            <option value="100" selected>100</option>
+                            <option value="100">100</option>
                             <option value="999999">Todos</option>
                         </select>
                         <span id="info-paginacao" style="margin-left: 8px; font-weight: 700;">-</span>
@@ -386,7 +390,7 @@
         let sortDirection = 'asc';
 
         let currentPage = 1;
-        let pageSize = 100;
+        let pageSize = 14;
         let chartInstance = null;
         let modalChartInstance = null;
 
@@ -431,6 +435,15 @@
             return "Outros";
         }
 
+        function formatarNomeTurma(nomeOriginal) {
+            if (!nomeOriginal) return "Turma";
+            let s = String(nomeOriginal).trim();
+            s = s.replace(/\s*-\s*/g, ' ');
+            s = s.replace(/(INTEGRAL.*|ANUAL.*|SEMESTRAL.*|PARCIAL.*|TURNO.*)/gi, '');
+            s = s.replace(/\s+/g, ' ').trim();
+            return s;
+        }
+
         function normalizarPercentual(val) {
             let num = parseFloat(val) || 0;
             if (num > 0 && num <= 1.0) num *= 100;
@@ -470,7 +483,7 @@
                     const nomeEscola = escolasMap.get(idEscolaStr) || t.escola || 'Escola Não Identificada';
                     if (key) {
                         turmasMap.set(key, {
-                            nomeLimpo: t.nome_limpo || t.turma || 'Turma Não Identificada',
+                            nomeLimpo: formatarNomeTurma(t.nome_limpo || t.turma),
                             escola: nomeEscola,
                             anoSerie: extrairAnoSerie(t.nome_limpo || t.turma)
                         });
@@ -483,7 +496,7 @@
                     const mesNum = parseInt(t.mes_referencia) || 0;
 
                     const nomeEscola = infoTurma.escola || 'Escola Não Identificada';
-                    const nomeTurma = infoTurma.nomeLimpo || t.turma || 'Turma Não Identificada';
+                    const nomeTurma = formatarNomeTurma(infoTurma.nomeLimpo || t.turma);
                     const anoSerie = infoTurma.anoSerie || extrairAnoSerie(t.turma);
 
                     const iq = normalizarPercentual(t.indice_qualidade);
@@ -578,7 +591,7 @@
             const c = document.querySelector(`.multi-select[data-filter="${k}"]`); if (!c) return;
             const cbs = c.querySelectorAll('input[type="checkbox"]:checked');
             const span = c.querySelector('.select-display span');
-            span.textContent = cbs.length === 0 ? 'Nenhuma' : cbs.length === 1 ? cbs[0].value : `${cbs.length} sel.`;
+            span.textContent = cbs.length === 0 ? 'Todas/Todos' : cbs.length === 1 ? cbs[0].value : `${cbs.length} sel.`;
         }
 
         function getSelectedCheckboxes(k) {
@@ -723,6 +736,50 @@
             });
         }
 
+        async function exportarTabelaPDF() {
+            const { jsPDF } = window.jspdf;
+            const tableEl = document.getElementById('tabelaTarefas');
+            const titleText = document.getElementById('table-title-context').textContent;
+
+            const canvas = await html2canvas(tableEl, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+            const pdf = new jsPDF('l', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            const margin = 10;
+            const printableWidth = pageWidth - (margin * 2);
+            const printableHeight = pageHeight - (margin * 2) - 10;
+
+            const imgWidth = printableWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = margin + 10;
+
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(11);
+            pdf.text(titleText, margin, margin + 5);
+
+            pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+            heightLeft -= printableHeight;
+
+            while (heightLeft > 0) {
+                position = margin + 10 - (imgHeight - heightLeft);
+                pdf.addPage();
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(11);
+                pdf.text(`${titleText} (Continuação)`, margin, margin + 5);
+                
+                pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+                heightLeft -= printableHeight;
+            }
+
+            const nomeArquivo = titleText.replace(/[^a-zA-Z0-9]/g, '_');
+            pdf.save(`Matriz_Tarefas_${nomeArquivo}.pdf`);
+        }
+
         function mudarPagina(delta) { currentPage += delta; renderDashboard(); }
         function alterarTamanhoPagina(val) { pageSize = parseInt(val, 10); currentPage = 1; renderDashboard(); }
 
@@ -828,6 +885,18 @@
 
             const activeMetric = currentView === 'atividades' ? 'atividades' : document.getElementById('selectMetric').value;
 
+            // --- TÍTULO DA TABELA COM AS ENTIDADES FILTRADAS ---
+            const sEsc = getSelectedCheckboxes('escola');
+            const sTur = getSelectedCheckboxes('turma');
+            let tituloContextoTexto = "Matriz Semanal de Tarefas — Consolidado URE Avaré";
+            if (sEsc.length > 0) {
+                tituloContextoTexto = `Matriz Semanal de Tarefas — Escola(s): ${sEsc.join(', ')}`;
+            }
+            if (sTur.length > 0) {
+                tituloContextoTexto = `Matriz Semanal de Tarefas — Turma(s): ${sTur.join(', ')}`;
+            }
+            document.getElementById('table-title-context').textContent = tituloContextoTexto;
+
             const semanasSet = new Set(filteredData.map(d => d.codigo_intervalo || d.semanaRotulo));
             const semanasOrdenadas = Array.from(semanasSet).sort((a, b) => {
                 const numA = parseInt(String(a).replace(/\D/g, '')) || 0;
@@ -909,7 +978,6 @@
             const avgIQGlobal = sumMatriculasAcumuladas > 0 ? (sumIQXMatGlobal / sumMatriculasAcumuladas) : 0;
             document.getElementById('card-iq-medio').textContent = `${avgIQGlobal.toFixed(1).replace('.', ',')}%`;
 
-            // Pré-cálculo dos totais de peso (alunos) por semana para saber a proporção (peso da entidade / peso total da rede na semana)
             const totalPesoSemanal = {};
             semanasOrdenadas.forEach(semKey => {
                 let wTotal = 0;
@@ -926,18 +994,9 @@
                     const sData = e.semanasData[semKey];
                     if (sData && sData.weight > 0) {
                         let valCell = 0;
-                        const pReal = sData.realSoma / sData.weight;
                         const iqVal = sData.iqSoma / sData.weight;
+                        valCell = (iqVal / 100.0) * (sData.weight / (totalPesoSemanal[semKey] || 1));
 
-                        if (activeMetric === 'triplo') {
-                            const biEntidade = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
-                            const proporcao = sData.weight / (totalPesoSemanal[semKey] || 1);
-                            valCell = biEntidade * proporcao;
-                        } else if (activeMetric === 'indice_qualidade') {
-                            valCell = (iqVal / 100.0) * (sData.weight / (totalPesoSemanal[semKey] || 1));
-                        } else {
-                            valCell = (pReal / 100.0) * (sData.weight / (totalPesoSemanal[semKey] || 1));
-                        }
                         somaRow += valCell * sData.weight;
                         weightRow += sData.weight;
                     }
@@ -974,7 +1033,7 @@
 
             const getArrow = col => sortColumn === col ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
 
-            // --- CÁLCULO DA LINHA 1: MÉDIA GERAL (PONDERADA POR ALUNOS) ---
+            // --- CÁLCULO DA LINHA 1: MÉDIA GERAL (COM IQ AGORA INCLUÍDO) ---
             const ureSemanasData = {};
             semanasOrdenadas.forEach(semKey => {
                 let sumRealSem = 0, sumAcertoSem = 0, sumIqSem = 0, sumPropSem = 0, sumWSem = 0;
@@ -998,17 +1057,6 @@
                     };
                 }
             });
-
-            let sumUreTotalRow = 0, sumUreWeightRow = 0;
-            semanasOrdenadas.forEach(semKey => {
-                const sd = ureSemanasData[semKey];
-                if (sd) {
-                    const biUre = sd.iq > 0 ? Math.min((sd.iq / 70.0) * 0.75, 0.75) : 0;
-                    sumUreTotalRow += biUre * sd.weight;
-                    sumUreWeightRow += sd.weight;
-                }
-            });
-            const ureTotalConsolidado = sumUreWeightRow > 0 ? sumUreTotalRow / sumUreWeightRow : 0;
 
             // Cabeçalho da Tabela
             const theadTr = document.querySelector('#tabelaTarefas thead');
@@ -1034,14 +1082,14 @@
                 }
             });
 
-            thHtml += `<th style="border-left:2px solid var(--navy2);">Média Geral</th></tr>`;
+            thHtml += `</tr>`;
             theadTr.innerHTML = thHtml;
 
             // Corpo da Tabela
             const tbody = document.querySelector('#tabelaTarefas tbody');
             let tbHtml = '';
 
-            // LINHA 1: MÉDIA GERAL
+            // LINHA 1: MÉDIA GERAL (Com IQ incorporado no lugar do BI)
             tbHtml += `<tr class="row-consolidado">
                 <td style="font-weight:800;">★</td>`;
             if (!colunasOcultas.includes('col_alunos')) {
@@ -1051,7 +1099,7 @@
                 tbHtml += `<td class="row-header">MÉDIA GERAL</td>`;
             }
             if (currentView !== 'escola' && !colunasOcultas.includes('col_escola_pai')) {
-                tbHtml += `<td>Geral</td>`;
+                tbHtml += `<td>Rede URE</td>`;
             }
             semanasOrdenadas.forEach(semKey => {
                 const colId = `sem_${semKey}`;
@@ -1060,7 +1108,7 @@
                     if (sd) {
                         const pReal = sd.real;
                         const pAcerto = sd.acerto;
-                        const biVal = Math.min((sd.iq / 70.0) * 0.75, 0.75);
+                        const iqVal = sd.iq; // IQ Médio Ponderado da Rede
                         const qtdProps = Math.round(sd.propostas || 0);
 
                         tbHtml += `<td>
@@ -1070,7 +1118,7 @@
                                 </div>
                                 <div class="${getFarolColor(pReal)}"><span>Real:</span> <strong>${pReal.toFixed(0)}%</strong></div>
                                 <div class="${getFarolColor(pAcerto)}"><span>Acerto:</span> <strong>${pAcerto.toFixed(0)}%</strong></div>
-                                <div class="${getFarolColor((biVal/0.75)*100)}"><span>BI:</span> <strong>${biVal.toFixed(2).replace('.', ',')}</strong></div>
+                                <div class="${getFarolColor(iqVal)}"><span>IQ:</span> <strong>${iqVal.toFixed(1).replace('.', ',')}%</strong></div>
                             </div>
                         </td>`;
                     } else {
@@ -1078,9 +1126,9 @@
                     }
                 }
             });
-            tbHtml += `<td style="border-left:2px solid var(--border2); font-weight:800;">${ureTotalConsolidado.toFixed(2).replace('.', ',')}</td></tr>`;
+            tbHtml += `</tr>`;
 
-            // Demais Linhas (Entidades Individuais com contribuição proporcional no BI)
+            // Demais Linhas (Entidades Individuais com IQ da turma/escola)
             paginadas.forEach((r, idx) => {
                 const nomeEscolaTarget = currentView === 'escola' ? r.rotulo : r.escolaPai;
                 const linkEscolaHtml = `<span class="escola-link" onclick="abrirModalInsights('${nomeEscolaTarget.replace(/'/g, "\\'")}')">${r.rotulo}</span>`;
@@ -1107,18 +1155,11 @@
                         if (sData && sData.weight > 0) {
                             const pReal = sData.realSoma / sData.weight;
                             const pAcerto = sData.acertoSoma / sData.weight;
-                            const iqVal = sData.iqSoma / sData.weight;
-                            
-                            // Índice BI real da turma/escola isolada
-                            const biBruto = iqVal > 0 ? Math.min((iqVal / 70.0) * 0.75, 0.75) : 0;
-                            
-                            // Parcela de contribuição proporcional que vai para a média geral
-                            const proporcaoPeso = sData.weight / (totalPesoSemanal[semKey] || 1);
-                            const biContribuicao = biBruto * proporcaoPeso;
+                            const iqVal = sData.iqSoma / sData.weight; // IQ da Entidade
 
                             const cReal = getFarolColor(pReal);
                             const cAcerto = getFarolColor(pAcerto);
-                            const cBi = getFarolColor((biBruto / 0.75) * 100); // Cor avaliada pelo desempenho real da turma
+                            const cIq = getFarolColor(iqVal);
                             const qtdProps = Math.round(sData.propSoma || 0);
 
                             tbHtml += `<td>
@@ -1128,7 +1169,7 @@
                                     </div>
                                     <div class="${cReal}"><span>Real:</span> <strong>${pReal.toFixed(0)}%</strong></div>
                                     <div class="${cAcerto}"><span>Acerto:</span> <strong>${pAcerto.toFixed(0)}%</strong></div>
-                                    <div class="${cBi}" title="Contribuição na média: ${biContribuicao.toFixed(3)}"><span>BI:</span> <strong>${biContribuicao.toFixed(2).replace('.', ',')}</strong></div>
+                                    <div class="${cIq}"><span>IQ:</span> <strong>${iqVal.toFixed(1).replace('.', ',')}%</strong></div>
                                 </div>
                             </td>`;
                         } else {
@@ -1137,9 +1178,7 @@
                     }
                 });
 
-                const totalGeral = r.totalConsolidado;
-                const farolTotal = getFarolColor((totalGeral / 0.75) * 100);
-                tbHtml += `<td class="${farolTotal}" style="border-left:2px solid var(--border2); font-weight:800;">${totalGeral.toFixed(2).replace('.', ',')}</td></tr>`;
+                tbHtml += `</tr>`;
             });
 
             tbody.innerHTML = tbHtml;
@@ -1275,3 +1314,4 @@
     </script>
 </body>
 </html>
+

@@ -698,6 +698,12 @@
             if (val < 60.0) return 'bg-yellow';
             return 'bg-green';
         }
+        function getFarolColorIQ(val) {
+            if (val === null || val === undefined) return 'bg-empty';
+            if (val < 50) return 'bg-red';
+            if (val < 70) return 'bg-yellow';
+            return 'bg-green';
+        }
 
         function exportarGraficoJPG() {
             if (!chartInstance) return;
@@ -1159,7 +1165,7 @@
 
                             const cReal = getFarolColor(pReal);
                             const cAcerto = getFarolColor(pAcerto);
-                            const cIq = getFarolColor(iqVal);
+                            const cIq = getFarolColorIQ(iqVal);
                             const qtdProps = Math.round(sData.propSoma || 0);
 
                             tbHtml += `<td>

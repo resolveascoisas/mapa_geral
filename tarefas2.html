@@ -692,16 +692,18 @@
             renderDashboard();
         }
 
+        // Nova regra do Farol para o IQ solicitada
+        function getFarolColorIQ(val) {
+            if (val === null || val === undefined) return 'bg-empty';
+            if (val >= 70.0) return 'bg-green';
+            if (val >= 50.0) return 'bg-yellow';
+            return 'bg-red';
+        }
+
         function getFarolColor(val) {
             if (val === null || val === undefined) return 'bg-empty';
             if (val < 40.0) return 'bg-red';
             if (val < 60.0) return 'bg-yellow';
-            return 'bg-green';
-        }
-        function getFarolColorIQ(val) {
-            if (val === null || val === undefined) return 'bg-empty';
-            if (val < 50) return 'bg-red';
-            if (val < 70) return 'bg-yellow';
             return 'bg-green';
         }
 
@@ -962,7 +964,7 @@
                 item.somaMatriculasPeso += w;
 
                 if (!item.semanasData[semKey]) {
-                    item.semanasData[semKey] = { realSoma: 0, acertoSoma: 0, iqSoma: 0, propSoma: 0, weight: 0 };
+                    item.semanasData[semKey] = { realSoma: 0, acertoSoma: 0, iqSoma: 0, propSoma: 0, prazoSoma: 0, weight: 0 };
                 }
                 const sObj = item.semanasData[semKey];
                 
@@ -970,6 +972,7 @@
                 sObj.acertoSoma += d.percentual_acertos * w;
                 sObj.iqSoma += d.indice_qualidade * w;
                 sObj.propSoma += d.tarefas_propostas;
+                sObj.prazoSoma += d.tarefas_realizadas_prazo;
                 sObj.weight += w;
 
                 sumIQXMatGlobal += d.indice_qualidade * w;
@@ -984,25 +987,13 @@
             const avgIQGlobal = sumMatriculasAcumuladas > 0 ? (sumIQXMatGlobal / sumMatriculasAcumuladas) : 0;
             document.getElementById('card-iq-medio').textContent = `${avgIQGlobal.toFixed(1).replace('.', ',')}%`;
 
-            const totalPesoSemanal = {};
-            semanasOrdenadas.forEach(semKey => {
-                let wTotal = 0;
-                mapaMatriz.forEach(item => {
-                    const sd = item.semanasData[semKey];
-                    if (sd && sd.weight > 0) wTotal += sd.weight;
-                });
-                totalPesoSemanal[semKey] = wTotal;
-            });
-
             let linhas = Array.from(mapaMatriz.values()).map(e => {
                 let somaRow = 0, weightRow = 0;
                 semanasOrdenadas.forEach(semKey => {
                     const sData = e.semanasData[semKey];
                     if (sData && sData.weight > 0) {
-                        let valCell = 0;
                         const iqVal = sData.iqSoma / sData.weight;
-                        valCell = (iqVal / 100.0) * (sData.weight / (totalPesoSemanal[semKey] || 1));
-
+                        let valCell = (iqVal / 100.0);
                         somaRow += valCell * sData.weight;
                         weightRow += sData.weight;
                     }
@@ -1039,23 +1030,24 @@
 
             const getArrow = col => sortColumn === col ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : '';
 
-            // --- CÁLCULO DA LINHA 1: MÉDIA GERAL (COM IQ AGORA INCLUÍDO) ---
+            // --- CÁLCULO DA LINHA 1: MÉDIA GERAL (USANDO total_realizadas_prazos e tarefas_propostas para o percentual de realização, com acertos e IQ) ---
             const ureSemanasData = {};
             semanasOrdenadas.forEach(semKey => {
-                let sumRealSem = 0, sumAcertoSem = 0, sumIqSem = 0, sumPropSem = 0, sumWSem = 0;
+                let sumPrazoSem = 0, sumPropSem = 0, sumAcertoSem = 0, sumIqSem = 0, sumWSem = 0;
                 mapaMatriz.forEach(item => {
                     const sd = item.semanasData[semKey];
                     if (sd && sd.weight > 0) {
-                        sumRealSem += sd.realSoma;
+                        sumPrazoSem += sd.prazoSoma;
+                        sumPropSem += sd.propSoma;
                         sumAcertoSem += sd.acertoSoma;
                         sumIqSem += sd.iqSoma;
-                        sumPropSem += (sd.propSoma || 0);
                         sumWSem += sd.weight;
                     }
                 });
                 if (sumWSem > 0) {
+                    const realGeralCalc = sumPropSem > 0 ? (sumPrazoSem / sumPropSem) * 100.0 : 0;
                     ureSemanasData[semKey] = {
-                        real: sumRealSem / sumWSem,
+                        real: realGeralCalc,
                         acerto: sumAcertoSem / sumWSem,
                         iq: sumIqSem / sumWSem,
                         propostas: sumPropSem,
@@ -1095,7 +1087,7 @@
             const tbody = document.querySelector('#tabelaTarefas tbody');
             let tbHtml = '';
 
-            // LINHA 1: MÉDIA GERAL (Com IQ incorporado no lugar do BI)
+            // LINHA 1: MÉDIA GERAL (Usando novas regras de realização e farol IQ)
             tbHtml += `<tr class="row-consolidado">
                 <td style="font-weight:800;">★</td>`;
             if (!colunasOcultas.includes('col_alunos')) {
@@ -1114,7 +1106,7 @@
                     if (sd) {
                         const pReal = sd.real;
                         const pAcerto = sd.acerto;
-                        const iqVal = sd.iq; // IQ Médio Ponderado da Rede
+                        const iqVal = sd.iq;
                         const qtdProps = Math.round(sd.propostas || 0);
 
                         tbHtml += `<td>
@@ -1134,7 +1126,7 @@
             });
             tbHtml += `</tr>`;
 
-            // Demais Linhas (Entidades Individuais com IQ da turma/escola)
+            // Demais Linhas (Entidades Individuais)
             paginadas.forEach((r, idx) => {
                 const nomeEscolaTarget = currentView === 'escola' ? r.rotulo : r.escolaPai;
                 const linkEscolaHtml = `<span class="escola-link" onclick="abrirModalInsights('${nomeEscolaTarget.replace(/'/g, "\\'")}')">${r.rotulo}</span>`;
@@ -1161,11 +1153,11 @@
                         if (sData && sData.weight > 0) {
                             const pReal = sData.realSoma / sData.weight;
                             const pAcerto = sData.acertoSoma / sData.weight;
-                            const iqVal = sData.iqSoma / sData.weight; // IQ da Entidade
+                            const iqVal = sData.iqSoma / sData.weight;
 
                             const cReal = getFarolColor(pReal);
                             const cAcerto = getFarolColor(pAcerto);
-                            const cIq = getFarolColorIQ(iqVal);
+                            const cIq = getFarolColorIQ(iqVal); // Farol do IQ atualizado
                             const qtdProps = Math.round(sData.propSoma || 0);
 
                             tbHtml += `<td>

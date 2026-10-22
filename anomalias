@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evolução entre Bimestres e Casos Anômalos</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#0c1a35;--blue:#1d4ed8;--emerald:#059669;--rose:#e11d48;--amber:#d97706;--bg:#f1f5fb;--surface:#fff;--surface2:#f8fafd;--border:#e4eaf3;--text:#0d1829;--muted:#5a6e8a;--radius:8px;--radius2:14px;--shadow:0 1px 2px rgba(0,0,0,.04),0 4px 20px rgba(12,26,53,.06);--grad:linear-gradient(160deg,#0c1a35,#0f2a52 60%,#1a3d72)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14.5px;line-height:1.55;min-height:100vh}
+#loading{position:fixed;inset:0;background:rgba(12,26,53,.85);display:none;justify-content:center;align-items:center;color:#fff;z-index:9999;font-weight:600}
+#login{display:flex;justify-content:center;align-items:center;min-height:100vh;background:var(--grad)}
+.lbox{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);padding:2.5rem;border-radius:20px;width:100%;max-width:390px}
+.lbox h1{color:#fff;font-size:1.35rem;text-align:center;margin-bottom:1.5rem}
+.lbox input{width:100%;padding:.75rem 1rem;margin-bottom:.8rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--radius);color:#fff;font:inherit;outline:none}
+.lbox button{width:100%;padding:.85rem;background:var(--blue);border:0;border-radius:var(--radius);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+#lerr{color:#fca5a5;font-size:.8rem;text-align:center;margin-top:.6rem;display:none}
+#app{display:none}
+header{background:var(--grad);padding:.85rem 2rem;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:200}
+header h1{color:#fff;font-size:.95rem;font-weight:800}header small{color:rgba(255,255,255,.45);font-size:.7rem}
+.hb{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.25);padding:.4rem .9rem;border-radius:var(--radius);font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;margin-left:.5rem}
+.wrap{max-width:1600px;margin:0 auto;padding:1.5rem 2rem}
+.tabs{display:flex;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap}
+.tab,.sub{padding:.55rem 1.2rem;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font:inherit;font-weight:700;font-size:.85rem;cursor:pointer}
+.sub{border-radius:6px;padding:.4rem .9rem;font-size:.78rem;background:var(--surface2)}
+.tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}.sub.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);box-shadow:var(--shadow);padding:1.1rem 1.5rem;display:flex;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.25rem}
+.f{display:flex;flex-direction:column;gap:.35rem}
+.f label{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase}
+.f select{padding:.55rem .8rem;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface2);font:inherit;font-weight:600;font-size:.85rem;min-width:190px}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);box-shadow:var(--shadow);padding:1.25rem 1.5rem;margin-bottom:1.25rem;overflow-x:auto}
+.box h2{font-size:1rem;font-weight:800;color:var(--navy)}.box p.s{font-size:.78rem;color:var(--muted);margin:.2rem 0 .9rem}
+table{width:100%;border-collapse:collapse;font-size:.82rem;white-space:nowrap}
+th,td{border-bottom:1px solid var(--border);padding:.65rem .9rem;text-align:center}
+th{background:var(--surface2);color:var(--muted);font-size:.72rem;text-transform:uppercase}
+th:first-child,td:first-child{text-align:left;font-weight:700;color:var(--navy);position:sticky;left:0;background:var(--surface)}
+tr.rede td{background:#eef3fc;font-weight:800}
+tbody tr:hover td{background:var(--surface2)}
+.m{font-family:'Geist Mono',monospace;font-weight:600}
+.up{color:var(--emerald)}.dn{color:var(--rose)}.eq{color:var(--muted)}
+.cell{cursor:pointer;display:inline-flex;gap:.3rem;align-items:center;padding:.2rem .5rem;border-radius:6px}
+.cell:hover{background:var(--bg)}
+.cell.an{outline:2px solid var(--amber);outline-offset:1px}
+.pill{padding:.2rem .55rem;border-radius:99px;font-size:.7rem;font-weight:700;cursor:pointer;display:inline-block}
+.p-dn{background:rgba(225,29,72,.1);color:var(--rose);border:1px solid rgba(225,29,72,.25)}
+.p-up{background:rgba(217,119,6,.1);color:var(--amber);border:1px solid rgba(217,119,6,.25)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.25rem}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:1rem 1.25rem;border-top:3px solid var(--amber)}
+.kpi b{display:block;font-size:1.5rem;font-family:'Geist Mono',monospace;color:var(--navy)}.kpi span{font-size:.75rem;color:var(--muted)}
+.cmp{margin-bottom:1.5rem}.cmp h3{font-size:.95rem;color:var(--navy);display:flex;gap:.8rem;align-items:baseline;flex-wrap:wrap;margin-bottom:.5rem}
+.cmp h3 small{font-weight:600;color:var(--muted);font-size:.78rem}
+.empty{color:var(--muted);font-size:.85rem;padding:.5rem 0}
+.mo{display:none;position:fixed;inset:0;background:rgba(12,26,53,.65);z-index:10000;justify-content:center;align-items:center;padding:1rem}
+.mc{background:var(--surface);padding:2rem;border-radius:var(--radius2);width:100%;max-width:720px;max-height:90vh;overflow-y:auto;position:relative}
+.mc h2{color:var(--navy);font-size:1.2rem;margin-bottom:.3rem}.mc h3{font-size:.85rem;text-transform:uppercase;color:var(--navy);margin:1.1rem 0 .4rem}
+.mc p,.mc li{font-size:.88rem;line-height:1.6;margin-bottom:.4rem}.mc ul{padding-left:1.2rem}
+.x{position:absolute;top:1rem;right:1rem;cursor:pointer;width:28px;height:28px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin:.9rem 0}
+.g4 div{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:.7rem}
+.g4 label{display:block;font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase}.g4 span{font-family:'Geist Mono',monospace;font-weight:800;color:var(--navy)}
+.note{background:var(--surface2);border-left:4px solid var(--amber);border-radius:var(--radius);padding:.9rem 1rem;font-size:.86rem}
+@media(max-width:700px){.g4{grid-template-columns:repeat(2,1fr)}.wrap{padding:1rem}}
+</style>
+</head>
+<body>
+<div id="loading">Calculando evolução...</div>
+
+<div id="mo" class="mo"><div class="mc"><span class="x" onclick="fechar()">&times;</span><div id="mbody"></div></div></div>
+
+<div id="login"><div class="lbox"><h1>Evolução entre Bimestres</h1>
+<input type="email" id="email" placeholder="E-mail" onkeypress="if(event.key==='Enter')entrar()">
+<input type="password" id="pass" placeholder="Senha" onkeypress="if(event.key==='Enter')entrar()">
+<button onclick="entrar()">Entrar</button><div id="lerr"></div></div></div>
+
+<div id="app">
+<header><div><h1>Evolução entre Bimestres e Casos Anômalos</h1><small>Gestão Pedagógica — URE Avaré</small></div>
+<div><button class="hb" onclick="history.back()">Voltar</button><button class="hb" onclick="sair()">Sair</button></div></header>
+<div class="wrap">
+<div class="tabs">
+<button class="tab on" id="t-evo" onclick="aba('evo')">Evolução entre bimestres</button>
+<button class="tab" id="t-ano" onclick="aba('ano')">Casos anômalos</button>
+</div>
+
+<div class="bar">
+<div class="f"><label>Avaliação (série de provas)</label><select id="f-fam" onchange="trocaFam()"></select></div>
+<div class="f"><label>Comparação</label><select id="f-par" onchange="render()"></select></div>
+<div class="f"><label>Série</label><select id="f-serie" onchange="render()"></select></div>
+<div class="f"><label>Entidade nas linhas</label><select id="f-ent" onchange="render()"><option value="escola">Escola</option><option value="turma">Turma</option></select></div>
+<div class="f" id="f-lim-w" style="display:none"><label>Sensibilidade da anomalia</label>
+<select id="f-lim" onchange="render()"><option value="1.5">Alta (desvio ≥ 1,5)</option><option value="2" selected>Padrão (desvio ≥ 2,0)</option><option value="2.5">Baixa (desvio ≥ 2,5)</option></select></div>
+</div>
+
+<div id="v-evo">
+<div class="box"><h2 id="evo-t">Evolução</h2><p class="s">Variação da nota média ponderada (em pontos) entre os dois bimestres. Clique numa célula para ver o detalhe. Contorno laranja = evolução anômala frente à rede.</p>
+<table id="tb-evo"><thead></thead><tbody></tbody></table></div>
+</div>
+
+<div id="v-ano" style="display:none">
+<div class="tabs"><button class="sub on" id="s-comp" onclick="subano('comp')">Por componente</button><button class="sub" id="s-ger" onclick="subano('ger')">Visão geral (todos os componentes)</button></div>
+<div class="kpis" id="kpis"></div>
+<div id="ano-body"></div>
+</div>
+</div></div>
+
+<script>
+const sb=window.supabase.createClient('https://kmplasayzhtjoelxnvif.supabase.co','sb_publishable_24GErsvesucjCS2GKZkBUQ_8xMMXuoh');
+let D=[],FAM={},REG=[],subAno='comp',tabAtual='evo',R=null;
+const $=id=>document.getElementById(id), fx=(n,d=1)=>n.toFixed(d).replace('.',','), sg=n=>(n>0?'+':n<0?'−':'')+fx(Math.abs(n));
+
+function serieDe(t,e){t=String(t).toUpperCase();e=String(e).toUpperCase();
+ const em=e.includes('MEDIO')||t.includes('EM')||t.includes('MEDIO');
+ for(const n of em?['1','2','3']:['6','7','8','9']){if(t.includes(n+(em?'ª':'º')))return n+(em?'ª Série EM':'º Ano EF')}return null}
+function infoAval(nome){
+ const m=nome.match(/(\d+)\s*[ºo°ª]?\s*bim\w*/i)||nome.match(/bim\w*\s*(\d+)/i);
+ if(!m)return null;
+ const fam=nome.replace(m[0],'').replace(/\s*[-–—_:]+\s*$/,'').replace(/\s{2,}/g,' ').trim()||'Avaliação';
+ return{bim:+m[1],fam}}
+async function fetchAll(t){let all=[],s=0;for(;;){const{data,error}=await sb.from(t).select('*').range(s,s+999);if(error)throw error;all.push(...data);if(data.length<1000)break;s+=1000}return all}
+
+async function entrar(){const e=$('email').value.trim(),p=$('pass').value,er=$('lerr');er.style.display='none';
+ try{ld(1);const{error}=await sb.auth.signInWithPassword({email:e,password:p});if(error)throw error;await carregar()}
+ catch(x){ld(0);er.textContent=x.message;er.style.display='block'}}
+async function sair(){await sb.auth.signOut();$('app').style.display='none';$('login').style.display='flex'}
+function ld(v){$('loading').style.display=v?'flex':'none'}
+
+async function carregar(){
+ ld(1);
+ try{
+  const[av,es,de,tu]=await Promise.all(['avaliacoes','escolas','desempenho','turmas'].map(fetchAll));
+  const eM=new Map(es.map(e=>[e.id_escola,e])),tM=new Map(tu.map(t=>[t.id,t])),aM=new Map(av.map(a=>[a.id,a]));
+  D=de.map(d=>{const t=tM.get(d.id)||{},a=aM.get(d.id_avaliacao)||{},eg=eM.get(t.id_escola)||{};
+   const tn=d.nome_limpo||t.nome_limpo||'N/A',ia=infoAval(a.nome||'');
+   return{escola:t.escola||eg.nome_escola||'Desconhecida',turma:tn,comp:d.componente||'N/A',nota:parseFloat(d.nota)||0,
+    w:(parseInt(d.avaliados)||1)*(parseFloat(d.peso)||1),serie:serieDe(tn,t.tipo_ensino||''),ia}})
+   .filter(d=>d.escola!=='Desconhecida'&&d.nota>0&&d.serie&&d.ia);
+  FAM={};D.forEach(d=>{(FAM[d.ia.fam]??=new Set()).add(d.ia.bim)});
+  const fams=Object.keys(FAM).filter(f=>FAM[f].size>1).sort();
+  $('f-fam').innerHTML=fams.map(f=>`<option>${f}</option>`).join('');
+  const pref=fams.find(f=>/paulista/i.test(f));if(pref)$('f-fam').value=pref;
+  const ss=['6º Ano EF','7º Ano EF','8º Ano EF','9º Ano EF','1ª Série EM','2ª Série EM','3ª Série EM'].filter(s=>D.some(d=>d.serie===s));
+  $('f-serie').innerHTML='<option value="">Todas as séries</option>'+ss.map(s=>`<option>${s}</option>`).join('');
+  $('login').style.display='none';$('app').style.display='block';
+  trocaFam();
+ }catch(e){alert('Erro ao carregar: '+e.message)}
+ ld(0)}
+
+function trocaFam(){
+ const b=[...(FAM[$('f-fam').value]||[])].sort((a,b)=>a-b),p=[];
+ for(let i=0;i<b.length-1;i++)p.push(`<option value="${b[i]}-${b[i+1]}">${b[i]}º Bimestre → ${b[i+1]}º Bimestre</option>`);
+ $('f-par').innerHTML=p.join('');render()}
+
+function aba(t){tabAtual=t;$('t-evo').classList.toggle('on',t==='evo');$('t-ano').classList.toggle('on',t==='ano');
+ $('v-evo').style.display=t==='evo'?'block':'none';$('v-ano').style.display=t==='ano'?'block':'none';
+ $('f-lim-w').style.display=t==='ano'?'flex':'none';render()}
+function subano(s){subAno=s;$('s-comp').classList.toggle('on',s==='comp');$('s-ger').classList.toggle('on',s==='ger');render()}
+
+const med=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const sd=a=>{if(a.length<2)return 0;const m=a.reduce((x,y)=>x+y)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/a.length)};
+function escala(a){const m=med(a),mad=med(a.map(x=>Math.abs(x-m)));return Math.max(1.4826*mad||sd(a),0.3)}
+
+function calcular(){
+ const fam=$('f-fam').value,par=$('f-par').value;if(!par)return null;
+ const[bA,bB]=par.split('-').map(Number),serie=$('f-serie').value,ek=$('f-ent').value,lim=+$('f-lim').value;
+ const M={},RD={},comps=new Set();
+ const add=(o,k,c,which,d)=>{const x=((o[k]??={})[c]??={a:{s:0,w:0},b:{s:0,w:0}})[which];x.s+=d.nota*d.w;x.w+=d.w};
+ D.forEach(d=>{if(d.ia.fam!==fam||(serie&&d.serie!==serie))return;
+  const wh=d.ia.bim===bA?'a':d.ia.bim===bB?'b':null;if(!wh)return;
+  comps.add(d.comp);add(M,d[ek],d.comp,wh,d);add(RD,'Rede',d.comp,wh,d)});
+ const C=[...comps].sort(),mk=x=>x&&x.a.w&&x.b.w?{a:x.a.s/x.a.w,b:x.b.s/x.b.w,d:x.b.s/x.b.w-x.a.s/x.a.w}:null;
+ const rede={};C.forEach(c=>rede[c]=mk(RD.Rede?.[c]));
+ const ents=Object.keys(M).sort(),cell={};
+ ents.forEach(e=>{cell[e]={};C.forEach(c=>cell[e][c]=mk(M[e][c]))});
+ const st={};
+ C.forEach(c=>{const ds=ents.map(e=>cell[e][c]?.d).filter(v=>v!==undefined);
+  st[c]={esp:med(ds),esc:escala(ds),n:ds.length};
+  ents.forEach(e=>{const x=cell[e][c];if(x){x.z=(x.d-st[c].esp)/st[c].esc;x.an=ents.length>2&&Math.abs(x.z)>=lim}})});
+ // geral
+ const ger=ents.map(e=>{const itens=C.filter(c=>cell[e][c]).map(c=>({c,...cell[e][c],esp:st[c].esp,ex:cell[e][c].d-st[c].esp}));
+  return{e,itens,exc:itens.length?itens.reduce((s,i)=>s+i.ex,0)/itens.length:0}}).filter(g=>g.itens.length);
+ const mg=med(ger.map(g=>g.exc)),sg_=escala(ger.map(g=>g.exc));
+ ger.forEach(g=>{g.z=(g.exc-mg)/sg_;g.an=ger.length>2&&Math.abs(g.z)>=lim;g.mg=mg;g.nAn=g.itens.filter(i=>cell[g.e][i.c].an).length;
+  g.dm=g.itens.reduce((s,i)=>s+i.d,0)/g.itens.length;g.em=g.itens.reduce((s,i)=>s+i.esp,0)/g.itens.length});
+ return{bA,bB,C,ents,cell,rede,st,ger,lim,ek,serie,fam}}
+
+function reg(o){REG.push(o);return REG.length-1}
+function celH(x,h){if(!x)return'<span class="eq">–</span>';
+ const cl=x.d>0.05?'up':x.d<-0.05?'dn':'eq',ar=x.d>0.05?'▲':x.d<-0.05?'▼':'●';
+ return`<span class="cell ${x.an?'an':''} ${cl} m" onclick="${h}">${ar} ${sg(x.d)}${x.an?' ⚠':''}</span>`}
+
+function render(){
+ if(!D.length)return;REG=[];R=calcular();if(!R){return}
+ tabAtual==='evo'?rEvo():rAno()}
+
+function rEvo(){
+ const{C,ents,cell,rede,bA,bB,ek}=R;
+ $('evo-t').textContent=`${$('f-fam').value}: ${bA}º → ${bB}º Bimestre`+(R.serie?` — ${R.serie}`:'');
+ $('tb-evo').querySelector('thead').innerHTML=`<tr><th>${ek==='escola'?'Escola':'Turma'}</th>${C.map(c=>`<th>${c}</th>`).join('')}</tr>`;
+ const rr=`<tr class="rede"><td>REDE (referência)</td>${C.map(c=>{const x=rede[c];if(x)x.an=false;return`<td>${x?celH(x,`abrirRede(${reg({c})})`):'–'}</td>`}).join('')}</tr>`;
+ $('tb-evo').querySelector('tbody').innerHTML=rr+ents.map(e=>`<tr><td>${e}</td>${C.map(c=>{const x=cell[e][c];return`<td>${x?celH(x,`abrirCel(${reg({e,c})})`):'–'}</td>`}).join('')}</tr>`).join('')}
+
+function rAno(){
+ const{C,ents,cell,st,ger,lim}=R;
+ const todos=[];C.forEach(c=>ents.forEach(e=>{const x=cell[e][c];if(x?.an)todos.push({e,c,...x,esp:st[c].esp})}));
+ const gAn=ger.filter(g=>g.an);
+ $('kpis').innerHTML=`<div class="kpi"><b>${todos.length}</b><span>casos anômalos (entidade × componente)</span></div>
+ <div class="kpi"><b>${todos.filter(t=>t.z<0).length} / ${todos.filter(t=>t.z>0).length}</b><span>quedas / saltos anômalos</span></div>
+ <div class="kpi"><b>${gAn.length}</b><span>entidades anômalas na visão geral</span></div>`;
+ if(subAno==='comp'){
+  $('ano-body').innerHTML=C.map(c=>{
+   const l=todos.filter(t=>t.c===c).sort((a,b)=>Math.abs(b.z)-Math.abs(a.z)),s=st[c];
+   return`<div class="box cmp"><h3>${c}<small>Evolução esperada (mediana da rede): <span class="m">${sg(s.esp)}</span> pts · ${s.n} entidades · ${l.length} anômalas</small></h3>`+
+   (l.length?`<table><thead><tr><th>Entidade</th><th>${R.bA}º Bim.</th><th>${R.bB}º Bim.</th><th>Evolução real</th><th>Esperada</th><th>Diferença</th><th>Tipo</th></tr></thead><tbody>`+
+   l.map(t=>`<tr><td>${t.e}</td><td class="m">${fx(t.a)}</td><td class="m">${fx(t.b)}</td><td class="m ${t.d<0?'dn':'up'}">${sg(t.d)}</td><td class="m">${sg(t.esp)}</td><td class="m">${sg(t.d-t.esp)}</td>
+   <td><span class="pill ${t.z<0?'p-dn':'p-up'}" onclick="abrirCel(${reg({e:t.e,c})})">${t.z<0?'Queda anômala':'Salto anômalo'}</span></td></tr>`).join('')+'</tbody></table>':'<p class="empty">Nenhum caso anômalo neste componente.</p>')+'</div>'}).join('')}
+ else{
+  const l=[...ger].sort((a,b)=>Math.abs(b.z)-Math.abs(a.z));
+  $('ano-body').innerHTML=`<div class="box"><h2>Visão geral — todos os componentes</h2><p class="s">Compara o quanto cada entidade evoluiu a mais ou a menos que o esperado, na média de todos os componentes. Clique no tipo para ver o motivo.</p>
+  <table><thead><tr><th>Entidade</th><th>Evolução média real</th><th>Esperada (média)</th><th>Diferença média</th><th>Comp. anômalos</th><th>Situação</th></tr></thead><tbody>`+
+  l.map(g=>`<tr><td>${g.e}</td><td class="m ${g.dm<0?'dn':'up'}">${sg(g.dm)}</td><td class="m">${sg(g.em)}</td><td class="m">${sg(g.exc)}</td><td class="m">${g.nAn} de ${g.itens.length}</td>
+  <td>${g.an?`<span class="pill ${g.z<0?'p-dn':'p-up'}" onclick="abrirGer(${reg({e:g.e})})">${g.z<0?'Queda anômala':'Salto anômalo'}</span>`:`<span class="pill eq" style="cursor:pointer;border:1px solid var(--border)" onclick="abrirGer(${reg({e:g.e})})">Dentro do esperado</span>`}</td></tr>`).join('')+'</tbody></table></div>'}}
+
+function fechar(){$('mo').style.display='none'}
+function abrirMo(h){$('mbody').innerHTML=h;$('mo').style.display='flex'}
+const par=()=>`${R.bA}º → ${R.bB}º Bimestre`;
+
+function abrirCel(i){const{e,c}=REG[i],x=R.cell[e][c],s=R.st[c];if(!x)return;
+ const dif=x.d-s.esp,abaixo=x.z<0,nRede=R.ents.filter(k=>R.cell[k][c]).length,
+  pior=R.ents.filter(k=>R.cell[k][c]&&(abaixo?R.cell[k][c].d<x.d:R.cell[k][c].d>x.d)).length;
+ abrirMo(`<h2>${e} — ${c}</h2><p>${$('f-fam').value}, ${par()}</p>
+ <div class="g4"><div><label>${R.bA}º Bim.</label><span>${fx(x.a)}</span></div><div><label>${R.bB}º Bim.</label><span>${fx(x.b)}</span></div><div><label>Evolução real</label><span>${sg(x.d)}</span></div><div><label>Esperada</label><span>${sg(s.esp)}</span></div></div>
+ <h3>${x.an?'Por que é considerado anômalo':'Por que não é anômalo'}</h3>
+ <div class="note">${x.an
+  ?`${abaixo?'A nota caiu ou cresceu muito menos':'A nota cresceu muito mais'} do que o padrão da rede neste componente. A evolução esperada (mediana de ${nRede} entidades) é de <b>${sg(s.esp)}</b> pts, mas ${e} teve <b>${sg(x.d)}</b> pts, uma diferença de <b>${sg(dif)}</b> pts. Isso equivale a <b>${fx(Math.abs(x.z))}</b> desvios robustos ${abaixo?'abaixo':'acima'} do esperado, acima do limite de ${fx(R.lim)}. Apenas ${pior} das ${nRede} entidades ficaram ${abaixo?'pior':'melhor'} que este resultado.`
+  :`A evolução de ${sg(x.d)} pts está a ${fx(Math.abs(x.z))} desvios robustos da evolução esperada (${sg(s.esp)} pts), abaixo do limite de ${fx(R.lim)}. Está dentro da variação normal da rede.`}</div>
+ <h3>Como o cálculo é feito</h3><ul><li>Evolução = nota média ponderada do ${R.bB}º bimestre − a do ${R.bA}º, por entidade e componente.</li><li>Esperada = mediana das evoluções de todas as entidades naquele componente.</li><li>Desvio robusto = (real − esperada) ÷ dispersão típica da rede (MAD).</li></ul>`)}
+
+function abrirRede(i){const{c}=REG[i],x=R.rede[c],s=R.st[c];
+ abrirMo(`<h2>Rede — ${c}</h2><p>${par()}</p><div class="g4"><div><label>${R.bA}º Bim.</label><span>${fx(x.a)}</span></div><div><label>${R.bB}º Bim.</label><span>${fx(x.b)}</span></div><div><label>Evolução da rede</label><span>${sg(x.d)}</span></div><div><label>Esperada p/ entidade</label><span>${sg(s.esp)}</span></div></div>
+ <div class="note">A linha da rede é a referência. A evolução esperada de cada entidade é a mediana das evoluções individuais (${sg(s.esp)} pts), com dispersão típica de ${fx(s.esc)} pts.</div>`)}
+
+function abrirGer(i){const{e}=REG[i],g=R.ger.find(x=>x.e===e);if(!g)return;const ab=g.z<0;
+ abrirMo(`<h2>${e} — visão geral</h2><p>${$('f-fam').value}, ${par()} · todos os componentes</p>
+ <div class="g4"><div><label>Evolução média</label><span>${sg(g.dm)}</span></div><div><label>Esperada (média)</label><span>${sg(g.em)}</span></div><div><label>Diferença média</label><span>${sg(g.exc)}</span></div><div><label>Desvio robusto</label><span>${sg(g.z)}</span></div></div>
+ <h3>${g.an?'Por que é considerado anômalo':'Leitura'}</h3>
+ <div class="note">${g.an
+  ?`Somando todos os componentes, ${e} evoluiu em média <b>${sg(g.exc)}</b> pts ${ab?'abaixo':'acima'} do esperado para a rede, a <b>${fx(Math.abs(g.z))}</b> desvios robustos da mediana das entidades (limite ${fx(R.lim)}). ${g.nAn} de ${g.itens.length} componentes são anômalos individualmente.`
+  :`A diferença média de ${sg(g.exc)} pts em relação ao esperado está dentro da variação normal da rede (${fx(Math.abs(g.z))} desvios; limite ${fx(R.lim)}).`}</div>
+ <h3>Componentes</h3><table><thead><tr><th>Componente</th><th>Real</th><th>Esperada</th><th>Diferença</th><th></th></tr></thead><tbody>`+
+ [...g.itens].sort((a,b)=>Math.abs(b.z)-Math.abs(a.z)).map(t=>`<tr><td>${t.c}</td><td class="m ${t.d<0?'dn':'up'}">${sg(t.d)}</td><td class="m">${sg(t.esp)}</td><td class="m">${sg(t.ex)}</td><td>${t.an?'⚠':''}</td></tr>`).join('')+'</tbody></table>')}
+
+(async()=>{try{const{data:{session}}=await sb.auth.getSession();if(session)await carregar()}catch(e){}})();
+</script>
+</body>
+</html>
